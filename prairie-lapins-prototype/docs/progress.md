@@ -1,3 +1,13 @@
+# Comptes privés — prévisualisation, activation externe en attente
+
+8 octobre 2026. Retour humain exact : **jeu normal et laboratoire fonctionnent pendant l’essai iPhone** ; aucun scénario supplémentaire déduit. Production de départ `1747ea6` conservée. Travail sur `feature/private-cloud-saves`. Supabase Free choisi après lecture des documents officiels ; aucune intégration/clé/compte Supabase ou SMTP accessible. Variables GitHub Actions : administration refusée à l’intégration (HTTP 403), saisie des deux valeurs publiques par le propriétaire nécessaire.
+
+Client OTP officiel, choix initial explicite, cache par compte/projet et preview, simulation/contrôleur conservés, CAS SQL serveur, horodatage serveur, envoi durable/idempotent, reprise, conflits, invalidation des anciens comptes, garde avant import/reset/restauration, historique borné et exports v4 indépendants. SDK complètement absent du laboratoire compilé ; stockage normal, horloge de test, migrations et règles préservés. L’absence de configuration affiche honnêtement un mode invité local sans boutons de connexion.
+
+Validation : **414 tests / 15 fichiers**, TypeScript et builds normal, laboratoire et prévisualisation. PostgreSQL embarqué réel : permissions RLS/RPC, propriétaires, CAS/rejeu, invalides, format futur et rétention. Ces essais ne sont pas des tests du Supabase hébergé. Parcours Chromium statique : huit contrôles normaux et sept groupes laboratoire réussis sans erreur ; isolation preview/auth/reset testée séparément. Connexion réelle par email, API/JWT hébergés, seconde connexion réelle et Safari comptes restent à vérifier après configuration.
+
+[Guide et parcours iPhone](accounts.md) ; [SQL et manipulations exactes](../backend/README.md). Ne pas annoncer la protection en ligne ni fusionner le client de comptes en production avant les vérifications hébergées. La prévisualisation peut être publiée séparément, dans le même artefact conservant jeu normal/laboratoire.
+
 # Consolidation et première passe visuelle — 8 octobre 2026
 
 ## Laboratoire publié — HTTPS vérifié

@@ -29,11 +29,26 @@ export class GameController {
   private importSequence = 0;
   private pendingImport: {token: number; state: GameState; legacyJson?: string} | null = null;
   private listeners = new Set<(snapshot: Snapshot) => void>();
+  private replacementGuard: ((state: GameState, reason: 'import' | 'restart') => Operation) | null = null;
+  private sourceGeneration = 0;
 
   constructor(private storage: SaveStorage, private clock: () => number = Date.now,
     private rng: () => number = Math.random) { this.load(); }
 
   get storageScope(): 'normal' | 'laboratory' { return this.storage.scope ?? 'normal'; }
+  get storageGeneration(): number { return this.sourceGeneration; }
+
+  setReplacementGuard(guard: ((state: GameState, reason: 'import' | 'restart') => Operation) | null): void { this.replacementGuard = guard; }
+  /** Keep each account's local storage independent, while retaining the live UI. */
+  switchStorage(next: SaveStorage): Operation {
+    if (this.disposed) return {ok:false, reason:'DISPOSED'};
+    if (this.dirty && this.state) { const saved = this.retrySave(); if (!saved.ok) return saved; }
+    const candidate = new GameController(next, this.clock, this.rng);
+    if (!candidate.state || candidate.status !== 'saved') { const reason = candidate.issue ?? 'NO_GAME'; candidate.dispose(); return {ok:false,reason}; }
+    this.cancelImport(); this.storage = next; this.state = candidate.state; this.status = candidate.status;
+    this.issue = null; this.lastSavedAt = candidate.lastSavedAt; this.dirty = false; this.storedRaw = candidate.storedRaw; this.hasRead = candidate.hasRead;
+    candidate.dispose(); this.sourceGeneration++; this.emit(); return {ok:true};
+  }
 
   getSnapshot(): Snapshot {
     return {state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
@@ -160,6 +175,10 @@ export class GameController {
     const source = this.pendingImport.legacyJson ? decodeGame(this.pendingImport.legacyJson, now) : null;
     if (source && !source.ok) return source;
     const candidate = advance(source?.ok ? source.state : this.pendingImport.state, now);
+    if (this.state && this.replacementGuard) {
+      const protectedState = this.replacementGuard(structuredClone(this.state), 'import');
+      if (!protectedState.ok) return protectedState;
+    }
     // Persist first. Failure cannot replace the current game or change its save status.
     const result = this.write(candidate, now, this.pendingImport.legacyJson);
     if (!result.ok) return result;
@@ -170,6 +189,10 @@ export class GameController {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};
     if (!confirmed) return {ok: false, reason: 'NOT_CONFIRMED'};
     const now = this.clock(); const candidate = createGame(now);
+    if (this.state && this.replacementGuard) {
+      const protectedState = this.replacementGuard(structuredClone(this.state), 'restart');
+      if (!protectedState.ok) return protectedState;
+    }
     const result = this.write(candidate, now);
     if (!result.ok) return result;
     this.state = candidate; this.dirty = false; this.status = 'saved'; this.issue = null;
