@@ -4,7 +4,7 @@
 
 Source validée : branche `visual/meadow-habitats`, commit `87862a073eafd6cc699236ea3b863607fa4c35b1`. Retour reçu le 8 octobre 2026 : **« tout fonctionne bien pendant mon essai » sur iPhone**. Aucun scénario détaillé n'a été communiqué ; ce retour ne prouve pas une liste d'essais particulière.
 
-La branche de livraison **`production`** part de cette source et ajoute seulement les instructions de publication, les contrôles de production et l'information de version dans les paramètres. `main` contient encore l'ancien état `e3e4b89` ; elle ne déclenche pas ce déploiement. Les règles, graphismes, caméra et sauvegardes sont conservés.
+La branche de livraison **`production`** part de cette source et ajoute la publication HTTPS, ses contrôles et sa version dans Paramètres, puis le laboratoire explicitement séparé décrit dans [laboratory.md](laboratory.md). `main` contient encore l'ancien état `e3e4b89` ; elle ne déclenche pas ce déploiement. Les règles, graphismes, caméra et sauvegardes sont conservés.
 
 Le dépôt `sullivanlegoff-code/Project-L` est déjà **public**, constaté sur GitHub. Sa visibilité n'a pas été modifiée. GitHub Pages est disponible gratuitement pour les dépôts publics. Ce jeu solo statique, sans achat réel, tient largement dans les limites documentées : site ≤1 Go, bande passante indicative 100 Go/mois. Aucun abonnement ni domaine acheté.
 

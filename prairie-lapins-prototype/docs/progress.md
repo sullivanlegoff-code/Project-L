@@ -1,10 +1,10 @@
 # Consolidation et première passe visuelle — 8 octobre 2026
 
-## Laboratoire publié — préparation et validation locale
+## Laboratoire publié — HTTPS vérifié
 
-Retour reçu : le jeu HTTPS fonctionne sur l’iPhone du joueur, **ordinateur éteint**. Ce retour confirme cet essai ; aucun test détaillé supplémentaire ni essai du futur laboratoire n’est inventé.
+Retour reçu : le jeu HTTPS fonctionne sur l’iPhone du joueur, **ordinateur éteint**. Ce retour confirme cet essai ; aucun test détaillé supplémentaire ni essai du laboratoire sur iPhone n’est inventé.
 
-Branche de travail `feature/published-laboratory`, depuis `production` `2d3ba56`. Jeu normal préservé à `/Project-L/`, laboratoire prévu à `/Project-L/dev/`, avec mêmes sources et révision. Le workflow produit les deux builds dans un artefact Pages unique : aucune publication indépendante qui retirerait l’autre route. Le paramètre normal `?dev=1` n’active toujours rien.
+Branche de travail `feature/published-laboratory`, depuis `production` `2d3ba56`. Jeu normal préservé à `/Project-L/`, laboratoire publié à `/Project-L/dev/`, avec mêmes sources et révision. Le workflow produit les deux builds dans un artefact Pages unique : aucune publication indépendante qui retirerait l’autre route. Le paramètre normal `?dev=1` n’active toujours rien.
 
 Réutilisation du préfixe historique `prairie-lapins.development.` pour partie, migrations/backups, préférences et horloge de test. Adaptateur de sauvegarde préfixant toutes les clés, sans repli vers les clés normales. Scope explicite sur stockage/contrôleur ; les commandes de test refusent un contrôleur normal. Politique de session interdisant les futurs services en ligne dans le laboratoire ; aucun compte développé.
 
@@ -12,7 +12,9 @@ Ajouts : lien dans Paramètres normal, bandeau permanent **MODE TEST — PARTIE 
 
 Validation : **381 tests / 11 fichiers réussis**, dont 12 tests du laboratoire. TypeScript et les deux builds réussissent ; contrôle des chemins, absence des commandes dans le build normal et présence dans le laboratoire. Les quatre scénarios passent la validation v4. Deux parcours Chromium sur serveur statique sous les chemins réels ont réussi : huit contrôles normaux, puis sept groupes de contrôles d’isolation sur une même origine, sans erreur de console/réseau. Toutes les clés hors espace de test restent identiques pendant les commandes, imports et resets ; les rechargements restaurent leurs progressions et horloges respectives.
 
-Rapports locaux : `/workspace/artifacts/normal-laboratory-local/` et `/workspace/artifacts/laboratory-local-final/`. Publication réelle et vérification HTTPS des deux routes encore à effectuer. [Guide complet](laboratory.md) : commandes, clés exactes, transfert volontaire, builds, rollback et cinq étapes iPhone.
+**Publication réelle réussie**, première révision `92d6511a4b478af9df8b0c2a8f1852949303d3be`, [workflow 37809697390](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37809697390). Installation verrouillée, tests, TypeScript, deux builds et déploiement réussis dans GitHub Actions. Les deux `build-revision.txt` HTTPS répondent 200 et indiquent exactement cette révision. Les huit contrôles normaux et les sept groupes du parcours laboratoire ont également réussi sur les vraies adresses, en contexte Chromium jetable, sans erreur de console, requête échouée ni réponse HTTP d’erreur. Nourriture normale conservée, export/import normal valide, liens aller/retour, tous les presets, reset confirmé/annulé, quatre scénarios, affichage portrait utilisable, stockage normal inchangé pendant les commandes de test et rechargements indépendants.
+
+Rapports locaux : `/workspace/artifacts/normal-laboratory-local/` et `/workspace/artifacts/laboratory-local-final/`. Rapports HTTPS : `/workspace/artifacts/normal-laboratory-https/` et `/workspace/artifacts/laboratory-https/`. Les deux accès passent la validation TLS système ; le navigateur de test utilise temporairement l’empreinte du certificat du site derrière le proxy cloud, sans changer le magasin de confiance. L’essai physique du laboratoire sur Safari reste à effectuer. Le point de retour avant laboratoire est `2d3ba56` ; celui comprenant les deux routes est `92d6511`. Les mises à jour documentaires produisent un nouvel identifiant de build ; la révision actuellement servie est accessible dans Paramètres et dans `build-revision.txt` de chaque route. [Guide complet](laboratory.md) : commandes, clés exactes, transfert volontaire, builds, rollback et cinq étapes iPhone.
 
 ## Mise en ligne HTTPS — publiée et vérifiée
 

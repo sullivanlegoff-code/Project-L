@@ -4,7 +4,7 @@
 - Laboratoire : [https://sullivanlegoff-code.github.io/Project-L/dev/](https://sullivanlegoff-code.github.io/Project-L/dev/).
 - Livraison : **`production`**, mêmes sources et même révision pour les deux builds. Le laboratoire active les outils de test ; il n'est pas une branche expérimentale publiée séparément.
 
-Publication du laboratoire en préparation ; les résultats effectifs sur GitHub Pages seront consignés dans [progress.md](progress.md). Le joueur a confirmé que la publication normale précédente fonctionne sur son iPhone, ordinateur éteint. Aucun scénario détaillé supplémentaire n'est déduit de ce retour.
+Publication et vérification HTTPS réussies le 8 octobre 2026, première révision `92d6511a4b478af9df8b0c2a8f1852949303d3be`, [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37809697390). Les 381 tests, TypeScript, deux builds et les parcours du site réel (huit contrôles normaux, sept groupes d’isolation) passent, sans erreur de console/réseau. La révision actuelle se lit dans Paramètres et dans `build-revision.txt` de chaque route, y compris après les mises à jour documentaires. Bilan : [progress.md](progress.md). Le joueur a confirmé que la publication normale précédente fonctionne sur son iPhone, ordinateur éteint. Aucun scénario détaillé supplémentaire n'est déduit de ce retour.
 
 ## Utilisation
 
@@ -69,7 +69,7 @@ Le cache GitHub Pages et les assets Vite hashés restent utilisés sans service 
 
 `docs/laboratory-browser-check.cjs <URL normale> <révision>` ouvre les deux pages sur une même origine, en contexte Chromium jetable. Il teste la nourriture normale, le lien, les commandes, la comparaison octet par octet de toutes les clés hors espace de test, la copie par export/import avec annulation, le reset avec annulation/confirmation, les scénarios, les rechargements, le retour normal, les deux révisions et l'absence des outils sur `?dev=1` normal. Le parcours normal historique reste dans `docs/production-browser-check.cjs`.
 
-Les tests unitaires couvrent aussi les backups de migration, préférences, erreurs d'écriture, overflow et contrôleur normal transmis par erreur. Le contexte de test n'utilise jamais la sauvegarde du joueur. Les essais automatisés Chromium ne constituent pas un essai physique Safari.
+Les tests unitaires couvrent aussi les backups de migration, préférences, erreurs d'écriture, overflow et contrôleur normal transmis par erreur. Le contexte de test n'utilise jamais la sauvegarde du joueur. Les essais automatisés Chromium (paysage 852×393 et portrait 390×844) ne constituent pas un essai physique Safari. Le certificat du proxy cloud est limité temporairement au certificat du site pour ce navigateur jetable ; les deux accès HTTPS réussissent également avec la validation TLS système active, sans modification du magasin de confiance.
 
 Test iPhone en cinq étapes :
 
