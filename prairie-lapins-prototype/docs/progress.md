@@ -1,3 +1,9 @@
+# Premiers contrôles réels du backend réussis
+
+9 octobre 2026 : [workflow 37856320968](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37856320968) : job build réussi, contrôle `check-cloud-backend.mjs` exécuté avant la construction de preview avec configuration publique confirmée dans les scripts servis. Sur le Supabase hébergé : Auth joignable, fournisseur Email actif, SELECT anonyme état/historique refusé par permissions (42501), RPC et INSERT direct anonymes refusés, schéma `prairie_private` non exposé (PGRST106). Aucune session/admin/partie personnelle, aucun email envoyé par ces contrôles. Preuve locale expurgée : `/workspace/artifacts/accounts-hosted-anonymous-proof.json`. Source preview `3e70d9e`, jeu stable `45323cb`, 415 tests et TypeScript réussis.
+
+Ces résultats confirment les protections anonymes du backend installé, **pas** la connexion humaine, la sauvegarde authentifiée, l’isolation de deux propriétaires ou la reprise sur un autre navigateur. Quota confirmé de 2 emails/heure : pause des demandes d’une heure proposée. Adresse de retour corrigée selon le propriétaire ; les anciens liens refusés ne sont pas réutilisés. Prochain essai : un seul nouvel email, ouvrir le dernier lien une fois ; confirmer l’état de compte avant de tester une partie fictive. Aucun changement payant ni client de comptes activé dans le jeu normal.
+
 # Pause des emails et contrôle hébergé anonyme
 
 9 octobre 2026 : propriétaire confirme correction de Site URL/Redirect URLs, puis nouvelle demande refusée par limite d’envoi/fréquence. Interface jusque-là regroupait ces causes ; message de quota email séparé du cooldown générique, avec wording lien plutôt que code. Quota exact confirmé par le propriétaire dans Authentication → Rate Limits : **2 emails/heure** pour le projet. Pause proposée d’une heure sans nouvelles demandes, sans changer de réglage. Aucun nouvel email automatiquement envoyé.
