@@ -1,3 +1,7 @@
+# Prévisualisation : lien email standard
+
+9 octobre 2026 : le propriétaire confirme projet Supabase prêt, SQL exécuté avec succès, fournisseur Email activé. Le dashboard impose un SMTP personnalisé pour modifier le template. La preview est adaptée au **lien par défaut**, via détection SDK de la session dans le retour URL ; un code numérique reste optionnel avec template/SMTP futur. Aucun abonnement/domaine acheté, client de comptes toujours absent du jeu normal et du laboratoire. Preview figée sur `df864e11a14badae0806714a4fb71be95d5067db`. 415 tests, TypeScript et builds réussis sur les sources expérimentales. Ces tests ne constituent toujours pas une preuve d’email réel ou de sauvegarde hébergée. URL de retour, variables publiques et parcours d'intégration restent à configurer/vérifier. Ne pas rerun SQL ni retoucher le template pour suivre ce nouveau parcours. Le workflow continue de publier les trois routes dans un artefact unique.
+
 # Prévisualisation des comptes — publication séparée
 
 8 octobre 2026. Le joueur confirme que **jeu normal et laboratoire fonctionnent pendant son essai iPhone** ; aucun scénario supplémentaire déduit. Les sources du jeu normal et du laboratoire restent celles de `1747ea6` ; seuls le workflow et ce suivi changent ici. Une troisième route `/Project-L/preview/accounts/` est ajoutée dans le même artefact Pages, depuis les sources expérimentales figées `608f49a` sur `feature/private-cloud-saves`.

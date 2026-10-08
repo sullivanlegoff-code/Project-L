@@ -43,7 +43,7 @@ jobs:
       - name: Lire les sources figées de la prévisualisation des comptes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 608f49a473fc1e275414119dd041d3dbdee6aeb0
+          ref: df864e11a14badae0806714a4fb71be95d5067db
           path: accounts-preview-source
           persist-credentials: false
       - name: Installer et tester la prévisualisation séparée
@@ -55,7 +55,7 @@ jobs:
       - name: Construire la prévisualisation avec sa propre révision
         working-directory: accounts-preview-source/prairie-lapins-prototype
         env:
-          VITE_BUILD_REVISION: 608f49a473fc1e275414119dd041d3dbdee6aeb0
+          VITE_BUILD_REVISION: df864e11a14badae0806714a4fb71be95d5067db
           # Public browser settings only, and ONLY for the separate preview.
           VITE_SUPABASE_URL: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
