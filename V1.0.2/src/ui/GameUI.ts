@@ -1,0 +1,414 @@
+import type {GameController, Snapshot} from '../application/GameController';
+import {BALANCE, HEARTS, ORDERS, SPECIES, type BuildingKind, type SpeciesId, type OrderId} from '../config/balance';
+import type {Command, GameState, PattesCommand, TimedStage} from '../state/types';
+import {quoteComplement} from '../simulation/actions';
+import {accelerationCost, quoteAcceleration} from '../simulation/hearts';
+import {rabbitIncome} from '../simulation/time';
+import type {MeadowScene, MeadowSelection} from '../display/MeadowScene';
+import {ActionGate} from './gestures';
+import {portrait} from './portraits';
+import {PreferenceStore, Sounds} from './preferences';
+import {BUILDING_NAMES, REFUSALS, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement} from './models';
+
+type View = {kind: 'shop'; tab: 'buildings' | 'rabbits'} | {kind: 'building' | 'rabbit' | 'moveRabbit'; id: string} |
+  {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind: 'collection' | 'settings' | 'extension' | 'placement' | 'hearts'} | null;
+function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
+}
+const heartAmount = (n: number) => `${n} ${n === 1 ? 'cœur' : 'cœurs'}`;
+function avatar(species?: SpeciesId, large = false): HTMLElement {
+  const element = node('span', '', large ? 'portrait large' : 'portrait'); element.innerHTML = portrait(species); return element;
+}
+export class GameUI {
+  private view: View = null;
+  private placement: Placement | null = null;
+  private parents: [string | null, string | null] = [null, null];
+  private snapshot: Snapshot;
+  private unsubscribe: () => void;
+  private panel = document.getElementById('game-panel')!;
+  private content = document.getElementById('panel-content')!;
+  private title = document.getElementById('panel-title')!;
+  private settings = document.getElementById('settings-content')!;
+  private toast = document.getElementById('toast')!;
+  private tutorial = document.getElementById('tutorial')!;
+  private dialog = document.getElementById('game-dialog') as HTMLDialogElement;
+  private gate = new ActionGate();
+  private sounds: Sounds;
+  private toastTimer = 0;
+  private frame = 0;
+  private abort = new AbortController();
+  private oddsOpen = false;
+  private lastSecond = -1;
+  private confirmationGeneration = 0;
+  constructor(private controller: GameController, private scene: MeadowScene, private clock: () => number, private preferences: PreferenceStore) {
+    this.snapshot = controller.getSnapshot(); this.sounds = new Sounds(preferences);
+    const options = {signal: this.abort.signal};
+    document.getElementById('recenter-view')!.addEventListener('click', () => this.scene.recenter(), options);
+    document.getElementById('open-hearts')!.addEventListener('click', () => this.open({kind: 'hearts'}), options);
+    document.getElementById('open-shop')!.addEventListener('click', () => this.open({kind: 'shop', tab: 'buildings'}), options);
+    document.getElementById('open-collection')!.addEventListener('click', () => this.open({kind: 'collection'}), options);
+    document.getElementById('open-settings')!.addEventListener('click', () => this.open({kind: 'settings'}), options);
+    document.getElementById('save-warning')!.addEventListener('click', () => this.open({kind: 'settings'}), options);
+    document.getElementById('close-panel')!.addEventListener('click', () => this.close(), options);
+    document.getElementById('sound-toggle')!.addEventListener('click', () => { preferences.set({muted: !preferences.value.muted}); this.renderPreferences(); }, options);
+    document.getElementById('tutorial-toggle')!.addEventListener('click', () => { preferences.set({tutorial: !preferences.value.tutorial, tutorialDone: false}); this.renderPreferences(); this.renderTutorial(); }, options);
+    this.dialog.addEventListener('cancel', () => { this.dialog.replaceChildren(); }, options);
+    this.unsubscribe = controller.subscribe(snapshot => {
+      this.snapshot = snapshot;
+      if (!snapshot.state) this.view = {kind: 'settings'};
+      const warning = document.getElementById('save-warning')!;
+      warning.hidden = snapshot.status === 'saved';
+      warning.textContent = snapshot.state ? 'Sauvegarde non enregistrée · Paramètres' : 'Partie non chargée · Paramètres';
+      this.render(); this.renderTutorial();
+    });
+    this.renderPreferences();
+    // Countdown text is a projection of timestamps; the controller alone advances the simulation.
+    const animate = () => {
+      const second = Math.floor(this.clock() / 1000);
+      if (second !== this.lastSecond && !document.hidden) { this.lastSecond = second; this.updateTimers(); }
+      this.frame = requestAnimationFrame(animate);
+    };
+    this.frame = requestAnimationFrame(animate);
+  }
+  private now(): number { return Math.max(this.clock(), this.snapshot.state?.lastSimulatedAt ?? 0); }
+  private renderPreferences(): void {
+    document.getElementById('sound-toggle')!.textContent = this.preferences.value.muted ? 'Sons : coupés' : 'Sons : activés';
+    document.getElementById('tutorial-toggle')!.textContent = this.preferences.value.tutorial ? 'Désactiver le tutoriel' : 'Activer le tutoriel';
+  }
+  private notice(message: string): void {
+    this.toast.textContent = message; this.toast.hidden = false; window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => { this.toast.hidden = true; }, 4300);
+  }
+  private button(parent: HTMLElement, label: string, action: () => void, reason: string | null = null, secondary = false): HTMLButtonElement {
+    const button = node('button', label, secondary ? 'secondary' : ''); button.type = 'button'; button.disabled = !!reason;
+    button.onclick = action; parent.append(button);
+    if (reason) parent.append(node('p', reason, 'reason'));
+    return button;
+  }
+  private execute(command: Command, success: string | ((value?: string | number) => string), after?: () => void): void {
+    this.gate.run(JSON.stringify(command), () => {
+      const result = this.controller.perform(command);
+      if (!result.ok) { this.notice(REFUSALS[result.reason]); this.render(); return; }
+      this.sounds.ping(); this.notice(typeof success === 'function' ? success(result.value) : success); after?.(); this.render();
+    });
+  }
+  private card(title: string, description = '', species?: SpeciesId): HTMLElement {
+    const card = node('article', '', 'card');
+    const heading = node('div', '', 'card-heading'); if (species) heading.append(avatar(species));
+    const text = node('div'); text.append(node('h3', title)); if (description) text.append(node('p', description)); heading.append(text); card.append(heading);
+    return card;
+  }
+  open(view: NonNullable<View>): void {
+    if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
+    if (this.placement && view.kind !== 'placement') { this.placement = null; this.scene.setPlacement(null); }
+    this.view = view; this.controller.refresh(); this.render();
+  }
+  close(): void {
+    if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
+    this.view = null; this.placement = null; this.scene.setPlacement(null); this.render();
+  }
+  onReplacement(): void {
+    this.confirmationGeneration++;
+    this.parents = [null, null]; this.placement = null; this.scene.setPlacement(null);
+    if (this.dialog.open) this.dialog.close(); this.dialog.replaceChildren();
+    this.view = {kind: 'settings'}; this.render();
+  }
+  select(selection: MeadowSelection): void {
+    if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
+    if (selection.kind === 'cell') {
+      if (this.placement) { this.placement.cell = {x: selection.x, y: selection.y}; this.scene.setPlacement(this.placement); this.render(); }
+      return;
+    }
+    if (selection.kind === 'empty') { this.close(); return; }
+    if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
+    if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
+    this.open(selection.kind === 'extension' ? {kind: 'extension'} : {kind: selection.kind, id: selection.id});
+  }
+  private render(): void {
+    this.renderTutorial();
+    const scroll = this.content.scrollTop;
+    const focusId = (document.activeElement as HTMLElement | null)?.dataset.focus;
+    this.panel.hidden = !this.view;
+    this.settings.hidden = this.view?.kind !== 'settings'; this.content.hidden = this.view?.kind === 'settings';
+    this.content.replaceChildren(); if (!this.view) return;
+    if (this.view.kind === 'settings') { this.title.textContent = 'Paramètres'; return; }
+    const s = this.snapshot.state; if (!s) { this.title.textContent = 'Partie indisponible'; return; }
+    switch (this.view.kind) {
+      case 'hearts': this.renderHearts(s); break;
+      case 'shop': this.renderShop(s, this.view.tab); break;
+      case 'building': this.renderBuilding(s, this.view.id); break;
+      case 'rabbit': this.renderRabbit(s, this.view.id); break;
+      case 'moveRabbit': this.renderDestinations(s, this.view.id); break;
+      case 'buyRabbit': this.renderBuyRabbit(s, this.view.species); break;
+      case 'collection': this.renderCollection(s); break;
+      case 'species': this.renderSpecies(s, this.view.species); break;
+      case 'extension': this.renderExtension(s); break;
+      case 'placement': this.renderPlacement(s); break;
+    }
+    this.content.scrollTop = scroll;
+    if (focusId) for (const el of this.content.querySelectorAll<HTMLElement>('[data-focus]')) if (el.dataset.focus === focusId) el.focus({preventScroll: true});
+    this.updateTimers();
+  }
+  private renderShop(s: GameState, tab: 'buildings' | 'rabbits'): void {
+    this.title.textContent = 'Boutique';
+    const tabs = node('div', '', 'tabs');
+    this.button(tabs, 'Bâtiments', () => this.open({kind: 'shop', tab: 'buildings'}), null, tab !== 'buildings');
+    this.button(tabs, 'Lapins', () => this.open({kind: 'shop', tab: 'rabbits'}), null, tab !== 'rabbits'); this.content.append(tabs);
+    if (tab === 'buildings') {
+      const utility: Record<BuildingKind, string> = {enclosure: '3 places · tous les types · stocke 600 pattes', farm: 'Produit l’herbe · maximum 2', nest: 'Deux parents · maximum 1', nursery: 'Une place pour grandir · maximum 1'};
+      for (const kind of ['enclosure', 'farm', 'nest', 'nursery'] as const) {
+        const card = this.card(BUILDING_NAMES[kind], utility[kind]);
+        this.button(card, `Placer · ${BALANCE.buildings[kind].price} pattes`, () => this.beginPlacement(kind), buildingReason(s, kind, true)); this.content.append(card);
+      }
+    } else for (const species of ['paille', 'neige', 'terre'] as const) {
+      const card = this.card(SPECIES[species].name, 'Commun · affection 1 · 12 pattes / h', species);
+      const full = !s.buildings.some(b => b.kind === 'enclosure' && occupants(s, b.id).length < BALANCE.enclosureCapacity);
+      this.button(card, 'Choisir un enclos · 80 pattes', () => this.open({kind: 'buyRabbit', species}), full ? 'Tous les enclos sont pleins.' : null); this.content.append(card);
+    }
+  }
+  private beginPlacement(kind: BuildingKind, movingId?: string): void {
+    this.placement = {kind, movingId, cell: null}; this.view = {kind: 'placement'}; this.scene.setPlacement(this.placement); this.render();
+  }
+  private renderPlacement(s: GameState): void {
+    const p = this.placement; if (!p) { this.close(); return; }
+    this.title.textContent = `${p.movingId ? 'Déplacer' : 'Placer'} : ${BUILDING_NAMES[p.kind]}`;
+    this.content.append(node('p', 'Touchez une case. ✓ indique une place libre ; × une case occupée ou verrouillée. Glissez pour déplacer la vue.'));
+    this.content.append(node('p', p.cell ? `Case ${p.cell.x + 1} · ${p.cell.y + 1}` : 'Aucune case sélectionnée.', 'badge'));
+    this.button(this.content, p.movingId ? 'Confirmer le déplacement · gratuit' : `Acheter et placer · ${BALANCE.buildings[p.kind].price} pattes`, () => {
+      if (!p.cell) return;
+      const cmd: Command = p.movingId ? {type: 'moveBuilding', id: p.movingId, ...p.cell} : {type: 'buyBuilding', kind: p.kind, ...p.cell};
+      this.execute(cmd, p.movingId ? 'Bâtiment déplacé.' : `${BUILDING_NAMES[p.kind]} construit.`, () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
+    }, placementReason(s, p));
+    if (!p.movingId && p.cell) this.complement(this.content, s, {type: 'buyBuilding', kind: p.kind, ...p.cell},
+      `Acheter et placer : ${BUILDING_NAMES[p.kind]} (case ${p.cell.x + 1}, ${p.cell.y + 1})`, `${BUILDING_NAMES[p.kind]} construit.`,
+      () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
+    this.button(this.content, 'Annuler · aucun coût', () => this.close(), null, true);
+  }
+  private enclosureName(s: GameState, id: string): string { return `Enclos ${s.buildings.filter(b => b.kind === 'enclosure').findIndex(b => b.id === id) + 1}`; }
+  private rabbitCard(s: GameState, id: string): HTMLElement {
+    const r = s.rabbits.find(r => r.id === id)!;
+    return this.card(SPECIES[r.species].name, `Affection ${r.affection} · ${rabbitIncome(r.affection)} pattes / h`, r.species);
+  }
+  private renderBuilding(s: GameState, id: string): void {
+    const b = s.buildings.find(b => b.id === id); if (!b) { this.close(); return; }
+    this.title.textContent = b.kind === 'enclosure' ? this.enclosureName(s, id) : BUILDING_NAMES[b.kind];
+    if (b.kind === 'enclosure') {
+      const residents = occupants(s, id), income = incomeWhole(b.incomeUnits);
+      this.content.append(node('p', `${residents.length} / 3 places · ${income} / 600 pattes stockées`));
+      if (income >= BALANCE.enclosureCap) this.content.append(node('p', 'Enclos plein de pattes : récoltez pour relancer les revenus.', 'reason'));
+      this.button(this.content, `Récolter ${income} pattes`, () => this.execute({type: 'collectIncome', id}, value => `+ ${value} pattes`), income < 1 ? 'Il faut au moins une patte entière.' : null);
+      for (const r of residents) { const card = this.rabbitCard(s, r.id); this.button(card, 'Voir ce lapin', () => this.open({kind: 'rabbit', id: r.id}), null, true); this.content.append(card); }
+      if (residents.length < 3) this.button(this.content, 'Acheter un lapin', () => this.open({kind: 'shop', tab: 'rabbits'}), null, true);
+    } else if (b.kind === 'farm') {
+      if (b.order) {
+        const recipe = ORDERS[b.order.recipe]; this.content.append(node('p', `${recipe.grass} herbes en production.`)); this.timer(b.order.startedAt, b.order.endsAt);
+        this.acceleration(s, id, 'order');
+        this.button(this.content, `Récolter ${recipe.grass} herbes`, () => this.execute({type: 'collectOrder', id}, value => `+ ${value} herbes`), b.order.endsAt > this.now() ? 'Production en cours.' : null);
+      } else for (const recipe of Object.keys(ORDERS) as OrderId[]) {
+        const order = ORDERS[recipe], card = this.card(`${order.grass} herbes`, `${order.duration / 60_000} minutes · une seule récolte`);
+        this.button(card, `Produire · ${order.cost} pattes`, () => this.execute({type: 'startOrder', id, recipe}, 'Production d’herbe lancée.'), moneyReason(s, order.cost));
+        this.complement(card, s, {type: 'startOrder', id, recipe}, `Produire ${order.grass} herbes`, 'Production d’herbe lancée.'); this.content.append(card);
+      }
+    } else if (b.kind === 'nest') this.renderNest(s, id);
+    else this.renderNursery(s);
+    this.button(this.content, 'Déplacer ce bâtiment', () => this.beginPlacement(b.kind, id), null, true);
+  }
+  private renderRabbit(s: GameState, id: string): void {
+    const r = s.rabbits.find(r => r.id === id); if (!r) { this.close(); return; }
+    const species = SPECIES[r.species]; this.title.textContent = species.name;
+    this.content.append(avatar(r.species, true), node('p', `${species.types.join(' + ')} · ${species.rarity === 'common' ? 'Commun' : 'Peu commun'}`, 'badge'),
+      node('p', `Affection ${r.affection} / 20 · ${rabbitIncome(r.affection)} pattes / h`), node('p', this.enclosureName(s, r.enclosureId)));
+    const cost = BALANCE.foodMultiplier * r.affection;
+    if (r.affection < 20) this.content.append(node('p', `Après une nourriture : affection ${r.affection + 1}, revenu ${rabbitIncome(r.affection + 1)} pattes / h.`, 'small'));
+    this.button(this.content, `Nourrir · ${cost} herbes`, () => this.execute({type: 'feed', id}, `Affection ${r.affection + 1} !`, () => this.scene.reactToFeed(id)), r.affection >= 20 ? REFUSALS.MAX_AFFECTION : s.grass < cost ? REFUSALS.NOT_ENOUGH_GRASS : null).dataset.focus = 'feed';
+    const hasDestination = s.buildings.some(b => b.kind === 'enclosure' && b.id !== r.enclosureId && occupants(s, b.id).length < 3);
+    this.button(this.content, 'Changer d’enclos', () => this.open({kind: 'moveRabbit', id}), hasDestination ? null : 'Aucun autre enclos avec une place libre.', true);
+    this.button(this.content, 'Confier ce lapin', () => this.confirm('Confier ce lapin ?', 'Ce lapin quittera définitivement votre prairie, sans gain de pattes.', () => this.execute({type: 'release', id}, 'Lapin confié.', () => { this.view = {kind: 'building', id: r.enclosureId}; })), releaseReason(s, id, this.now()), true);
+  }
+  private destinations(s: GameState, choose: (id: string) => void, currentId?: string, price?: number): void {
+    for (const b of s.buildings.filter(b => b.kind === 'enclosure')) {
+      const count = occupants(s, b.id).length;
+      this.button(this.content, `${this.enclosureName(s, b.id)} · ${count}/3${price !== undefined ? ` · acheter ${price} pattes` : ''}`, () => choose(b.id),
+        b.id === currentId ? 'Enclos actuel.' : count >= 3 ? 'Enclos plein.' : price !== undefined ? moneyReason(s, price) : null, true);
+    }
+  }
+  private renderDestinations(s: GameState, id: string): void {
+    const r = s.rabbits.find(r => r.id === id); if (!r) { this.close(); return; }
+    this.title.textContent = 'Changer d’enclos';
+    this.destinations(s, enclosureId => this.execute({type: 'moveRabbit', id, enclosureId}, 'Lapin déplacé.', () => { this.view = {kind: 'rabbit', id}; }), r.enclosureId);
+  }
+  private renderBuyRabbit(s: GameState, species: SpeciesId): void {
+    this.title.textContent = `Accueillir : ${SPECIES[species].name}`; this.content.append(avatar(species, true));
+    for (const enclosure of s.buildings.filter(b => b.kind === 'enclosure')) {
+      const enclosureId = enclosure.id, command: PattesCommand = {type: 'buyRabbit', species, enclosureId};
+      const after = () => { this.view = {kind: 'building' as const, id: enclosureId}; if (!s.discovered.includes(species)) this.discovery(species); };
+      const card = this.card(this.enclosureName(s, enclosureId), `${occupants(s, enclosureId).length}/3 places`);
+      this.button(card, `${this.enclosureName(s, enclosureId)} · ${occupants(s, enclosureId).length}/3 · acheter ${SPECIES[species].price} pattes`, () => this.execute(command, 'Lapin acheté et accueilli.', after),
+        occupants(s, enclosureId).length >= 3 ? 'Enclos plein.' : moneyReason(s, SPECIES[species].price ?? 80));
+      this.complement(card, s, command, `${SPECIES[species].name} → ${this.enclosureName(s, enclosureId)}`, 'Lapin acheté et accueilli.', after);
+      this.content.append(card);
+    }
+  }
+  private renderNest(s: GameState, id: string): void {
+    const nest = s.buildings.find(b => b.id === id)!;
+    if (nest.breeding) {
+      this.content.append(node('p', 'Les parents préparent l’arrivée d’un lapereau. Son espèce sera révélée après sa croissance.'));
+      this.timer(nest.breeding.startedAt, nest.breeding.endsAt);
+      this.acceleration(s, id, 'breeding');
+      if (nest.breeding.endsAt <= this.now()) this.content.append(node('p', 'Le lapereau attend au nid : la nurserie est occupée. Accueillez son occupant pour libérer la place.', 'reason'));
+      return;
+    }
+    if (!s.buildings.some(b => b.kind === 'nursery')) { this.content.append(node('p', 'Construisez une nurserie avant de lancer une reproduction.')); this.button(this.content, 'Ouvrir la boutique', () => this.open({kind: 'shop', tab: 'buildings'})); return; }
+    for (let i = 0; i < 2; i++) if (this.parents[i] && !s.rabbits.some(r => r.id === this.parents[i])) this.parents[i] = null;
+    const selected = this.parents.map(id => s.rabbits.find(r => r.id === id));
+    this.content.append(node('p', `Parent A : ${selected[0] ? SPECIES[selected[0].species].name : 'à choisir'} · Parent B : ${selected[1] ? SPECIES[selected[1].species].name : 'à choisir'}`));
+    this.content.append(node('p', '20 pattes · 20 minutes de reproduction, puis croissance en nurserie.'));
+    if (selected[0] && selected[1]) {
+      const odds = oddsView(s, selected[0].species, selected[1].species);
+      this.content.append(node('p', `Résultats possibles : ${[...new Set(odds.entries.map(e => e.name))].join(', ')}.`));
+      const details = node('details'); details.open = this.oddsOpen; details.append(node('summary', 'Probabilités de cette reproduction'));
+      for (const entry of odds.entries) details.append(node('p', `${entry.name} : ${entry.weight} %`));
+      details.addEventListener('toggle', () => { if (details.isConnected) this.oddsOpen = details.open; }); this.content.append(details);
+      this.content.append(node('p', odds.guaranteed ? 'Cette tentative garantit un hybride encore inconnu.' : odds.eligible ? 'Cette paire est admissible à la garantie.' : 'Cette paire ne fait pas avancer la garantie.', 'badge'));
+    }
+    this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit un hybride inconnu (50/50 s’il y en a deux). Un résultat inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
+    let reason: string | null = selected[0] && selected[1] ? (rabbitAvailability(s, selected[0].id, this.now()) ?? rabbitAvailability(s, selected[1].id, this.now()) ?? moneyReason(s, 20)) : 'Choisissez deux parents différents.';
+    if (this.parents[0] && this.parents[0] === this.parents[1]) reason = REFUSALS.SAME_PARENT;
+    this.button(this.content, 'Lancer la reproduction · 20 pattes', () => {
+      if (this.parents[0] && this.parents[1]) this.execute({type: 'breed', parents: [this.parents[0], this.parents[1]]}, 'Reproduction lancée. Le résultat reste une surprise !');
+    }, reason);
+    if (this.parents[0] && this.parents[1]) this.complement(this.content, s, {type: 'breed', parents: [this.parents[0], this.parents[1]]}, 'Lancer la reproduction', 'Reproduction lancée. Le résultat reste une surprise !');
+    if (s.buildings.some(b => b.baby)) this.content.append(node('p', 'La nurserie est occupée : le prochain lapereau attendra au nid si nécessaire.', 'small'));
+    this.content.append(node('h3', 'Choisir les parents'));
+    for (const r of s.rabbits) {
+      const card = this.rabbitCard(s, r.id); card.append(node('p', `${this.enclosureName(s, r.enclosureId)} · ${rabbitAvailability(s, r.id, this.now()) ?? 'Disponible'}`, 'small'));
+      const actions = node('div', '', 'tabs');
+      for (const slot of [0, 1] as const) this.button(actions, `${this.parents[slot] === r.id ? '✓ ' : ''}Parent ${slot === 0 ? 'A' : 'B'}`, () => { this.parents[slot] = r.id; this.render(); }, rabbitAvailability(s, r.id, this.now()) ?? (this.parents[1 - slot] === r.id ? 'Déjà choisi.' : null), true);
+      card.append(actions); this.content.append(card);
+    }
+  }
+  private renderNursery(s: GameState): void {
+    const view = nurseryView(s, this.now()), baby = s.buildings.find(b => b.kind === 'nursery')?.baby;
+    if (view.stage === 'empty') { this.content.append(node('p', 'La nurserie est libre. Lancez une reproduction dans le nid.')); return; }
+    if (view.stage === 'growing') {
+      this.content.append(avatar(undefined, true), node('p', 'Un petit lapin grandit au chaud… Son espèce reste secrète.'));
+      this.timer(baby!.startedAt, baby!.readyAt);
+      this.acceleration(s, s.buildings.find(b => b.kind === 'nursery')!.id, 'growth'); return;
+    }
+    this.content.append(avatar(view.species, true), node('h3', SPECIES[view.species].name), node('p', 'Votre lapereau est prêt. Choisissez son enclos.'));
+    if (!s.buildings.some(b => b.kind === 'enclosure' && occupants(s, b.id).length < 3)) this.content.append(node('p', 'Tous les enclos sont pleins. Construisez-en un ou confiez un doublon. Le lapereau reste en sécurité ici.', 'reason'));
+    this.destinations(s, enclosureId => {
+      const discovery = !s.discovered.includes(view.species);
+      this.execute({type: 'welcome', enclosureId}, 'Lapereau accueilli !', () => { this.view = {kind: 'building', id: enclosureId}; if (discovery) this.discovery(view.species); });
+    });
+  }
+  private renderCollection(s: GameState): void {
+    this.title.textContent = `Collection · ${s.discovered.length}/5`;
+    for (const entry of collectionView(s)) {
+      const card = this.card(entry.name); card.prepend(avatar(entry.known ? entry.species : undefined));
+      if (entry.known) this.button(card, 'Consulter l’espèce', () => this.open({kind: 'species', species: entry.species}), null, true);
+      else card.append(node('p', 'À découvrir', 'small'));
+      this.content.append(card);
+    }
+  }
+  private renderSpecies(s: GameState, species: SpeciesId): void {
+    if (!s.discovered.includes(species)) { this.view = {kind: 'collection'}; this.renderCollection(s); return; }
+    const info = SPECIES[species]; this.title.textContent = info.name;
+    this.content.append(avatar(species, true), node('p', `${info.types.join(' + ')} · ${info.rarity === 'common' ? 'Commun' : 'Peu commun'}`),
+      node('p', `${s.rabbits.filter(r => r.species === species).length} individu(s) dans la prairie.`), node('p', info.price === null ? 'Obtention : reproduction.' : 'Obtention : boutique ou reproduction.'));
+    this.button(this.content, 'Retour à la collection', () => this.open({kind: 'collection'}), null, true);
+  }
+  private renderExtension(s: GameState): void {
+    this.title.textContent = 'Une prairie plus grande';
+    this.content.append(node('p', 'Débloquez six nouvelles cases. Vos bâtiments et vos lapins restent à leur place.'));
+    this.button(this.content, 'Acheter l’extension · 500 pattes', () => this.execute({type: 'expand'}, 'La prairie s’agrandit !', () => { this.view = null; }), s.expanded ? REFUSALS.ALREADY_EXPANDED : moneyReason(s, 500));
+    this.complement(this.content, s, {type: 'expand'}, 'Acheter l’extension', 'La prairie s’agrandit !', () => { this.view = null; });
+  }
+  private renderHearts(s: GameState): void {
+    this.title.textContent = 'Les cœurs';
+    this.content.append(node('p', `${s.hearts} cœurs disponibles`, 'badge'),
+      node('p', 'Terminez un délai ou complétez les pattes manquantes. Chaque dépense demande votre confirmation. Les cœurs ne remplacent pas l’herbe.'),
+      node('p', 'Vous pouvez développer votre prairie sans cœurs. Aucun achat réel ni publicité.'),
+      node('h3', 'Votre cadeau gratuit'), node('p', `${HEARTS.gift} cœurs à réclamer toutes les ${HEARTS.giftInterval / 3_600_000} heures. Une seule récompense attend, même après plusieurs jours.`));
+    const gift = this.button(this.content, `Réclamer · +${HEARTS.gift} cœurs gratuits`, () => this.execute({type: 'claimHearts'}, `+ ${HEARTS.gift} cœurs gratuits`));
+    gift.className = 'heart-gift'; gift.dataset.giftAt = String(s.nextHeartGiftAt);
+    const wait = node('p', '', 'timer'); wait.dataset.end = String(s.nextHeartGiftAt); this.content.append(wait);
+  }
+  private complement(host: HTMLElement, s: GameState, action: PattesCommand, title: string, success: string, after?: () => void): void {
+    const quote = quoteComplement(s, action, this.now()); if (!quote.ok) return;
+    this.button(host, `Compléter · ${quote.pattes} pattes + ${heartAmount(quote.hearts)}`, () => {
+      this.controller.refresh(); const current = this.controller.getSnapshot().state; if (!current) return;
+      const fresh = quoteComplement(current, action, this.now());
+      if (!fresh.ok) { this.notice(REFUSALS[fresh.reason]); return; }
+      if (current.hearts < fresh.hearts) { this.notice(REFUSALS.NOT_ENOUGH_HEARTS); return; }
+      this.confirm(title, `Paiement : ${fresh.pattes} pattes + ${heartAmount(fresh.hearts)} pour couvrir ${fresh.missing} pattes manquantes, sans monnaie supplémentaire. Solde disponible : ${current.pattes} pattes et ${current.hearts} cœurs.`,
+        () => this.execute({type: 'payWithHearts', action, maxHearts: fresh.hearts, maxPattes: fresh.pattes}, success, after));
+    }, s.hearts < quote.hearts ? REFUSALS.NOT_ENOUGH_HEARTS : null, true).classList.add('heart-spend');
+  }
+  private acceleration(s: GameState, id: string, stage: TimedStage): void {
+    const quote = quoteAcceleration(s, id, stage, this.now());
+    if (!quote.ok) {
+      if (quote.reason === 'CAPACITY_FULL') this.content.append(node('p', 'Libérez une place en enclos pour proposer une accélération de croissance.', 'reason'));
+      return;
+    }
+    const host = node('div'); host.dataset.accelerateEnd = String(quote.endsAt); this.content.append(host);
+    this.button(host, `Terminer · ${heartAmount(quote.hearts)}`, () => {
+      this.controller.refresh(); const current = this.controller.getSnapshot().state; if (!current) return;
+      const fresh = quoteAcceleration(current, id, stage, this.now());
+      if (!fresh.ok) { this.notice(REFUSALS[fresh.reason]); return; }
+      if (fresh.jobKey !== quote.jobKey) { this.notice(REFUSALS.STALE_ACTION); return; }
+      if (current.hearts < fresh.hearts) { this.notice(REFUSALS.NOT_ENOUGH_HEARTS); return; }
+      const names = {order: 'cette production', breeding: 'cette reproduction', growth: 'cette croissance'};
+      const effect = stage === 'order' ? 'La récolte reste manuelle.' : stage === 'growth' ? 'L’accueil reste manuel.' :
+        current.buildings.some(b => b.baby) ? 'La nurserie est occupée : le résultat attendra au nid.' : 'La croissance commencera ensuite en nurserie.';
+      this.confirm(`Terminer ${names[stage]} ?`, `${heartAmount(fresh.hearts)} maximum · solde : ${current.hearts} cœurs. Le prix sera recalculé à la confirmation et pourra diminuer, jamais augmenter. ${effect}`,
+        () => this.execute({type: 'accelerate', id, stage, jobKey: fresh.jobKey, maxHearts: fresh.hearts}, value => `Étape terminée · ${heartAmount(Number(value))} dépensé(s).`));
+    }, s.hearts < quote.hearts ? REFUSALS.NOT_ENOUGH_HEARTS : null, true).classList.add('heart-spend');
+  }
+  private timer(start: number, end: number): void {
+    const progress = node('progress'); progress.max = 1; progress.dataset.start = String(start); progress.dataset.end = String(end);
+    const label = node('p', '', 'timer'); label.dataset.end = String(end); this.content.append(progress, label);
+  }
+  private updateTimers(): void {
+    for (const gift of this.content.querySelectorAll<HTMLButtonElement>('[data-gift-at]')) gift.disabled = this.now() < Number(gift.dataset.giftAt);
+    for (const host of this.content.querySelectorAll<HTMLElement>('[data-accelerate-end]')) {
+      const remaining = Number(host.dataset.accelerateEnd) - this.now(); host.hidden = remaining <= 0;
+      const button = host.querySelector('button')!;
+      button.textContent = `Terminer · ${heartAmount(accelerationCost(remaining))}`;
+      button.disabled = (this.snapshot.state?.hearts ?? 0) < accelerationCost(remaining);
+      const reason = host.querySelector<HTMLElement>('.reason'); if (reason) reason.hidden = !button.disabled;
+    }
+    for (const label of this.content.querySelectorAll<HTMLElement>('.timer')) label.textContent = timeLeft(Number(label.dataset.end), this.now());
+    for (const progress of this.content.querySelectorAll<HTMLProgressElement>('progress')) progress.value = this.now() >= Number(progress.dataset.end) ? 1 : Math.max(0, Math.min(1, (this.now() - Number(progress.dataset.start)) / Math.max(1, Number(progress.dataset.end) - Number(progress.dataset.start))));
+  }
+  private confirm(title: string, message: string, action: () => void): void {
+    const generation = ++this.confirmationGeneration; let used = false;
+    this.dialog.replaceChildren(node('h2', title), node('p', message));
+    this.button(this.dialog, 'Confirmer', () => {
+      if (used || !this.dialog.open || generation !== this.confirmationGeneration) return;
+      used = true; this.dialog.close(); action();
+    }); this.button(this.dialog, 'Annuler', () => this.dialog.close(), null, true); this.dialog.showModal();
+  }
+  private discovery(species: SpeciesId): void {
+    const info = SPECIES[species]; this.dialog.replaceChildren(node('h2', 'Nouvelle découverte !'), avatar(species, true), node('h3', info.name), node('p', `${info.types.join(' + ')} · ${info.rarity === 'common' ? 'Commun' : 'Peu commun'}`));
+    this.button(this.dialog, 'Bienvenue dans la prairie', () => this.dialog.close()); this.dialog.showModal();
+  }
+  private renderTutorial(): void {
+    const s = this.snapshot.state, preferences = this.preferences.value;
+    this.tutorial.replaceChildren(); this.tutorial.hidden = !s || !!this.view || !preferences.tutorial || preferences.tutorialDone;
+    if (this.tutorial.hidden || !s) return;
+    const step = tutorialStep(s, preferences.intro);
+    this.tutorial.append(node('p', step.text));
+    this.button(this.tutorial, step.done ? 'Terminer' : !preferences.intro ? 'Commencer' : 'Me guider', () => {
+      if (step.done) { this.preferences.set({tutorialDone: true}); this.renderTutorial(); }
+      else if (!preferences.intro) { this.preferences.set({intro: true}); this.renderTutorial(); }
+      else if (step.rabbitId) this.open({kind: 'rabbit', id: step.rabbitId});
+      else if (step.building) {
+        const existing = s.buildings.find(b => b.kind === step.building);
+        this.open(existing ? {kind: 'building', id: existing.id} : {kind: 'shop', tab: 'buildings'});
+      }
+    });
+    this.button(this.tutorial, 'Masquer', () => { this.preferences.set({tutorial: false}); this.renderPreferences(); this.renderTutorial(); }, null, true);
+  }
+  dispose(): void { this.confirmationGeneration++; this.unsubscribe(); this.abort.abort(); cancelAnimationFrame(this.frame); clearTimeout(this.toastTimer); this.sounds.dispose(); }
+}

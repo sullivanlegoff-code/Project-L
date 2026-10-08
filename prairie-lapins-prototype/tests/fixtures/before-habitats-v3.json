@@ -1,0 +1,107 @@
+{
+  "version": 3,
+  "lastSimulatedAt": 1791374400017,
+  "nextId": 8,
+  "pattes": 4370,
+  "grass": 196,
+  "expanded": true,
+  "buildings": [
+    {
+      "id": "building-1",
+      "kind": "enclosure",
+      "x": 0,
+      "y": 0,
+      "incomeUnits": 476,
+      "order": null,
+      "breeding": null,
+      "baby": null
+    },
+    {
+      "id": "building-4",
+      "kind": "nest",
+      "x": 1,
+      "y": 0,
+      "incomeUnits": 0,
+      "order": null,
+      "breeding": {
+        "parents": [
+          "rabbit-2",
+          "rabbit-3"
+        ],
+        "startedAt": 1791374400017,
+        "endsAt": 1791375600017,
+        "birth": {
+          "id": "birth-7",
+          "species": "brumelin",
+          "guaranteed": true,
+          "reservedDiscovery": true
+        }
+      },
+      "baby": null
+    },
+    {
+      "id": "building-5",
+      "kind": "nursery",
+      "x": 2,
+      "y": 0,
+      "incomeUnits": 0,
+      "order": null,
+      "breeding": null,
+      "baby": null
+    },
+    {
+      "id": "building-6",
+      "kind": "farm",
+      "x": 0,
+      "y": 1,
+      "incomeUnits": 0,
+      "order": null,
+      "breeding": null,
+      "baby": null
+    }
+  ],
+  "rabbits": [
+    {
+      "id": "rabbit-2",
+      "species": "paille",
+      "affection": 2,
+      "enclosureId": "building-1"
+    },
+    {
+      "id": "rabbit-3",
+      "species": "neige",
+      "affection": 2,
+      "enclosureId": "building-1"
+    }
+  ],
+  "discovered": [
+    "paille",
+    "neige"
+  ],
+  "pityFailures": 0,
+  "hearts": 7,
+  "nextHeartGiftAt": 1791460800000,
+  "missions": {
+    "completed": [
+      "cozy-nest",
+      "welcome-babies",
+      "first-farm",
+      "bigger-meadow"
+    ],
+    "claimed": [
+      "bigger-meadow",
+      "cozy-nest"
+    ],
+    "daily": {
+      "referenceAt": 1791374400000,
+      "cycleIndex": 0,
+      "progress": {
+        "collect-pattes": 0,
+        "collect-grass": 0,
+        "gain-affection": 2
+      },
+      "claimed": [],
+      "bonusClaimed": false
+    }
+  }
+}

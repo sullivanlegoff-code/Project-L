@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "lastSimulatedAt": 1791374400017,
+  "nextId": 7,
+  "pattes": 1800,
+  "grass": 6,
+  "expanded": false,
+  "buildings": [
+    {
+      "id": "building-1",
+      "kind": "enclosure",
+      "x": 0,
+      "y": 0,
+      "incomeUnits": 476,
+      "order": null,
+      "breeding": null,
+      "baby": null
+    },
+    {
+      "id": "building-4",
+      "kind": "nest",
+      "x": 1,
+      "y": 0,
+      "incomeUnits": 0,
+      "order": null,
+      "breeding": {
+        "parents": [
+          "rabbit-2",
+          "rabbit-3"
+        ],
+        "startedAt": 1791374400017,
+        "endsAt": 1791375600017,
+        "birth": {
+          "id": "birth-6",
+          "species": "brumelin",
+          "guaranteed": true,
+          "reservedDiscovery": true
+        }
+      },
+      "baby": null
+    },
+    {
+      "id": "building-5",
+      "kind": "nursery",
+      "x": 2,
+      "y": 0,
+      "incomeUnits": 0,
+      "order": null,
+      "breeding": null,
+      "baby": null
+    }
+  ],
+  "rabbits": [
+    {
+      "id": "rabbit-2",
+      "species": "paille",
+      "affection": 2,
+      "enclosureId": "building-1"
+    },
+    {
+      "id": "rabbit-3",
+      "species": "neige",
+      "affection": 2,
+      "enclosureId": "building-1"
+    }
+  ],
+  "discovered": [
+    "paille",
+    "neige"
+  ],
+  "pityFailures": 0,
+  "hearts": 7,
+  "nextHeartGiftAt": 1791460800000
+}

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#b0d18b"><title>Prairie de lapins</title></head>
+<body>
+  <main id="app">
+    <div id="game" aria-label="Prairie : glissez pour déplacer la vue, pincez pour zoomer, touchez pour sélectionner"></div>
+    <header id="hud">
+      <h1>Prairie de lapins</h1>
+      <div class="resource" aria-label="Pattes"><span aria-hidden="true">✿</span> <strong id="pattes">—</strong><small>pattes</small></div>
+      <div class="resource grass" aria-label="Herbe"><span aria-hidden="true">♧</span> <strong id="grass">—</strong><small>herbes</small></div>
+      <button id="open-hearts" type="button" class="resource hearts" aria-label="Cœurs : solde et récompense">
+        <svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 28C12 24 3 19 3 11C3 3 13 2 16 9C21 1 30 6 29 13C28 20 20 25 16 28Z" fill="#ba657e"/><path d="M8 11Q8 7 12 9" fill="none" stroke="#ffeaf0" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <strong id="hearts">—</strong><small>cœurs</small>
+      </button>
+      <nav aria-label="Navigation principale">
+        <button id="recenter-view" type="button" class="icon secondary" aria-label="Recentrer la vue" title="Recentrer la vue">⌖</button>
+        <button id="open-shop" type="button">Boutique</button>
+        <button id="open-collection" type="button">Collection</button>
+        <button id="open-settings" type="button">Paramètres</button>
+      </nav>
+    </header>
+    <button id="save-warning" type="button" hidden>Vérifier la sauvegarde</button>
+    <div id="toast" role="status" hidden></div>
+    <span id="dev-badge" hidden>Mode test · partie séparée</span>
+    <aside id="game-panel" aria-labelledby="panel-title" hidden>
+      <div class="panel-header"><h2 id="panel-title"></h2><button id="close-panel" type="button" class="icon secondary" aria-label="Fermer le panneau">×</button></div>
+      <div id="panel-content" class="panel-scroll"></div>
+      <section id="settings-content" class="panel-scroll" hidden>
+        <div class="tabs"><button id="sound-toggle" class="secondary" type="button">Sons</button><button id="tutorial-toggle" class="secondary" type="button">Tutoriel</button></div>
+        <h3>Sauvegarde</h3>
+        <p id="save-status" role="status">Chargement de la partie…</p>
+        <p id="saved-at" class="small"></p>
+        <p class="small"><strong id="rabbits">—</strong> lapins · <strong id="stored-income">—</strong> pattes en attente dans les enclos.</p>
+        <div class="actions">
+          <button id="export-game" type="button">Exporter ma partie</button>
+          <button id="import-game" type="button" class="secondary">Importer une partie</button>
+          <button id="retry-save" type="button" hidden>Réessayer la sauvegarde</button>
+          <button id="restart-game" type="button" class="secondary">Recommencer avec confirmation</button>
+          <button id="export-unreadable" type="button" class="secondary" hidden>Exporter le contenu protégé</button>
+          <button id="download-fallback" type="button" hidden>Télécharger le JSON</button>
+        </div>
+        <input id="import-file" type="file" accept=".json,application/json" hidden>
+        <p id="save-notice" role="status"></p>
+        <p class="small">La sauvegarde locale peut être effacée par le navigateur. Gardez un export de secours. Changer de domaine, de port ou passer à un site HTTPS nécessite un export/import.</p>
+        <section id="devtools" hidden aria-label="Outils de développement"></section>
+      </section>
+    </aside>
+    <section id="tutorial" aria-label="Tutoriel facultatif" hidden></section>
+    <div id="portrait-notice"><div><span class="rotate-symbol" aria-hidden="true">↻</span><h2>Un peu plus de place pour vos lapins</h2><p>Tournez le téléphone en paysage.<br>Votre partie reste conservée.</p><button id="continue-portrait" type="button">Continuer en portrait</button></div></div>
+  </main>
+  <dialog id="game-dialog" aria-label="Confirmation ou découverte"></dialog>
+  <dialog id="import-dialog" aria-labelledby="import-title" aria-describedby="import-summary import-warning">
+    <h2 id="import-title">Importer cette partie ?</h2>
+    <p id="import-summary"></p>
+    <p id="import-warning">Cet import remplacera votre progression actuelle après enregistrement réussi. Vous pouvez exporter votre partie avant de continuer.</p>
+    <div class="actions"><button id="export-before-import" type="button" class="secondary">Exporter la partie actuelle d’abord</button><button id="confirm-import" type="button">Confirmer le remplacement</button><button id="cancel-import" type="button" class="secondary">Annuler</button></div>
+    <p id="import-error" role="alert"></p>
+  </dialog>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

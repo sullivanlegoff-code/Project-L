@@ -1,0 +1,129 @@
+import {GameController, type ControllerIssue, type Snapshot} from '../application/GameController';
+import {HOUR, SPECIES} from '../config/balance';
+import {MAX_JSON_LENGTH} from '../persistence/json';
+import {fileExporter} from './fileExport';
+
+export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
+  INVALID_JSON: 'Ce fichier ne contient pas un JSON lisible.',
+  INVALID_STATE: 'Cette sauvegarde est incohérente ou incomplète.',
+  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1 ou 2.',
+  FILE_TOO_LARGE: 'Le fichier dépasse la limite de 1 000 000 octets pour l’import.',
+  READ_FAILED: 'Le navigateur ne permet pas de lire la sauvegarde. Aucun contenu existant n’a été écrasé.',
+  WRITE_FAILED: 'L’écriture locale a échoué. Vérifiez l’espace disponible et les autorisations du navigateur.',
+  STORAGE_CHANGED: 'La sauvegarde a changé dans un autre onglet ou contrôleur. Les écritures sont bloquées pour la protéger. Exportez cette partie puis rechargez la page.',
+  NO_GAME: 'Aucune partie n’est chargée. Importez un fichier ou confirmez un nouveau départ.',
+  NOT_CONFIRMED: 'Opération annulée : la partie actuelle est conservée.',
+  STALE_IMPORT: 'Cet import n’est plus actif. Sélectionnez à nouveau le fichier.',
+  DISPOSED: 'Cette session est terminée. Rechargez la page.',
+  ENCODING_FAILED: 'La partie ne peut pas être encodée. Elle reste disponible en mémoire.',
+};
+
+export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}): () => void {
+  const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const status = get('save-status'), savedAt = get('saved-at'), notice = get('save-notice');
+  const exportButton = get<HTMLButtonElement>('export-game'), importButton = get<HTMLButtonElement>('import-game');
+  const retry = get<HTMLButtonElement>('retry-save'), restart = get<HTMLButtonElement>('restart-game');
+  const backup = get<HTMLButtonElement>('export-unreadable'), fallback = get<HTMLButtonElement>('download-fallback');
+  const input = get<HTMLInputElement>('import-file');
+  const dialog = get<HTMLDialogElement>('import-dialog'), summary = get('import-summary'), importError = get('import-error');
+  const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
+  const beforeImport = get<HTMLButtonElement>('export-before-import');
+  const exporter = fileExporter();
+  const abort = new AbortController();
+  let importToken: number | null = null;
+  let readSequence = 0;
+  let alive = true;
+  let pendingDownload: {json: string; filename: string} | null = null;
+  const dateFormat = new Intl.DateTimeFormat('fr-FR', {dateStyle: 'short', timeStyle: 'medium'});
+  function say(message: string) { notice.textContent = message; }
+  function closeImport() {
+    readSequence++; importToken = null; controller.cancelImport();
+    if (dialog.open) dialog.close();
+    importError.textContent = '';
+  }
+  const unsubscribe = controller.subscribe((snapshot: Snapshot) => {
+    const {state} = snapshot;
+    get('pattes').textContent = state ? String(state.pattes) : '—';
+    get('hearts').textContent = state ? String(state.hearts) : '—';
+    get('grass').textContent = state ? String(state.grass) : '—';
+    get('rabbits').textContent = state ? String(state.rabbits.length) : '—';
+    get('stored-income').textContent = state ? String(Math.floor(state.buildings.reduce((sum, b) => sum + b.incomeUnits, 0) / HOUR)) : '—';
+    const label = snapshot.status === 'saved' ? 'Partie enregistrée sur cet appareil.' :
+      state ? 'Attention : les dernières modifications ne sont pas sauvegardées. La partie reste en mémoire.' :
+        'Aucune partie chargée. La sauvegarde existante est protégée.';
+    status.textContent = label + (snapshot.issue ? ` ${ERROR_MESSAGES[snapshot.issue]}` : '');
+    status.dataset.status = snapshot.status;
+    savedAt.textContent = snapshot.lastSavedAt === null ? 'Aucune sauvegarde réussie dans cette session.' :
+      `Dernière sauvegarde réussie : ${dateFormat.format(snapshot.lastSavedAt)}.`;
+    exportButton.disabled = !state; beforeImport.disabled = !state;
+    retry.hidden = !['write-error', 'read-error'].includes(snapshot.status);
+    restart.hidden = false;
+    backup.hidden = !snapshot.hasUnreadableBackup;
+  });
+  async function exportCurrent() {
+    const result = controller.exportGame();
+    if (!result.ok) { say(ERROR_MESSAGES[result.reason]); return; }
+    try {
+      const outcome = await exporter.export(result.json, result.filename);
+      if (!alive) return;
+      if (outcome === 'fallback') {
+        pendingDownload = result; fallback.hidden = false;
+        say('Le partage n’a pas pu démarrer. Touchez « Télécharger le JSON » pour utiliser le téléchargement.');
+      } else say(outcome === 'cancelled' ? 'Export annulé. La partie est conservée.' :
+        outcome === 'shared' ? 'Partage effectué. Vérifiez que le fichier est conservé dans Fichiers ou à l’emplacement choisi.' :
+          'Téléchargement demandé. Vérifiez le fichier dans les téléchargements de votre navigateur.');
+    } catch { if (alive) say('L’export n’a pas pu démarrer. La partie est conservée ; vous pouvez réessayer.'); }
+  }
+  const options = {signal: abort.signal};
+  exportButton.addEventListener('click', () => { void exportCurrent(); }, options);
+  beforeImport.addEventListener('click', () => { void exportCurrent(); }, options);
+  fallback.addEventListener('click', () => {
+    if (pendingDownload) {
+      try { exporter.download(pendingDownload.json, pendingDownload.filename); say('Téléchargement demandé. Vérifiez le fichier.'); }
+      catch { say('Le téléchargement a échoué. Vous pouvez réessayer.'); }
+    }
+  }, options);
+  importButton.addEventListener('click', () => { closeImport(); input.value = ''; input.click(); }, options);
+  input.addEventListener('change', () => { void (async () => {
+    const file = input.files?.[0]; if (!file) return;
+    const sequence = ++readSequence;
+    if (file.size > MAX_JSON_LENGTH) { say(ERROR_MESSAGES.FILE_TOO_LARGE); return; }
+    let json: string;
+    try { json = await file.text(); }
+    catch { if (alive && sequence === readSequence) say('Impossible de lire ce fichier. La partie actuelle est conservée.'); return; }
+    if (!alive || sequence !== readSequence) return;
+    const prepared = controller.prepareImport(json, file.size);
+    if (!prepared.ok) { say(ERROR_MESSAGES[prepared.reason]); return; }
+    importToken = prepared.token;
+    const s = prepared.summary;
+    summary.textContent = `${s.pattes} pattes · ${s.grass} herbes · ${s.hearts} cœurs · ${s.rabbits} lapins. Espèces découvertes : ${s.discovered.map(id => SPECIES[id].name).join(', ') || 'aucune'}.`;
+    importError.textContent = ''; dialog.showModal();
+  })(); }, options);
+  confirm.addEventListener('click', () => {
+    if (importToken === null) return;
+    const result = controller.confirmImport(importToken, true);
+    if (!result.ok) { importError.textContent = `${ERROR_MESSAGES[result.reason]} L’import n’a pas remplacé la partie actuelle.`; return; }
+    closeImport(); pendingDownload = null; fallback.hidden = true; onReplacement(); say('Partie importée et enregistrée.');
+  }, options);
+  cancel.addEventListener('click', () => { closeImport(); say('Import annulé. La partie actuelle est conservée.'); }, options);
+  dialog.addEventListener('cancel', event => { event.preventDefault(); closeImport(); say('Import annulé. La partie actuelle est conservée.'); }, options);
+  retry.addEventListener('click', () => {
+    const result = controller.retrySave(); say(result.ok ? 'Sauvegarde réussie.' : ERROR_MESSAGES[result.reason]);
+  }, options);
+  restart.addEventListener('click', () => {
+    const confirmed = window.confirm('Créer une nouvelle partie remplacera la sauvegarde actuelle. Exportez d’abord le contenu protégé si vous souhaitez le conserver. Confirmer le nouveau départ ?');
+    if (!confirmed) { say('Nouveau départ annulé. La sauvegarde est conservée.'); return; }
+    const result = controller.restart(true);
+    if (result.ok) onReplacement();
+    say(result.ok ? 'Nouvelle partie créée et enregistrée.' : `${ERROR_MESSAGES[result.reason]} La sauvegarde précédente est conservée.`);
+  }, options);
+  backup.addEventListener('click', () => {
+    const raw = controller.unreadableBackup();
+    if (raw !== null) void exporter.export(raw, `prairie-lapins-sauvegarde-protegee-${new Date().toISOString().slice(0, 10)}.json`)
+      .then(outcome => { if (alive) {
+        if (outcome === 'fallback') { pendingDownload = {json: raw, filename: 'prairie-lapins-sauvegarde-protegee.json'}; fallback.hidden = false; }
+        say(outcome === 'cancelled' ? 'Export annulé.' : 'Export du contenu protégé demandé. Vérifiez le fichier.');
+      } }).catch(() => { if (alive) say('L’export du contenu protégé a échoué.'); });
+  }, options);
+  return () => { alive = false; closeImport(); abort.abort(); unsubscribe(); exporter.dispose(); };
+}
