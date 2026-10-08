@@ -1,3 +1,7 @@
+# Premier email reçu, lien refusé
+
+9 octobre 2026 : propriétaire confirme réception de l’email réel. À l’ouverture, réponse Supabase `403 / otp_expired` : lien invalide ou expiré. La réception est confirmée par le retour utilisateur ; **session, sauvegarde distante et reprise toujours non validées**. Aucun lien/token transmis ni stocké. Documentation officielle consultée : auth-email-templates, section Email prefetching ; un scanner peut consommer un lien à usage unique, mais cette cause n’est pas établie pour cet essai. Prochain diagnostic : une nouvelle demande après cooldown, ouvrir uniquement le dernier lien une fois dans le navigateur du jeu, puis examiner les logs Auth expurgés si le même refus persiste. Aucun changement de SQL ou de sauvegarde, aucune annonce d’activation normale.
+
 # Variables de preview actives — premier email à tester
 
 9 octobre 2026 : le propriétaire confirme les deux variables publiques GitHub ajoutées. Relance automatique du [workflow 37853991358](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37853991358), Build/Deploy réussis. Contrôle des scripts réellement servis : URL du bon projet et clé publishable présentes dans la preview `df864e1`, bouton d’e-mail de connexion préparé. Aucune valeur de clé ni sauvegarde personnelle publiée dans ce suivi. Jeu normal/laboratoire restent `51e752d`, sans client de comptes.
