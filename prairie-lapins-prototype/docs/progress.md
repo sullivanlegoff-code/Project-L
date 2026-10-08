@@ -1,3 +1,7 @@
+# Lien neuf également refusé — diagnostic Auth nécessaire
+
+9 octobre 2026 : propriétaire rapporte de nouveau `403 / otp_expired` après le nouvel essai demandé. Sa question sur une partie initiale est clarifiée : l’authentification Supabase vérifie le lien avant le retour au jeu, indépendamment de la sauvegarde locale. Aucun troisième envoi demandé. Prochaine étape de diagnostic : journaux Auth hébergés `/logs/auth-logs`, ne recueillir que méthode/chemin sans paramètres, statut et message, jamais token/lien complet. Préchargement du lien par la messagerie reste une hypothèse, pas une cause confirmée. Connexion et sauvegarde distante toujours non validées ; aucune intégration normale.
+
 # Premier email reçu, lien refusé
 
 9 octobre 2026 : propriétaire confirme réception de l’email réel. À l’ouverture, réponse Supabase `403 / otp_expired` : lien invalide ou expiré. La réception est confirmée par le retour utilisateur ; **session, sauvegarde distante et reprise toujours non validées**. Aucun lien/token transmis ni stocké. Documentation officielle consultée : auth-email-templates, section Email prefetching ; un scanner peut consommer un lien à usage unique, mais cette cause n’est pas établie pour cet essai. Prochain diagnostic : une nouvelle demande après cooldown, ouvrir uniquement le dernier lien une fois dans le navigateur du jeu, puis examiner les logs Auth expurgés si le même refus persiste. Aucun changement de SQL ou de sauvegarde, aucune annonce d’activation normale.
