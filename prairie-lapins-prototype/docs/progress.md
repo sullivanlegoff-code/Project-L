@@ -1,3 +1,7 @@
+# Adaptation au template email intégré
+
+9 octobre 2026 : propriétaire confirme **projet prêt**, **SQL réussi** et Email activé. Il signale que le dashboard exige un SMTP personnalisé pour éditer Magic Link. Instructions corrigées : lien par défaut traité par le SDK officiel ; code numérique toujours possible ultérieurement avec SMTP/template. Aucun abonnement ou domaine demandé. Site URL/redirect, variables, reconstruction et email réel restent à configurer/vérifier. SQL réussi est un retour utilisateur, pas une vérification des permissions hébergées. Aucune donnée personnelle ou secret collecté.
+
 # Activation des comptes — contrôle du 9 octobre 2026
 
 Retour exact du joueur : les essais effectués fonctionnent, **sans preuve de connexion réelle ou de configuration Supabase**. Réponse explicite le 9 octobre : **aucun projet Supabase encore créé**.

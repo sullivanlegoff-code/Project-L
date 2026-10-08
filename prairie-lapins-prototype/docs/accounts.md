@@ -12,7 +12,7 @@ Sources : branche `feature/private-cloud-saves`, issue de `production` `1747ea6`
 
 ## Utilisation après activation du backend de test
 
-Dans Paramètres → Compte et sauvegarde : entrer l'email autorisé, **Recevoir un code**, lire l'email puis **Valider le code**. Supabase crée le compte si nécessaire et attribue l'UUID propriétaire. Ni mot de passe maison, ni identité déduite d'une adresse saisie.
+Dans Paramètres → Compte et sauvegarde : entrer l'email autorisé, **Recevoir un e-mail de connexion**, puis ouvrir son lien dans le navigateur du jeu. Avec SMTP/template contenant Token, un code reçu peut aussi être saisi et validé. Le dashboard exige un SMTP personnalisé pour changer le template ; le premier essai gratuit conserve le modèle par défaut. Supabase crée le compte si nécessaire et attribue l'UUID propriétaire. Ni mot de passe maison, ni identité déduite d'une adresse saisie.
 
 La lecture distante réussit et l'état v4 est validé avant tout envoi. Première connexion : aucune partie remplacée automatiquement. Choisir **Conserver et transférer la partie locale**, **Commencer une nouvelle partie**, ou **Charger la partie en ligne** si elle existe, avec confirmation et résumés pattes/herbes/cœurs/lapins/espèces. Une nouvelle installation initiale ne remplace pas automatiquement une partie avancée. Pas de fusion.
 

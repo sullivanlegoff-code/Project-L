@@ -25,9 +25,9 @@ Projet de test → **SQL Editor → New query**. Ouvrir [le fichier SQL figé ut
 
 Vérification : exécution réussie ; **Table Editor**, schéma `public`, contient `prairie_saves` et `prairie_history`. Le schéma `prairie_private` reste privé : ne pas l'ajouter à la liste des schémas exposés de la Data API. Si une erreur apparaît, transmettre uniquement le message d'erreur expurgé de toute valeur personnelle ; ne pas relancer aveuglément un script déjà installé.
 
-## 3. Activer les codes email
+## 3. Activer l’email et configurer le retour au jeu
 
-**Authentication → Sign In / Providers → Email** : activer le fournisseur Email et autoriser les inscriptions. **Authentication → Email Templates → Magic Link** : garder un objet reconnaissable, remplacer le contenu par `<p>Votre code Prairie de lapins : {{ .Token }}</p>`, puis enregistrer. La variable Token est nécessaire : le template par défaut envoie un lien au lieu du code numérique attendu.
+**Authentication → Sign In / Providers → Email** : activer Email et autoriser les inscriptions. Retour réel du propriétaire : le dashboard exige **un SMTP personnalisé pour modifier le template**. Ne pas souscrire pour cette étape. Le template par défaut envoie un lien : le client est adapté pour le traiter via le SDK officiel. Le code numérique reste une option ultérieure avec SMTP et template `{{ .Token }}` ; il n’est pas exigé pour le premier essai gratuit.
 
 **Authentication → URL Configuration → Site URL** : `https://sullivanlegoff-code.github.io/Project-L/preview/accounts/`, enregistrer. Vérifier les réglages de validité, cooldown et longueur du code (client 6–10 chiffres). Les menus exacts peuvent évoluer ; les fonctions et template sont confirmés dans [la documentation officielle OTP](https://supabase.com/docs/guides/auth/auth-email-passwordless).
 

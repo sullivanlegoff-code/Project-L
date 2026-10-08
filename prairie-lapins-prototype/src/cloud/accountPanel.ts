@@ -31,14 +31,14 @@ export async function mountAccountPanel(controller:GameController,storage:SaveSt
  const authKey = AUTH_KEY + '.' + project;
  let suppressAuth = false;
  const authStorage = {getItem:(key:string)=>suppressAuth?null:storage.getItem(key)||null,setItem:(key:string,value:string)=>{if(!suppressAuth)storage.setItem(key,value);},removeItem:(key:string)=>storage.setItem(key,'')};
- const client:SupabaseClient=createClient(configuration.url,configuration.key,{auth:{storage:authStorage,storageKey:authKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+ const client:SupabaseClient=createClient(configuration.url,configuration.key,{auth:{storage:authStorage,storageKey:authKey,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  const sync=new SyncCoordinator(controller,storage,new SupabaseGateway(client),policy,replacement,()=>crypto.randomUUID(),scopedStorage(storage,'prairie-lapins.backend.'+project+'.'));
  const abort=new AbortController();let alive=true;let authBusy=false;let emailSent:string|null=null;let epoch=0;
  const identity=document.createElement('p');identity.id='account-identity';host.append(identity);
  const status=document.createElement('p');status.id='account-status';status.setAttribute('role','status');host.append(status);
  const saved=document.createElement('p');saved.id='account-synced-at';saved.className='small';host.append(saved);
  const authNotice=document.createElement('p');authNotice.id='account-notice';authNotice.setAttribute('role','status');host.append(authNotice);
- const login=document.createElement('form');login.innerHTML='<label>Email <input id="account-email" type="email" autocomplete="email" required></label><button id="account-send" type="submit">Recevoir un code</button><label>Code reçu <input id="account-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10"></label><button id="account-verify" type="button">Valider le code</button>';host.append(login);
+ const login=document.createElement('form');login.innerHTML='<label>Email <input id="account-email" type="email" autocomplete="email" required></label><button id="account-send" type="submit">Recevoir un e-mail de connexion</button><label>Code, si présent dans l’e-mail <input id="account-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10"></label><button id="account-verify" type="button">Valider le code</button>';host.append(login);
  const email=login.querySelector<HTMLInputElement>('#account-email')!,code=login.querySelector<HTMLInputElement>('#account-code')!;
  const send=login.querySelector<HTMLButtonElement>('#account-send')!,verify=login.querySelector<HTMLButtonElement>('#account-verify')!;
  const choices=document.createElement('div');choices.id='account-choices';host.append(choices);
@@ -80,9 +80,9 @@ export async function mountAccountPanel(controller:GameController,storage:SaveSt
  login.addEventListener('submit',event=>{event.preventDefault();void (async()=>{
   if(authBusy||!email.validity.valid)return;authBusy=true;send.disabled=true;verify.disabled=true;email.disabled=true;
   const address=email.value.trim();const generation=epoch;
-  let error:{status?:number;code?:string}|null=null;try {error=(await client.auth.signInWithOtp({email:address,options:{shouldCreateUser:true}})).error;}catch{error={};}
+  let error:{status?:number;code?:string}|null=null;try {error=(await client.auth.signInWithOtp({email:address,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}})).error;}catch{error={};}
   if(alive){authBusy=false;send.disabled=false;verify.disabled=false;email.disabled=false;}
-  if(alive&&generation===epoch){authBusy=false;send.disabled=false;verify.disabled=false;email.disabled=false;emailSent=error?null:address;authNotice.textContent=error?authMessage(error):'Code demandé. Vérifiez votre boîte email et vos indésirables, puis saisissez le code.';}
+  if(alive&&generation===epoch){authBusy=false;send.disabled=false;verify.disabled=false;email.disabled=false;emailSent=error?null:address;authNotice.textContent=error?authMessage(error):'E-mail demandé. Ouvrez son lien de connexion dans ce navigateur. Si le message contient un code, vous pouvez aussi le saisir ici. Vérifiez également les indésirables.';}
  })();},options);
  verify.addEventListener('click',()=>{void (async()=>{
   if(authBusy||!emailSent||!/^[0-9]{6,10}$/.test(code.value.trim())){authNotice.textContent='Demandez un code puis saisissez les chiffres reçus.';return;}
