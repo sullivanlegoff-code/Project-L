@@ -10,6 +10,14 @@ Validation : **414 tests / 15 fichiers**, TypeScript et builds normal, laboratoi
 
 # Consolidation et première passe visuelle — 8 octobre 2026
 
+## Prévisualisation publiée et HTTPS contrôlé
+
+Déploiement [37817000453](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37817000453) réussi. Jeu normal et laboratoire : révision **166700f**, sources de jeu de **1747ea6** conservées ; seules publication et documentation changent. Preview : source figée **608f49a**, à [l’adresse publique séparée](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/). Les trois `build-revision.txt` répondent 200 et portent ces SHA exacts. Un seul artefact contient les trois routes ; les variables Supabase publiques ne concernent que la preview. `production` n’intègre ni SDK ni client de comptes.
+
+Trois parcours Chromium sur les adresses réelles ont réussi : huit contrôles normaux, sept groupes laboratoire et deux groupes preview/auth/isolation. Aucune erreur JavaScript, requête de compte ou modification de la clé témoin de session normale durant les opérations de preview/laboratoire ; imports/exports volontaires et rechargements conservés. Les profils sont jetables et les sauvegardes fictives. Rapports locaux : `/workspace/artifacts/accounts-normal-https/`, `/workspace/artifacts/accounts-laboratory-https/`, `/workspace/artifacts/accounts-preview-https/`. TLS validé par curl ; Chromium utilise uniquement une empreinte temporaire du certificat du site derrière le proxy, sans ajout au magasin de confiance. Pas d’essai Safari physique de cette fonctionnalité ni de compte Supabase réel. Les comptes restent inactifs, avec information de stockage local explicite.
+
+[Brouillon de PR nº1](https://github.com/sullivanlegoff-code/Project-L/pull/1) pour revue ; ne pas fusionner le client de comptes avant configuration et essais hébergés. Cette branche reprend les changements de publication de production pour éviter un conflit de revue, sans déployer le client normal expérimental. Retour complet avant preview : `1747ea6` ; retour au déploiement incluant preview : `166700f`.
+
 ## Laboratoire publié — HTTPS vérifié
 
 Retour reçu : le jeu HTTPS fonctionne sur l’iPhone du joueur, **ordinateur éteint**. Ce retour confirme cet essai ; aucun test détaillé supplémentaire ni essai du laboratoire sur iPhone n’est inventé.

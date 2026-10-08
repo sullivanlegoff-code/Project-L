@@ -4,9 +4,9 @@ Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des so
 
 **Retour iPhone reçu le 8 octobre 2026 : « tout fonctionne bien pendant mon essai ».** Aucun détail de scénario n'a été communiqué ; ce retour est consigné sans élargir ce qui a été testé.
 
-## Comptes : prévisualisation préparée, backend non activé
+## Comptes : prévisualisation publiée, backend non activé
 
-Branche `feature/private-cloud-saves` depuis `production` `1747ea6`. Auth email OTP Supabase et sauvegardes privées avec révisions, conflits, historique et caches séparés sont implémentés ; **aucun email réel ni backend géré disponible n’a encore été vérifié**. Le jeu publié reste local et opérationnel. 414 tests réussis, TypeScript et trois builds. [Guide comptes](docs/accounts.md), [configuration externe exacte](backend/README.md). Le joueur confirme également que **jeu normal et laboratoire fonctionnent pendant son essai iPhone**, sans détails de scénarios supplémentaires.
+Branche `feature/private-cloud-saves` depuis `production` `1747ea6`. Auth email OTP Supabase et sauvegardes privées avec révisions, conflits, historique et caches séparés sont implémentés ; **aucun email réel ni backend géré disponible n’a encore été vérifié**. Le jeu publié reste local et opérationnel. [Preview distincte](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/) : source `608f49a`, jeu/laboratoire `166700f`. Trois parcours Chromium HTTPS validés. 414 tests réussis, TypeScript et trois builds. [Guide comptes](docs/accounts.md), [configuration externe exacte](backend/README.md). Le joueur confirme également que **jeu normal et laboratoire fonctionnent pendant son essai iPhone**, sans détails de scénarios supplémentaires.
 
 ## Publication HTTPS
 
