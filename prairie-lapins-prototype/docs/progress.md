@@ -1,3 +1,9 @@
+# Pause des emails et contrôle hébergé anonyme
+
+9 octobre 2026 : propriétaire confirme correction de Site URL/Redirect URLs, puis nouvelle demande refusée par limite d’envoi/fréquence. Interface jusque-là regroupait ces causes ; message de quota email séparé du cooldown générique, avec wording lien plutôt que code. Quota exact confirmé par le propriétaire dans Authentication → Rate Limits : **2 emails/heure** pour le projet. Pause proposée d’une heure sans nouvelles demandes, sans changer de réglage. Aucun nouvel email automatiquement envoyé.
+
+Contrôle hébergé anonyme préparé pour GitHub Actions, car le cloud direct reste bloqué au proxy : Auth settings, SELECT état/historique refusés, RPC/INSERT anonymes refusés, schéma privé non exposé. Corps d’INSERT volontairement invalide et sans partie réelle ; aucun email, secret admin ou session utilisés. Ces tests ne prouvent pas les permissions entre deux propriétaires ni une synchronisation authentifiée. Production normale conserve son code de jeu ; aucun compte normal activé.
+
 # Lien neuf également refusé — diagnostic Auth nécessaire
 
 9 octobre 2026 : propriétaire rapporte de nouveau `403 / otp_expired` après le nouvel essai demandé. Sa question sur une partie initiale est clarifiée : l’authentification Supabase vérifie le lien avant le retour au jeu, indépendamment de la sauvegarde locale. Aucun troisième envoi demandé. Prochaine étape de diagnostic : journaux Auth hébergés `/logs/auth-logs`, ne recueillir que méthode/chemin sans paramètres, statut et message, jamais token/lien complet. Préchargement du lien par la messagerie reste une hypothèse, pas une cause confirmée. Connexion et sauvegarde distante toujours non validées ; aucune intégration normale.

@@ -11,7 +11,8 @@ import {scopedStorage} from '../persistence/scopedStorage';
 
 const summary=(state:GameState)=>`${state.pattes} pattes · ${state.grass} herbes · ${state.hearts} cœurs · ${state.rabbits.length} lapins. Espèces : ${state.discovered.map(id=>SPECIES[id].name).join(', ')||'aucune'}.`;
 export function authMessage(error:{status?:number;code?:string}):string {
- if(error.status===429||['over_email_send_rate_limit','over_request_rate_limit'].includes(error.code??''))return 'Trop de demandes. Attendez avant de demander un nouveau code.';
+ if(error.code==='over_email_send_rate_limit')return 'La limite d’envoi d’e-mails du service est atteinte. Attendez le renouvellement du quota avant de demander un nouveau lien.';
+ if(error.status===429||error.code==='over_request_rate_limit')return 'Trop de demandes. Attendez avant de demander un nouveau lien.';
  if(['otp_expired','otp_disabled','invalid_credentials'].includes(error.code??''))return 'Code incorrect ou expiré. Vérifiez-le ou demandez un nouveau code.';
  if(error.code==='email_address_not_authorized')return 'Cette adresse n’est pas encore autorisée à recevoir un code. Contactez le responsable du jeu.';
  if(error.code==='email_address_invalid')return 'Vérifiez votre adresse email.';
