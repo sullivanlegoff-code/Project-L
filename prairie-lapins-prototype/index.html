@@ -23,11 +23,13 @@
     <button id="save-warning" type="button" hidden>Vérifier la sauvegarde</button>
     <div id="toast" role="status" hidden></div>
     <span id="dev-badge" hidden>MODE TEST — PARTIE SÉPARÉE</span>
+    <span id="preview-badge" hidden>PRÉVISUALISATION — PARTIE SÉPARÉE <a href="/Project-L/">Retour au jeu normal</a></span>
     <aside id="game-panel" aria-labelledby="panel-title" hidden>
       <div class="panel-header"><h2 id="panel-title"></h2><button id="close-panel" type="button" class="icon secondary" aria-label="Fermer le panneau">×</button></div>
       <div id="panel-content" class="panel-scroll"></div>
       <section id="settings-content" class="panel-scroll" hidden>
         <div class="tabs"><button id="sound-toggle" class="secondary" type="button">Sons</button><button id="tutorial-toggle" class="secondary" type="button">Tutoriel</button></div>
+        <section id="account-content" hidden></section>
         <h3>Sauvegarde</h3>
         <p id="save-status" role="status">Chargement de la partie…</p>
         <p id="saved-at" class="small"></p>

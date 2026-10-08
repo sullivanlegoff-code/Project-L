@@ -18,7 +18,7 @@ export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   ENCODING_FAILED: 'La partie ne peut pas être encodée. Elle reste disponible en mémoire.',
 };
 
-export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}, environment: {test: boolean} = {test: false}): () => void {
+export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}, environment: {test: boolean; preview?: boolean} = {test: false}): () => void {
   const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const status = get('save-status'), savedAt = get('saved-at'), notice = get('save-notice');
   const exportButton = get<HTMLButtonElement>('export-game'), importButton = get<HTMLButtonElement>('import-game');
@@ -29,7 +29,7 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
   const beforeImport = get<HTMLButtonElement>('export-before-import');
   const exporter = fileExporter();
-  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, 'prairie-lapins-MODE-TEST-') : name;
+  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, 'prairie-lapins-MODE-TEST-') : environment.preview ? name.replace(/^prairie-lapins-/, 'prairie-lapins-PREVISUALISATION-') : name;
   if (environment.test) {
     exportButton.textContent = 'Exporter la partie de test';
     importButton.textContent = 'Importer dans la partie de test';
@@ -41,6 +41,7 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   let readSequence = 0;
   let alive = true;
   let pendingDownload: {json: string; filename: string} | null = null;
+  let sourceGeneration = controller.storageGeneration;
   const dateFormat = new Intl.DateTimeFormat('fr-FR', {dateStyle: 'short', timeStyle: 'medium'});
   function say(message: string) { notice.textContent = message; }
   function closeImport() {
@@ -49,6 +50,9 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     importError.textContent = '';
   }
   const unsubscribe = controller.subscribe((snapshot: Snapshot) => {
+    if (sourceGeneration !== controller.storageGeneration) {
+      sourceGeneration = controller.storageGeneration; closeImport(); pendingDownload = null; fallback.hidden = true;
+    }
     const {state} = snapshot;
     get('pattes').textContent = state ? String(state.pattes) : '—';
     get('hearts').textContent = state ? String(state.hearts) : '—';
