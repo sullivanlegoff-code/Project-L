@@ -6,6 +6,10 @@
 
 Sources : branche `feature/private-cloud-saves`, issue de `production` `1747ea6`. Le laboratoire `/dev/` garde ses outils et son interdiction d'accès aux services de comptes. Le jeu normal publié reste celui d'avant les comptes jusqu'à la validation hébergée. Chaque route possède `build-revision.txt` et sa version dans les paramètres.
 
+## Activation accompagnée et passage au jeu normal
+
+[Guide par petites étapes](accounts-activation.md), mis à jour le 9 octobre 2026 après confirmation qu’aucun projet Supabase n’est créé. Choix prévu : projet test pour la preview, projet distinct pour la production, dans les quotas Free disponibles. Les comptes/sessions ne passent pas automatiquement entre ces projets ; une progression de preview à conserver nécessitera un export/import volontaire. Partie invitée normale et données de test restent séparées.
+
 ## Utilisation après activation du backend de test
 
 Dans Paramètres → Compte et sauvegarde : entrer l'email autorisé, **Recevoir un code**, lire l'email puis **Valider le code**. Supabase crée le compte si nécessaire et attribue l'UUID propriétaire. Ni mot de passe maison, ni identité déduite d'une adresse saisie.
