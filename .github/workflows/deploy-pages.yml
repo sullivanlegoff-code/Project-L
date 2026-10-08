@@ -43,7 +43,7 @@ jobs:
       - name: Lire les sources figées de la prévisualisation des comptes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: df864e11a14badae0806714a4fb71be95d5067db
+          ref: 3e70d9e8cbe9228c63c73db007fff199199d6470
           path: accounts-preview-source
           persist-credentials: false
       - name: Installer et tester la prévisualisation séparée
@@ -55,11 +55,12 @@ jobs:
       - name: Construire la prévisualisation avec sa propre révision
         working-directory: accounts-preview-source/prairie-lapins-prototype
         env:
-          VITE_BUILD_REVISION: df864e11a14badae0806714a4fb71be95d5067db
+          VITE_BUILD_REVISION: 3e70d9e8cbe9228c63c73db007fff199199d6470
           # Public browser settings only, and ONLY for the separate preview.
           VITE_SUPABASE_URL: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
         run: |
+          node scripts/check-cloud-backend.mjs
           npm run build:account-preview -- --outDir "$RUNNER_TEMP/prairie-pages/preview/accounts" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/accounts/build-revision.txt"
           node scripts/verify-production.mjs "$RUNNER_TEMP/prairie-pages/preview/accounts" /Project-L/preview/accounts/
