@@ -5,13 +5,18 @@ import {drawHabitat} from './habitatArt';
 import {rabbitOffset, rabbitPosition, rabbitHitPoint, rabbitHit} from './rabbitLayout';
 import {habitatStats, habitatName, terrainWidth, visibleColumns, nextExtension} from '../simulation/habitats';
 import {HOUR} from '../config/balance';
-import type {GameState} from '../state/types';
+import type {DecorationLocation, GameState} from '../state/types';
+import {DECORATIONS, DECORATION_IDS, FINE_GRID} from '../config/decorations';
+import {decorationPlacementReason, decorationsInCell, footprint} from '../simulation/decorations';
+import {decorationSvg, decorationTexture} from './decorationArt';
 import {MeadowCamera, gridCell, gridPoint, type Point} from '../ui/gestures';
 import {BUILDING_NAMES, type Placement} from '../ui/models';
 import {COATS} from '../ui/portraits';
 import {bindMeadowInput} from './meadowInput';
 
-export type MeadowSelection = {kind: 'building' | 'rabbit' | 'income' | 'grass'; id: string} | {kind: 'cell'; x: number; y: number} | {kind: 'extension'} | {kind: 'empty'};
+export type MeadowSelection = {kind: 'building' | 'rabbit' | 'income' | 'grass' | 'decoration'; id: string} | {kind: 'cell' | 'fineCell'; x: number; y: number} | {kind: 'habitatSlot'; habitatId: string; slot: 0 | 1 | 2} | {kind: 'extension'} | {kind: 'empty'};
+export interface DecorationGhost {id: string; location: DecorationLocation | null}
+export const INTERIOR_OFFSETS = [{x: -76, y: 4}, {x: 76, y: 4}, {x: 0, y: 54}] as const;
 interface VisualRabbit {id: string; object: Phaser.GameObjects.Container; ears: Phaser.GameObjects.Ellipse[]; base: Point; phase: number; fedUntil: number}
 export class MeadowScene extends Phaser.Scene {
   private current: GameState | null = null;
@@ -19,16 +24,31 @@ export class MeadowScene extends Phaser.Scene {
   private ground!: Phaser.GameObjects.Container;
   private animals!: Phaser.GameObjects.Container;
   private bubbles!: Phaser.GameObjects.Container;
+  private labels!: Phaser.GameObjects.Container;
   private grid!: Phaser.GameObjects.Graphics;
   private rabbitViews: VisualRabbit[] = [];
   private bubbleHits: {point: Point; selection: MeadowSelection}[] = [];
   private layoutKey = '';
+  private arrangement = false;
+  private ghost: DecorationGhost | null = null;
+  private photo = false;
+  private decorationViews = new Map<string, Phaser.GameObjects.Image>();
+  private ghostView: Phaser.GameObjects.Image | null = null;
+  private decorationsLayer!: Phaser.GameObjects.Container;
   private unsubscribe: (() => void) | null = null;
   readonly view = new MeadowCamera();
   constructor(private controller: GameController, private select: (selection: MeadowSelection) => void, private blocked: () => boolean) { super('Meadow'); }
+  preload(): void {
+    for (const id of DECORATION_IDS) for (const rotation of (DECORATIONS[id].rotates ? [0, 1] : [0]) as (0 | 1)[]) {
+      const key = decorationTexture(id, rotation);
+      if (!this.textures.exists(key)) this.load.svg(key, 'data:image/svg+xml;base64,' + btoa(decorationSvg(id, rotation)), {width: 120, height: 120});
+    }
+  }
   create(): void {
     this.cameras.main.setBackgroundColor('#d4e6b9');
-    this.ground = this.add.container(0, 0); this.animals = this.add.container(0, 0);
+    this.ground = this.add.container(0, 0); this.animals = this.add.container(0, 0).setDepth(2);
+    this.decorationsLayer = this.add.container(0, 0).setDepth(.5);
+    this.labels = this.add.container(0, 0).setDepth(2.5);
     this.grid = this.add.graphics().setDepth(1); this.bubbles = this.add.container(0, 0).setDepth(3);
     this.resize(); this.recenter();
     this.unsubscribe = this.controller.subscribe(snapshot => { this.current = snapshot.state; this.renderState(); });
@@ -40,6 +60,14 @@ export class MeadowScene extends Phaser.Scene {
   private resize(): void { this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
   private applyCamera(): void { this.cameras.main.setZoom(this.view.zoom).centerOn(this.view.x, this.view.y); }
   setPlacement(placement: Placement | null): void { this.placement = placement; if (this.grid) this.drawGrid(); }
+  setArrangement(active: boolean, ghost: DecorationGhost | null = null): void {
+    this.arrangement = active; this.ghost = ghost;
+    if (this.grid) { this.drawGrid(); this.drawGhost(); }
+  }
+  setPhoto(active: boolean): void {
+    this.photo = active;
+    this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active);
+  }
   reactToFeed(id: string): void {
     const rabbit = this.rabbitViews.find(r => r.id === id); if (!rabbit) return;
     rabbit.fedUntil = this.time.now + 900;
@@ -56,10 +84,48 @@ export class MeadowScene extends Phaser.Scene {
     if (s) { this.view.setColumns(visibleColumns(s)); this.applyCamera(); }
     const key = JSON.stringify([s?.expanded, s?.secondExpanded, s?.buildings.map(b => [b.id, b.kind, b.x, b.y, b.habitat]), s?.rabbits.map(r => [r.id, r.species, r.enclosureId])]);
     if (key !== this.layoutKey) { this.layoutKey = key; this.drawGround(); this.drawAnimals(); }
-    this.drawBubbles(); this.drawGrid();
+    this.drawDecorations(); this.drawBubbles(); this.drawGrid(); this.drawGhost();
+  }
+  private decorationPoint(location: DecorationLocation, catalogId: typeof DECORATION_IDS[number]): Point | null {
+    if (location.kind === 'inventory') return null;
+    if (location.kind === 'outside') {
+      const size = footprint(catalogId, location.rotation);
+      return gridPoint((location.x + size.width / 2) / FINE_GRID, (location.y + size.height / 2) / FINE_GRID);
+    }
+    const home = this.current?.buildings.find(b => b.id === location.habitatId);
+    if (!home) return null;
+    const center = gridPoint(home.x + .5, home.y + .5), offset = INTERIOR_OFFSETS[location.slot];
+    return {x: center.x + offset.x, y: center.y + offset.y};
+  }
+  private drawDecorations(): void {
+    const visible = new Set<string>();
+    for (const d of this.current?.decorations ?? []) {
+      const point = this.decorationPoint(d.location, d.catalogId); if (!point) continue;
+      visible.add(d.id);
+      let image = this.decorationViews.get(d.id);
+      if (!image) { image = this.add.image(0, 0, decorationTexture(d.catalogId)); this.decorationsLayer.add(image); this.decorationViews.set(d.id, image); }
+      image.setTexture(decorationTexture(d.catalogId, d.location.kind === 'outside' ? d.location.rotation : 0));
+      const size = footprint(d.catalogId, d.location.kind === 'outside' ? d.location.rotation : 0);
+      const scale = d.location.kind === 'habitat' ? .31 : Math.max(size.width, size.height) > 1 ? .79 : .43;
+      image.setPosition(point.x, point.y).setOrigin(.5, .87).setScale(scale).setDepth(point.y);
+    }
+    for (const [id, image] of this.decorationViews) if (!visible.has(id)) { image.destroy(); this.decorationViews.delete(id); }
+    this.decorationsLayer.sort('depth');
+  }
+  private drawGhost(): void {
+    const d = this.current?.decorations.find(d => d.id === this.ghost?.id);
+    const point = d && this.ghost?.location ? this.decorationPoint(this.ghost.location, d.catalogId) : null;
+    if (!d || !point || !this.ghost?.location) { this.ghostView?.setVisible(false); return; }
+    if (!this.ghostView) this.ghostView = this.add.image(0, 0, decorationTexture(d.catalogId)).setDepth(1.5).setAlpha(.65).setOrigin(.5, .87);
+    const rotation = this.ghost.location.kind === 'outside' ? this.ghost.location.rotation : 0;
+    const size = footprint(d.catalogId, rotation);
+    this.ghostView.setTexture(decorationTexture(d.catalogId, rotation)).setPosition(point.x, point.y)
+      .setScale(this.ghost.location.kind === 'habitat' ? .31 : Math.max(size.width, size.height) > 1 ? .79 : .43)
+      .setTint(decorationPlacementReason(this.current!, d.id, this.ghost.location) ? 0xf3a6a1 : 0xe4ffb5).setVisible(!this.photo);
   }
   private drawGround(): void {
     this.ground.removeAll(true);
+    this.labels.removeAll(true);
     const g = this.add.graphics(); this.ground.add(g);
     const columns = this.current ? visibleColumns(this.current) : 6;
     const width = this.current ? terrainWidth(this.current) : 3;
@@ -121,8 +187,9 @@ export class MeadowScene extends Phaser.Scene {
         this.ground.add(this.add.text(x + 30, y - 54, '✦', {fontSize: '24px', color: '#f4df93'}).setOrigin(.5));
       }
       const label = this.add.text(x, y + 70, b.kind === 'enclosure' ? habitatName(b) : BUILDING_NAMES[b.kind], {fontFamily: 'Arial', fontSize: '13px', color: '#435b38', padding: {x: 7, y: 3}}).setOrigin(.5);
-      g.fillStyle(0xf8f4de, .92); g.fillRoundedRect(x - label.width / 2, y + 70 - label.height / 2, label.width, label.height, 7);
-      this.ground.add(label);
+      const labelBackground = this.add.graphics();
+      labelBackground.fillStyle(0xf8f4de, .96); labelBackground.fillRoundedRect(x - label.width / 2, y + 70 - label.height / 2, label.width, label.height, 7);
+      this.labels.add([labelBackground, label]);
     }
   }
   private drawAnimals(): void {
@@ -179,11 +246,11 @@ export class MeadowScene extends Phaser.Scene {
     }
   }
   private drawGrid(): void {
-    this.grid.clear(); if (!this.placement) return;
+    this.grid.clear(); if (this.arrangement) { this.drawDecorationGrid(); return; } if (!this.placement) return;
     for (let y = 0; y < 2; y++) for (let x = 0; x < (this.current ? visibleColumns(this.current) : 6); x++) {
       const locked = x >= (this.current ? terrainWidth(this.current) : 3);
       const occupied = this.current?.buildings.some(b => b.id !== this.placement!.movingId && b.x === x && b.y === y);
-      const valid = !locked && !occupied;
+      const valid = !locked && !occupied && !decorationsInCell(this.current!, x, y).length;
       const center = gridPoint(x + .5, y + .5), points = [gridPoint(x, y), gridPoint(x + 1, y), gridPoint(x + 1, y + 1), gridPoint(x, y + 1)];
       this.grid.lineStyle(3, valid ? 0x487b5c : 0xa66e61, .9); this.grid.strokePoints(points, true);
       this.grid.lineStyle(4, valid ? 0x396447 : 0x8d4f45);
@@ -197,8 +264,65 @@ export class MeadowScene extends Phaser.Scene {
       }
     }
   }
+  private drawDecorationGrid(): void {
+    if (!this.current) return;
+    const owned = this.current.decorations.find(d => d.id === this.ghost?.id);
+    if (!owned || DECORATIONS[owned.catalogId].area === 'outside') {
+      for (let y = 0; y < 8; y++) for (let x = 0; x < terrainWidth(this.current) * FINE_GRID; x++) {
+        const location = {kind: 'outside' as const, x, y, rotation: this.ghost?.location?.kind === 'outside' ? this.ghost.location.rotation : 0 as const};
+        const reason = owned ? decorationPlacementReason(this.current, owned.id, location) :
+          this.current.buildings.some(b => b.x === Math.floor(x / 4) && b.y === Math.floor(y / 4)) ? 'CELL_OCCUPIED' : null;
+        const p = gridPoint(x / 4, y / 4);
+        this.grid.lineStyle(1, reason ? 0xa37872 : 0x5b8864, .45); this.grid.strokeRect(p.x, p.y, VISUAL.grid.width / 4, VISUAL.grid.depth / 4);
+      }
+    }
+    for (const b of this.current.buildings.filter(b => b.kind === 'enclosure')) for (const slot of [0, 1, 2] as const) {
+      const center = gridPoint(b.x + .5, b.y + .5), offset = INTERIOR_OFFSETS[slot];
+      const occupied = this.current.decorations.some(d => d.id !== owned?.id && d.location.kind === 'habitat' && d.location.habitatId === b.id && d.location.slot === slot);
+      this.grid.lineStyle(2, occupied ? 0xa36864 : 0x577951); this.grid.strokeCircle(center.x + offset.x, center.y + offset.y, 17);
+      this.grid.lineBetween(center.x + offset.x - 5, center.y + offset.y, center.x + offset.x + 5, center.y + offset.y);
+      if (!occupied) this.grid.lineBetween(center.x + offset.x, center.y + offset.y - 5, center.x + offset.x, center.y + offset.y + 5);
+    }
+    if (!this.ghost?.location || !owned || this.ghost.location.kind === 'inventory') return;
+    const valid = !decorationPlacementReason(this.current, owned.id, this.ghost.location);
+    const p = this.decorationPoint(this.ghost.location, owned.catalogId)!;
+    this.grid.lineStyle(3, valid ? 0x396447 : 0xa54242);
+    if (this.ghost.location.kind === 'outside') {
+      const loc = this.ghost.location, size = footprint(owned.catalogId, loc.rotation), corner = gridPoint(loc.x / 4, loc.y / 4);
+      this.grid.fillStyle(valid ? 0xe5ffd2 : 0xf5b7b1, .6); this.grid.fillRect(corner.x, corner.y, size.width * VISUAL.grid.width / 4, size.height * VISUAL.grid.depth / 4);
+      this.grid.strokeRect(corner.x, corner.y, size.width * VISUAL.grid.width / 4, size.height * VISUAL.grid.depth / 4);
+    } else this.grid.strokeCircle(p.x, p.y, 19);
+    if (valid) { this.grid.lineBetween(p.x - 8, p.y + 5, p.x - 2, p.y + 11); this.grid.lineBetween(p.x - 2, p.y + 11, p.x + 10, p.y - 3); }
+    else { this.grid.lineBetween(p.x - 8, p.y - 8, p.x + 8, p.y + 8); this.grid.lineBetween(p.x - 8, p.y + 8, p.x + 8, p.y - 8); }
+  }
   private tap(screen: Point): void {
     const world = this.view.world(screen), cell = gridCell(world);
+    if (this.photo) return;
+    if (this.arrangement) {
+      const chosen = this.current?.decorations.find(d => d.id === this.ghost?.id);
+      // Interior destinations have stable slot IDs; tapping a habitat centre also opens its slots.
+      if (!chosen || DECORATIONS[chosen.catalogId].area === 'habitat') {
+        for (const b of this.current?.buildings.filter(b => b.kind === 'enclosure') ?? []) for (const slot of [0, 1, 2] as const) {
+          const p = this.decorationPoint({kind: 'habitat', habitatId: b.id, slot}, 'soft-cushion')!;
+          if (Math.hypot(screen.x - this.view.screen(p).x, screen.y - this.view.screen(p).y) < 24) {
+            const d = this.current?.decorations.find(d => d.location.kind === 'habitat' && d.location.habitatId === b.id && d.location.slot === slot);
+            this.select(chosen ? {kind: 'habitatSlot', habitatId: b.id, slot} : d ? {kind: 'decoration', id: d.id} : {kind: 'building', id: b.id}); return;
+          }
+        }
+      }
+      if (chosen) {
+        this.select(DECORATIONS[chosen.catalogId].area === 'outside' ? {kind: 'fineCell', x: Math.floor((world.x - VISUAL.grid.originX) / (VISUAL.grid.width / 4)), y: Math.floor((world.y - VISUAL.grid.originY) / (VISUAL.grid.depth / 4))} :
+          this.current?.buildings.some(b => b.kind === 'enclosure' && b.x === cell.x && b.y === cell.y) ? {kind: 'building', id: this.current!.buildings.find(b => b.x === cell.x && b.y === cell.y)!.id} : {kind: 'empty'}); return;
+      }
+      const d = this.current?.decorations.find(d => d.location.kind === 'outside' && (() => {
+        const loc = d.location; if (loc.kind !== 'outside') return false;
+        const size = footprint(d.catalogId, loc.rotation), corner = gridPoint(loc.x / 4, loc.y / 4);
+        return world.x >= corner.x && world.x < corner.x + size.width * VISUAL.grid.width / 4 && world.y >= corner.y && world.y < corner.y + size.height * VISUAL.grid.depth / 4;
+      })());
+      if (d) { this.select({kind: 'decoration', id: d.id}); return; }
+      const home = this.current?.buildings.find(b => b.kind === 'enclosure' && b.x === cell.x && b.y === cell.y);
+      this.select(home ? {kind: 'building', id: home.id} : {kind: 'empty'}); return;
+    }
     if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
     for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
     const closest = rabbitHit(screen, this.rabbitViews.map(r => ({id: r.id,

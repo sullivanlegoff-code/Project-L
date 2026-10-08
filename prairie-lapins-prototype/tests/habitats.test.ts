@@ -202,7 +202,7 @@ describe('v4 validation, migrations, imports and storage',()=>{
   });
   it.each([1,2] as const)('retains v%i migration with its historical heart rules and exact old fields',version=>{
     const {hearts,nextHeartGiftAt,...base}=previous;const raw=JSON.stringify({...base,version,...(version===2?{hearts,nextHeartGiftAt}:{})});
-    const migrated=decode(raw,previous.lastSimulatedAt);expect(migrated.version).toBe(4);expect(migrated.hearts).toBe(version===1?12:hearts);
+    const migrated=decode(raw,previous.lastSimulatedAt);expect(migrated.version).toBe(5);expect(migrated.hearts).toBe(version===1?12:hearts);
     expect(migrated.buildings[0].habitat).toEqual({type:'universal',level:1});expect(migrated.buildings[0].incomeUnits).toBe(previous.buildings[0].incomeUnits);
     expect(migrated.rabbits).toEqual(previous.rabbits);expect(pendingDiscoveries(migrated)).toEqual(['brumelin']);expect(migrated.secondExpanded).toBe(false);
   });
@@ -216,7 +216,7 @@ describe('v4 validation, migrations, imports and storage',()=>{
   it.each([HABITATS_MIGRATION_BACKUP_KEY,SAVE_KEY])('preserves the original if %s write fails during migration',key=>{
     const s=rich(),raw=JSON.stringify({...withoutHabitats(s),version:3}),m=memory(raw);m.flags.fail=key;
     const c=new GameController(m.storage,()=>0);expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(c.getSnapshot().state).toEqual(s);
-    expect(c.exportGame().ok).toBe(true);m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(4);
+    expect(c.exportGame().ok).toBe(true);m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(5);
   });
   it('imports v3 without resetting missions or hearts; v4 exports/reloads retain upgraded specialized habitats',()=>{
     const initial=rich(),m=memory(encodeGame(initial)),c=new GameController(m.storage,()=>0);

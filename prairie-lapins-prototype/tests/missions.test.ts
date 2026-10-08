@@ -42,7 +42,7 @@ const state=(c:GameController)=>c.getSnapshot().state!;
 describe('main missions and unique rewards',()=>{
   it('starts eight unclaimed visible objectives and a fresh 24-hour cycle without changing initial resources',()=>{
     const s=createGame(123);
-    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:4,pattes:300,grass:10,hearts:12});
+    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:5,pattes:300,grass:10,hearts:12});
     expect(s.missions).toEqual({completed:[],claimed:[],daily:{referenceAt:123,cycleIndex:0,progress:emptyDailyProgress(),claimed:[],bonusClaimed:false}});
     expect(dailyCycleEnd(s)).toBe(123+DAY);
   });
@@ -182,7 +182,7 @@ describe('v3 persistence, migrations and controller',()=>{
     const raw=legacy(prepared()),m=memory(raw);m.flags.fail=key;
     const c=new GameController(m.storage,()=>HOUR);
     expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(state(c).hearts).toBe(12);
-    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(4);
+    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(5);
   });
   it('saves a claim and its reward together; write failure preserves them in memory and retry never grants twice',()=>{
     const m=memory(encodeGame(prepared())),c=new GameController(m.storage,()=>0);const raw=m.data.get(SAVE_KEY),before=state(c);

@@ -7,6 +7,7 @@ import {SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
 import type {GameState} from '../state/types';
 
 export const TEST_PREFIX = 'prairie-lapins.development.';
+export const DECORATIONS_PREVIEW_PREFIX = 'prairie-lapins.preview.decorations.';
 export const TEST_CLOCK_KEY = TEST_PREFIX + 'clock';
 export const TIME_STEPS = [5, 20, 60, 360, 1440] as const;
 export const RESOURCE_STEPS = {pattes: [1000, 10000], grass: [100, 1000], hearts: [10, 100]} as const;
@@ -22,21 +23,23 @@ export function replaceTestState(controller: GameController, state: GameState): 
 }
 
 /** Imported only by local test mode or the explicitly built laboratory. */
-export function developmentEnvironment(base: SaveStorage) {
+export function developmentEnvironment(base: SaveStorage, options: {decorationPreview?: boolean} = {}) {
+  const prefix = options.decorationPreview ? DECORATIONS_PREVIEW_PREFIX : TEST_PREFIX;
+  const clockKey = prefix + 'clock';
   let offset = 0;
   try {
-    const saved = Number(base.getItem(TEST_CLOCK_KEY));
+    const saved = Number(base.getItem(clockKey));
     if (Number.isSafeInteger(saved) && saved >= 0 && saved < 8_000_000_000_000_000) offset = saved;
   } catch { /* optional test clock; normal storage is never consulted */ }
   const clock = () => Date.now() + offset;
   // Prefix EVERY controller key, including migration backups. No fallback to normal.
-  const storage: SaveStorage = {scope: 'laboratory', getItem: key => base.getItem(TEST_PREFIX + key), setItem: (key, value) => base.setItem(TEST_PREFIX + key, value)};
+  const storage: SaveStorage = {scope: 'laboratory', getItem: key => base.getItem(prefix + key), setItem: (key, value) => base.setItem(prefix + key, value)};
   function advanceTime(controller: GameController, minutes: number): TestResult {
     if (controller.storageScope !== 'laboratory') return {ok: false, reason: 'NOT_TEST_SESSION'};
     if (!(TIME_STEPS as readonly number[]).includes(minutes)) return {ok: false, reason: 'INVALID_TEST_VALUE'};
     const next = offset + minutes * 60_000;
     if (!Number.isSafeInteger(next) || next >= 8_000_000_000_000_000) return {ok: false, reason: 'INVALID_TEST_VALUE'};
-    try { base.setItem(TEST_CLOCK_KEY, String(next)); } catch { return {ok: false, reason: 'WRITE_FAILED'}; }
+    try { base.setItem(clockKey, String(next)); } catch { return {ok: false, reason: 'WRITE_FAILED'}; }
     offset = next; controller.refresh();
     const snapshot = controller.getSnapshot();
     return snapshot.issue ? {ok: false, reason: snapshot.issue} : {ok: true};
@@ -52,15 +55,16 @@ export function developmentEnvironment(base: SaveStorage) {
     try { return replaceTestState(controller, scenarioState(id, clock())); }
     catch { return {ok: false, reason: 'INVALID_TEST_VALUE'}; }
   }
-  return {clock, storage, preferenceKey: TEST_PREFIX + 'ui', policy: sessionPolicy(true), advanceTime, grant, loadScenario,
+  return {clock, storage, preferenceKey: prefix + 'ui', policy: sessionPolicy(true), advanceTime, grant, loadScenario,
     mount(controller: GameController, onReplacement: () => void = () => {}) {
       if (controller.storageScope !== 'laboratory') throw new Error('Test tools require isolated laboratory storage');
       const host = document.getElementById('devtools')!;
       host.hidden = false; host.replaceChildren();
       const intro = document.createElement('p');
       intro.textContent = 'Laboratoire public : partie, préférences, horloge et sauvegardes de secours séparées. Aucun compte ni service en ligne. Importez volontairement un export normal pour tester une copie. Les fichiers MODE-TEST peuvent contenir des ressources ajoutées et du temps avancé.';
+      if (options.decorationPreview) intro.textContent = 'Prévisualisation expérimentale v5 : partie, préférences, horloge et secours distincts des trois autres versions. Aucun compte ni synchronisation. Import v4 volontaire uniquement ; les exports v5 de cette prévisualisation ne sont pas compatibles avec les versions v4.';
       host.append(intro);
-      const version = document.createElement('p'); version.textContent = `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
+      const version = document.createElement('p'); version.textContent = options.decorationPreview ? `Version expérimentale v5 · build ${BUILD_REVISION.slice(0, 7)}. Jeu normal conservé en v4.` : `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
       const status = document.createElement('p'); status.setAttribute('role', 'status'); status.id = 'dev-status';
       const resultMessage = (result: TestResult, message: string) => { status.textContent = result.ok ? message : result.reason === 'NOT_CONFIRMED' ? 'Opération annulée. La partie de test est conservée.' : 'Opération de test refusée. Vérifiez la sauvegarde et l’espace disponible ; la partie normale est conservée.'; };
       const section = (title: string) => { const h = document.createElement('h3'); h.textContent = title; host.append(h); };
@@ -75,7 +79,7 @@ export function developmentEnvironment(base: SaveStorage) {
         for (const amount of RESOURCE_STEPS[resource]) button(`+ ${amount} ${names[resource]}`, `dev-grant-${resource}-${amount}`, () => resultMessage(grant(controller, resource, amount), 'Ressources ajoutées à la partie de test.'));
       }
       section('Scénarios préparés');
-      for (const id of Object.keys(SCENARIOS) as ScenarioId[]) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
+      for (const id of (Object.keys(SCENARIOS) as ScenarioId[]).filter(id => options.decorationPreview || !['decorationDemo', 'decoratedHabitat'].includes(id))) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
         if (!window.confirm(`Charger « ${SCENARIOS[id]} » remplace seulement la partie de test. Exportez-la pour la conserver. Continuer ?`)) return;
         const result = loadScenario(controller, id); if (result.ok) onReplacement(); resultMessage(result, 'Scénario chargé et enregistré dans la partie de test.');
       });
@@ -89,10 +93,12 @@ export function developmentEnvironment(base: SaveStorage) {
       host.append(status);
       const badge = document.getElementById('dev-badge')!;
       document.body.classList.add('test-session');
-      badge.hidden = false; badge.replaceChildren(document.createTextNode('MODE TEST — PARTIE SÉPARÉE'));
+      badge.hidden = false; badge.replaceChildren(document.createTextNode(options.decorationPreview ? 'PRÉVISUALISATION DÉCORATIONS v5 — PARTIE SÉPARÉE' : 'MODE TEST — PARTIE SÉPARÉE'));
+      const shortcut = document.getElementById('open-preview-tools');
+      if (options.decorationPreview && shortcut) { shortcut.hidden = false; shortcut.onclick = () => { document.getElementById('open-settings')!.click(); host.scrollIntoView({block: 'start'}); }; }
       const back = document.createElement('a'); back.textContent = 'Retour au jeu normal';
-      back.href = import.meta.env.MODE === 'laboratory' ? import.meta.env.BASE_URL + '../' : import.meta.env.BASE_URL;
+      back.href = options.decorationPreview ? import.meta.env.BASE_URL + '../../' : import.meta.env.MODE === 'laboratory' ? import.meta.env.BASE_URL + '../' : import.meta.env.BASE_URL;
       badge.append(back);
-      return () => { host.replaceChildren(); host.hidden = true; badge.hidden = true; document.body.classList.remove('test-session'); };
+      return () => { if (shortcut) { shortcut.hidden = true; shortcut.onclick = null; } host.replaceChildren(); host.hidden = true; badge.hidden = true; document.body.classList.remove('test-session'); };
     }};
 }

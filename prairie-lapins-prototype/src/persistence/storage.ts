@@ -12,3 +12,4 @@ export const MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v2';
 export const MISSIONS_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v3';
 
 export const HABITATS_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v4';
+export const DECORATIONS_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v5';

@@ -1,4 +1,4 @@
-import {HABITATS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
+import {HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
 import {act, advance, createGame, decodeGame, encodeGame} from '../simulation';
 import {MAX_JSON_LENGTH, type DecodeResult} from '../persistence/json';
 import {MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, SAVE_KEY, type SaveStorage} from '../persistence/storage';
@@ -76,7 +76,7 @@ export class GameController {
       const backup = legacySource ?? (old?.ok && old.migratedFrom ? raw : null);
       if (backup !== null && backup !== undefined) {
         const source = decodeGame(backup, savedAt);
-        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : HABITATS_MIGRATION_BACKUP_KEY, backup);
+        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : DECORATIONS_MIGRATION_BACKUP_KEY, backup);
       }
       this.storage.setItem(SAVE_KEY, json);
     }

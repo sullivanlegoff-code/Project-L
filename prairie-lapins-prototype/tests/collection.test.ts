@@ -193,7 +193,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   it('loads and imports an actual previous-build v2 export with its reserved birth and 7 hearts unchanged', () => {
     const raw = JSON.stringify(previous), parsed = decodeGame(raw, previous.lastSimulatedAt); expect(parsed.ok).toBe(true); if (!parsed.ok) return;
     const expected = {...withUniversalHabitats(previous), missions: createMissions(previous as GameState, previous.lastSimulatedAt)};
-    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(4);
+    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(5);
     const saved = memory(raw), rng = vi.fn(() => 0), c = new GameController(saved.storage, () => previous.lastSimulatedAt, rng);
     expect(c.getSnapshot().state).toEqual(expected); expect(rng).not.toHaveBeenCalled();
     const preview = c.prepareImport(raw); if (!preview.ok) throw Error(preview.reason);
@@ -204,7 +204,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   it('keeps v1 migration available and rejects unknown identifiers', () => {
     const {hearts: _hearts, nextHeartGiftAt: _gift, ...rest} = previous;
     const migrated = decodeGame(JSON.stringify({...rest, version: 1}), previous.lastSimulatedAt);
-    expect(migrated.ok && migrated.state).toMatchObject({version: 4, hearts: 12, discovered: previous.discovered, buildings: previous.buildings});
+    expect(migrated.ok && migrated.state).toMatchObject({version: 5, hearts: 12, discovered: previous.discovered, buildings: previous.buildings});
     const invalid = structuredClone(previous); invalid.rabbits[0].species = 'arc-en-ciel';
     expect(decodeGame(JSON.stringify(invalid))).toEqual({ok: false, reason: 'INVALID_STATE'});
   });
@@ -226,7 +226,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   });
   it('accepts the documented development scenario and preserves its gift schedule on import', () => {
     const result = decodeGame(JSON.stringify(testSave), testSave.lastSimulatedAt); expect(result.ok).toBe(true); if (!result.ok) return;
-    expect(result.state.version).toBe(4); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
+    expect(result.state.version).toBe(5); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
     expect(result.state.rabbits.every(r => r.affection === 2)).toBe(true);
     const {missions, ...fields} = withoutHabitats(result.state);
     expect({...fields, version: 2}).toEqual(testSave); expect(missions.daily.referenceAt).toBe(testSave.lastSimulatedAt);

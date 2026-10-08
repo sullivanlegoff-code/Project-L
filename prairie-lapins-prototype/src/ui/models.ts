@@ -3,9 +3,15 @@ import {terrainWidth} from '../simulation/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
 import {breedingPool} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
+import {decorationsInCell} from '../simulation/decorations';
 
 export const BUILDING_NAMES: Record<BuildingKind, string> = {enclosure: 'Enclos', farm: 'Ferme', nest: 'Nid', nursery: 'Nurserie'};
 export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED', string> = {
+  DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
+  DECORATION_OVERLAP: 'Cette empreinte chevauche une autre décoration.',
+  DECORATION_BLOCKS_BUILDING: 'Des décorations occupent cette case. Rangez-les avant de placer le bâtiment.',
+  INVALID_DECORATION_SLOT: 'Choisissez un des trois emplacements décoratifs d’un habitat.',
+  DECORATION_SLOT_OCCUPIED: 'Cet emplacement contient déjà un objet. Rangez-le d’abord ; il restera dans votre inventaire.',
   TYPE_INCOMPATIBLE: 'Type incompatible.', MAX_HABITAT_LEVEL: 'Niveau maximal atteint.', MISSING_EXTENSION: 'Achetez d’abord la première extension.',
   ALREADY_CLAIMED: 'Cette récompense a déjà été réclamée.', CYCLE_EXPIRED: 'Ce cycle a expiré. Consultez les nouvelles missions.', RESOURCE_LIMIT: 'Le solde est trop élevé pour recevoir cette récompense.',
   NOT_ENOUGH_HEARTS: 'Pas assez de cœurs. Vous pouvez continuer en attendant ou en récoltant des pattes.',
@@ -43,6 +49,7 @@ export function placementReason(s: GameState, placement: Placement): string | nu
   const width = terrainWidth(s);
   if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y) || cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= BALANCE.height) return REFUSALS.INVALID_CELL;
   if (s.buildings.some(b => b.id !== placement.movingId && b.x === cell.x && b.y === cell.y)) return REFUSALS.CELL_OCCUPIED;
+  if (decorationsInCell(s, cell.x, cell.y).length) return REFUSALS.DECORATION_BLOCKS_BUILDING;
   if (placement.movingId) return s.buildings.some(b => b.id === placement.movingId) ? null : REFUSALS.NOT_FOUND;
   return buildingReason(s, placement.kind, false, placement.habitatType);
 }

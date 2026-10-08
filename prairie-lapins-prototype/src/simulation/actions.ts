@@ -8,6 +8,8 @@ import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal}
 import {chooseBirth} from './breeding';
 import {advance, validTime} from './time';
 import {complementCost, quoteAcceleration} from './hearts';
+import {DECORATIONS} from '../config/decorations';
+import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from './decorations';
 
 class Quoted extends Error { constructor(public price: number) { super(); } }
 class Denied extends Error { constructor(public reason: Refusal) { super(reason); } }
@@ -49,6 +51,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
     requireRule(Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 &&
       x < terrainWidth(s) && y < BALANCE.height, 'INVALID_CELL');
     requireRule(!s.buildings.some(b => b.id !== exclude && b.x === x && b.y === y), 'CELL_OCCUPIED');
+    requireRule(!decorationsInCell(s, x, y).length, 'DECORATION_BLOCKS_BUILDING');
   };
   const busy = (rabbitId: string) => s.buildings.some(b => b.breeding && b.breeding.endsAt > time && b.breeding.parents.includes(rabbitId));
   const reward = (r: Reward) => {
@@ -58,6 +61,21 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
   let value: string | number | undefined;
   try {
     switch (command.type) {
+      case 'buyDecoration': {
+        const reason = purchaseDecorationReason(s, command.catalogId); requireRule(!reason, reason ?? 'INVALID_CHOICE');
+        pay(DECORATIONS[command.catalogId].price); value = id('decoration');
+        s.decorations.push({id: value, catalogId: command.catalogId, location: {kind: 'inventory'}}); break;
+      }
+      case 'placeDecoration': {
+        const reason = decorationPlacementReason(s, command.id, command.location); requireRule(!reason, reason ?? 'INVALID_CHOICE');
+        s.decorations.find(d => d.id === command.id)!.location = structuredClone(command.location); break;
+      }
+      case 'storeDecorationsInCell': {
+        requireRule(Number.isInteger(command.x) && Number.isInteger(command.y) && command.x >= 0 && command.y >= 0 && command.x < terrainWidth(s) && command.y < 2, 'INVALID_CELL');
+        const blocking = decorationsInCell(s, command.x, command.y);
+        for (const d of s.decorations) if (blocking.includes(d.id)) d.location = {kind: 'inventory'};
+        value = blocking.length; break;
+      }
       case 'claimMainMission': {
         requireRule(Object.hasOwn(MAIN_MISSIONS, command.id), 'INVALID_CHOICE');
         requireRule(!s.missions.claimed.includes(command.id), 'ALREADY_CLAIMED');

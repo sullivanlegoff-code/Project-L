@@ -26,7 +26,7 @@ function setup(initial = createGame(0)) {
   const data = new Map<string, string>([[SAVE_KEY, encodeGame(initial)]]);
   const storage: SaveStorage = {getItem: key => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); }};
   const clock = {now: 0}; const controller = new GameController(storage, () => clock.now, () => .9);
-  const scene = {setPlacement: vi.fn(), reactToFeed: vi.fn(), recenter: vi.fn()} as unknown as MeadowScene;
+  const scene = {setPlacement: vi.fn(), setArrangement: vi.fn(), setPhoto: vi.fn(), reactToFeed: vi.fn(), recenter: vi.fn()} as unknown as MeadowScene;
   const prefs = new PreferenceStore('test-ui'); prefs.set({muted: true, tutorial: false});
   const ui = new GameUI(controller, scene, () => clock.now, prefs);
   const disposeSave = mountSavePanel(controller, () => ui.onReplacement());
@@ -44,6 +44,67 @@ function place(ui: GameUI, kind: 'farm' | 'nest' | 'nursery' | 'enclosure', x: n
   const prices = {farm: 60, nest: 100, nursery: 80, enclosure: 120};
   button(`Placer · ${prices[kind]} pattes`).click(); ui.select({kind: 'cell', x, y}); button(`Acheter et placer · ${prices[kind]} pattes`).click();
 }
+
+describe('decoration UI transactions (simulated DOM; Phaser verified separately)', () => {
+  const shop = () => {document.getElementById('open-shop')!.click(); button('Décorations').click();};
+  const catalog = (id: string) => panel().querySelector<HTMLElement>(`[data-catalog="${id}"]`)!;
+  it('confirms one purchase under double pressure and cancellation preserves the purchased exemplar', () => {
+    const {controller, ui, scene} = setup(); shop(); expect(panel().querySelectorAll('[data-catalog]')).toHaveLength(12);
+    button('Acheter · 20 pattes', catalog('wildflowers')).click(); expect(state(controller).decorations).toEqual([]);
+    const confirm = button('Confirmer', document.getElementById('game-dialog')!); confirm.click(); confirm.click();
+    expect(state(controller).pattes).toBe(280); expect(state(controller).decorations).toHaveLength(1);
+    expect(scene.setArrangement).toHaveBeenLastCalledWith(true, {id: 'decoration-4', location: null});
+    ui.select({kind: 'fineCell', x: 4, y: 0}); expect(state(controller).decorations[0].location).toEqual({kind: 'inventory'});
+    button('Annuler le placement').click(); expect(state(controller).decorations[0].location).toEqual({kind: 'inventory'});
+    document.getElementById('close-panel')!.click(); expect(document.getElementById('arrange-banner')!.hidden).toBe(true);
+  });
+  it('refuses insufficient resources before confirmation and preserves every owned item', () => {
+    const initial = createGame(0); initial.pattes = 19; const {controller} = setup(initial); shop();
+    expect(button('Acheter · 20 pattes', catalog('wildflowers')).disabled).toBe(true); expect(catalog('wildflowers').textContent).toContain('Pas assez');
+    button('Acheter · 20 pattes', catalog('wildflowers')).click(); expect((document.getElementById('game-dialog') as HTMLDialogElement).open).toBe(false); expect(state(controller)).toEqual(initial);
+  });
+  it('requires explicit confirmation to move; closing a panel preserves the old location and rotation', () => {
+    const {controller, ui, scene} = setup(); controller.perform({type: 'buyDecoration', catalogId: 'wood-bench'});
+    controller.perform({type: 'placeDecoration', id: 'decoration-4', location: {kind: 'outside', x: 4, y: 0, rotation: 0}});
+    const original = state(controller); document.getElementById('open-arrange')!.click(); ui.select({kind: 'decoration', id: 'decoration-4'}); button('Tourner de 90°').click();
+    ui.select({kind: 'fineCell', x: 11, y: 0}); expect(panel().textContent).toContain('✓ Emplacement valide'); expect(state(controller)).toEqual(original);
+    document.getElementById('close-panel')!.click(); expect(state(controller)).toEqual(original); expect(scene.setArrangement).toHaveBeenLastCalledWith(false, null);
+    document.getElementById('open-arrange')!.click(); ui.select({kind: 'decoration', id: 'decoration-4'}); button('Déplacer').click(); ui.select({kind: 'fineCell', x: 7, y: 4});
+    const confirm = button('Confirmer la pose · gratuit'); confirm.click(); confirm.click();
+    expect(state(controller).decorations).toHaveLength(1); expect(state(controller).decorations[0].location).toEqual({kind: 'outside', x: 7, y: 4, rotation: 0}); expect(state(controller).pattes).toBe(original.pattes);
+    ui.select({kind: 'decoration', id: 'decoration-4'}); button('Ranger dans l’inventaire').click(); expect(state(controller).decorations[0].location.kind).toBe('inventory');
+  });
+  it('shows overlap, building and bounds refusals without modifying the object', () => {
+    const {controller, ui} = setup(); controller.perform({type: 'buyDecoration', catalogId: 'wildflowers'});
+    controller.perform({type: 'placeDecoration', id: 'decoration-4', location: {kind: 'outside', x: 4, y: 0, rotation: 0}}); controller.perform({type: 'buyDecoration', catalogId: 'wildflowers'});
+    document.getElementById('open-arrange')!.click(); button('Placer cet exemplaire').click(); const original = state(controller);
+    for (const [x, y, reason] of [[4,0,'chevauche'],[0,0,'occupée'],[12,0,'disponible']] as const) {
+      ui.select({kind: 'fineCell', x, y}); expect(button('Confirmer la pose · gratuit').disabled).toBe(true); expect(panel().textContent).toContain(reason); expect(state(controller)).toEqual(original);
+    }
+  });
+  it('offers confirmed storage of blocking objects and requires a separate building purchase', () => {
+    const {controller, ui} = setup(); controller.perform({type: 'buyDecoration', catalogId: 'wildflowers'}); controller.perform({type: 'placeDecoration', id: 'decoration-4', location: {kind: 'outside', x: 4, y: 0, rotation: 0}});
+    document.getElementById('open-shop')!.click(); button('Placer · 60 pattes').click(); ui.select({kind: 'cell', x: 1, y: 0}); const original = state(controller);
+    expect(button('Acheter et placer · 60 pattes').disabled).toBe(true); button('Ranger les 1 décoration(s) de cette case').click();
+    button('Annuler', document.getElementById('game-dialog')!).click(); expect(state(controller)).toEqual(original);
+    button('Ranger les 1 décoration(s) de cette case').click(); button('Confirmer', document.getElementById('game-dialog')!).click();
+    expect(state(controller).pattes).toBe(original.pattes); expect(state(controller).buildings).toHaveLength(1); expect(state(controller).decorations[0].location.kind).toBe('inventory');
+    button('Acheter et placer · 60 pattes').click(); expect(state(controller).pattes).toBe(original.pattes - 60); expect(state(controller).buildings).toHaveLength(2);
+  });
+  it('requires storing a occupied interior slot separately before posing its replacement', () => {
+    const {controller, ui} = setup(); controller.perform({type: 'buyDecoration', catalogId: 'soft-cushion'}); controller.perform({type: 'placeDecoration', id: 'decoration-4', location: {kind: 'habitat', habitatId: 'building-1', slot: 0}}); controller.perform({type: 'buyDecoration', catalogId: 'small-parasol'});
+    document.getElementById('open-arrange')!.click(); button('Placer cet exemplaire').click(); expect(panel().querySelectorAll('article')).toHaveLength(1);
+    ui.select({kind: 'habitatSlot', habitatId: 'building-1', slot: 0}); expect(button('Confirmer la pose · gratuit').disabled).toBe(true);
+    button('Ranger l’objet de cet emplacement').click(); button('Confirmer', document.getElementById('game-dialog')!).click();
+    expect(state(controller).decorations.every(d => d.location.kind === 'inventory')).toBe(true); button('Confirmer la pose · gratuit').click();
+    expect(state(controller).decorations[1].location).toEqual({kind: 'habitat', habitatId: 'building-1', slot: 0}); expect(state(controller).rabbits).toHaveLength(2);
+  });
+  it('enters photo mode without changing the save, exits arrangement and returns controls', () => {
+    const {controller, data, scene} = setup(); document.getElementById('open-arrange')!.click(); const before = data.get(SAVE_KEY), stateBefore = state(controller);
+    document.getElementById('open-photo')!.click(); expect(document.body.classList.contains('photo-mode')).toBe(true); expect(scene.setPhoto).toHaveBeenLastCalledWith(true); expect(document.getElementById('arrange-banner')!.hidden).toBe(true);
+    document.getElementById('photo-return')!.click(); expect(document.body.classList.contains('photo-mode')).toBe(false); expect(scene.setPhoto).toHaveBeenLastCalledWith(false); expect(data.get(SAVE_KEY)).toBe(before); expect(state(controller)).toEqual(stateBefore);
+  });
+});
 
 describe('real HTML UI wired to the real controller (simulated DOM, not a browser)', () => {
   it('shows all main missions without automatic opening, offers a free shortcut and claims a reward once', () => {
@@ -454,6 +515,6 @@ describe('habitat panels and controller transactions',()=>{
     expect(c.perform({type:'buyBuilding',kind:'enclosure',habitatType:'paille',x:1,y:0}).ok).toBe(true);
     expect(c.perform({type:'payWithHearts',action:{type:'upgradeHabitat',id:'building-4',fromLevel:1},maxPattes:100,maxHearts:8}).ok).toBe(true);
     expect(state(c).buildings[1].habitat).toEqual({type:'paille',level:2});expect(values.get(SAVE_KEY)).toBe(normal);
-    expect(JSON.parse(values.get('prairie-lapins.development.'+SAVE_KEY)!).version).toBe(4);
+    expect(JSON.parse(values.get('prairie-lapins.development.'+SAVE_KEY)!).version).toBe(5);
   });
 });

@@ -2,10 +2,11 @@
 * { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
 #app { height: 100dvh; position: relative; }
-#game { position: absolute; inset: 0; touch-action: none; }
+#game { position: absolute; inset: 0; touch-action: none; background: #d4e6b9; }
 #game canvas { display: block; touch-action: none; }
 #hud { position: absolute; inset: 0 0 auto; min-height: var(--hud-height); padding: max(9px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 9px max(14px, env(safe-area-inset-left)); display: flex; align-items: center; gap: 10px; pointer-events: none; }
 #hud > * { pointer-events: auto; }
+#hud { background: #d4e6b9; }
 h1 { font-size: 19px; margin: 0 12px 0 0; max-width: 150px; font-weight: 800; }
 .resource { display: flex; align-items: center; gap: 6px; min-width: 106px; background: #fff2d9; border: 2px solid #fffaf0; box-shadow: 0 3px 0 #71885a25; padding: 8px 12px; border-radius: 18px; white-space: nowrap; }
 .resource span { color: #b6854f; font-size: 23px; } .resource.grass { background: #f0f6dc; } .resource.grass span { color: #6c9957; }
@@ -61,11 +62,24 @@ button.heart-gift { background: #e6f2ce; color: #365331; border-color: #94ad76; 
 
 .recipe-pair { border-top: 1px solid #dddcc6; margin-top: 10px; padding-top: 4px; }
 .recipe-pair p { font-size: 12px; } .recipe-pair button { width: 100%; margin-top: 6px; }
+/* Sibling HTML controls never feed the canvas gesture recognizer. */
+#meadow-actions { position: absolute; left: max(16px, env(safe-area-inset-left)); top: calc(var(--hud-height) + 60px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 7px; }
+#arrange-banner { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: 64px; max-width: 47vw; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 13px; background: #e4f0d6; border: 2px solid #627d55; box-shadow: 0 4px 18px #344c3620; font-size: 12px; font-weight: 700; }
+.arranging #tutorial { display: none; }
+.arranging #game-panel { width: min(310px, 40vw); }
+.decoration-icon { display: inline-flex; width: 66px; height: 66px; flex: 0 0 66px; border-radius: 16px; background: #e7ead8; }
+.decoration-icon svg { width: 100%; height: 100%; }
+.placement-valid, .placement-invalid { border-radius: 10px; padding: 10px; font-size: 13px; font-weight: 700; }
+.placement-valid { color: #385b37; background: #e5efd9; }.placement-invalid { color: #8b3734; background: #f5d7d0; }
+#photo-return { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); background: #fffaf0de; opacity: .8; font-size: 12px; }
+.photo-mode #hud, .photo-mode #open-missions, .photo-mode #meadow-actions, .photo-mode #arrange-banner, .photo-mode #game-panel, .photo-mode #tutorial, .photo-mode #toast, .photo-mode #dev-badge { display: none !important; }
+.photo-mode #save-warning { left: auto; right: 12px; }
+@media (orientation: portrait) { .arranging #game-panel { width: min(310px, 88vw); } #arrange-banner { max-width: 88vw; } }
 
 /* Missions live below the HUD, preserving counters, camera and touch targets. */
 #open-missions { position: absolute; left: max(16px, env(safe-area-inset-left)); top: calc(var(--hud-height) + 7px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 8px; box-shadow: 0 3px 12px #38442c20; }
 #missions-badge { min-width: 20px; padding: 2px 5px; border-radius: 12px; color: #fff; background: #876232; font-size: 11px; }
-#toast { top: calc(var(--hud-height) + 61px + env(safe-area-inset-top)); }
+#toast { top: calc(var(--hud-height) + 166px + env(safe-area-inset-top)); }
 button.mission-claim:not(:disabled) { background: #e6f2ce; color: #365331; border-color: #94ad76; }
 .mission-reward { animation: mission-received .35s ease-out; }
 @keyframes mission-received { from { transform: translateY(5px); opacity: .4; } to { transform: translateY(0); opacity: 1; } }

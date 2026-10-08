@@ -1,8 +1,12 @@
-# Prairie de lapins — consolidation visuelle des habitats
+# Prairie de lapins — décorations en prévisualisation
 
-Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des sources récentes de `prairie-lapins-habitats-v4.zip`. Il contient les six habitats spécialisés, leurs trois niveaux, la deuxième extension et les sauvegardes **v4** avec migrations v1/v2/v3. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
+Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**. La branche `feature/meadow-decoration` ajoute la personnalisation et les sauvegardes **v5**, avec migrations v1–v4, depuis la production stable `45323cb`. Le jeu normal et son laboratoire restent en v4. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
 
 **Retour iPhone reçu le 8 octobre 2026 : « tout fonctionne bien pendant mon essai ».** Aucun détail de scénario n'a été communiqué ; ce retour est consigné sans élargir ce qui a été testé.
+
+**[Prévisualisation Décorations](https://sullivanlegoff-code.github.io/Project-L/preview/decorations/)** : douze objets, inventaire, placement tactile, trois emplacements par habitat et mode photo. Partie/prefs/horloge/secours isolés ; aucun compte initialisé. [Guide complet](docs/decorations.md), [future compatibilité des comptes v5](docs/accounts-v5-compatibility.md), [vérifications et captures](docs/progress.md). Les sections suivantes décrivent aussi les paliers stables antérieurs ; aucune intégration v5 en production dans cette livraison.
+
+Développement de la preview : `npm ci`, puis `npm run dev -- --mode decorations-preview --base=/Project-L/preview/decorations/ --host 0.0.0.0 --port 5178 --strictPort`. Vérifications : `npm test`, `npm run typecheck`, `npm run build:decorations`. Les builds root/dev de cette branche sont des contrôles v5, pas les builds stables publiés.
 
 ## Publication HTTPS
 
@@ -175,4 +179,4 @@ Les parcours HTML utilisent un **DOM simulé** : boutons, textes, confirmations 
 
 Vérifier d'abord la nouvelle disposition de cinq/sept lapins avec le [parcours visuel](docs/visual-iphone-test.md), puis les destinations compatibles, les détails des niveaux et le déplacement vers les dix-huit cases avec le [guide des habitats](docs/habitats-iphone-test.md). La caméra précédemment validée garde ses valeurs de zoom et de projection ; seules les limites latérales s'adaptent et un agencement est ajouté pour plus de trois occupants.
 
-La version visuelle est maintenant publiée sur HTTPS, sans ajout de lapin, décoration indépendante ou mini-jeu. Prochaine étape : vérifier le site dans Safari sur iPhone, avec Windows éteint et en données mobiles, puis examiner les résultats avant d'ajouter du contenu. La PWA et le fonctionnement hors connexion restent ultérieurs.
+La version stable est publiée sur HTTPS. La nouvelle personnalisation v5 se teste uniquement dans sa prévisualisation séparée ; le retour visuel Safari du joueur décidera de son intégration. Comptes/email en pause ; PWA et fonctionnement hors connexion restent ultérieurs.
