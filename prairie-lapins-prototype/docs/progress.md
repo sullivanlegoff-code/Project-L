@@ -1,3 +1,15 @@
+# Activation des comptes — contrôle du 9 octobre 2026
+
+Retour exact du joueur : les essais effectués fonctionnent, **sans preuve de connexion réelle ou de configuration Supabase**. Réponse explicite le 9 octobre : **aucun projet Supabase encore créé**.
+
+Vérification effective : `production` toujours `166700f`, PR nº1 ouverte en brouillon, sources `feature/private-cloud-saves` `e7874b8` avant cette mise à jour documentaire ; preview toujours figée sur `608f49a`. Analyse des scripts réellement servis : aucune URL de projet Supabase ni clé publishable injectée dans la preview. Aucun nouveau déploiement de production observé. Administration des variables GitHub toujours refusée à l'intégration (HTTP 403) : présence de variables non inspectable par API, mais configuration absente du build publié. Aucun secret ni contenu personnel collecté.
+
+Statut : projet absent confirmé par le propriétaire ; schéma/fonctions hébergés non installés puisque projet à créer ; configuration publique absente du build ; aucun email réel/session/distante/seconde connexion vérifiés. Les 414 tests de la livraison précédente ne sont pas présentés comme nouveaux tests hébergés. Aucun changement de code ni publication de comptes en production pendant cette préparation.
+
+Prochaine action guidée : créer **prairie-lapins-test** dans une organisation Free, garder le mot de passe uniquement dans un gestionnaire et attendre que le projet soit prêt. Puis SQL exact, OTP, contrôle de l'adresse de l'équipe autorisée, variables publiques et reconstruction, une étape à la fois. [Accompagnement pas à pas](accounts-activation.md).
+
+Passage prévu : **projet de test distinct du futur projet de production**, dans la limite des deux projets Free disponibles. Les comptes/sessions/parties de preview restent sur le projet de test ; aucune copie automatique. Une progression à conserver sera exportée puis importée volontairement après connexion au nouveau projet de production. La partie invitée normale et le laboratoire restent inchangés ; les services de comptes restent interdits au laboratoire. Le second projet sera aussi validé avant activation normale. Aucun abonnement, domaine ou destruction autorisés automatiquement.
+
 # Comptes privés — prévisualisation, activation externe en attente
 
 8 octobre 2026. Retour humain exact : **jeu normal et laboratoire fonctionnent pendant l’essai iPhone** ; aucun scénario supplémentaire déduit. Production de départ `1747ea6` conservée. Travail sur `feature/private-cloud-saves`. Supabase Free choisi après lecture des documents officiels ; aucune intégration/clé/compte Supabase ou SMTP accessible. Variables GitHub Actions : administration refusée à l’intégration (HTTP 403), saisie des deux valeurs publiques par le propriétaire nécessaire.
