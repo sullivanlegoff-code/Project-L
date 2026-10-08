@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
 import type {GameController} from '../application/GameController';
-import {HABITATS} from '../config/habitats';
+import {drawHabitat} from './habitatArt';
+import {rabbitOffset, rabbitPosition, rabbitHitPoint, rabbitHit} from './rabbitLayout';
 import {habitatStats, habitatName, terrainWidth, visibleColumns, nextExtension} from '../simulation/habitats';
 import {HOUR} from '../config/balance';
 import type {GameState} from '../state/types';
@@ -63,13 +64,25 @@ export class MeadowScene extends Phaser.Scene {
     const columns = this.current ? visibleColumns(this.current) : 6;
     const width = this.current ? terrainWidth(this.current) : 3;
     const corners = [gridPoint(0, 0), gridPoint(columns, 0), gridPoint(columns, 2), gridPoint(0, 2)];
-    g.fillStyle(0x97ad73); g.fillPoints(corners.map(p => ({x: p.x, y: p.y + 18})), true);
-    for (let y = 0; y < 2; y++) for (let x = 0; x < columns; x++) this.polygon(g, x, y, (x + y) % 2 ? 0xb3d690 : 0xb0d18b);
+    g.fillStyle(0x789060, .12); g.fillPoints(corners.map(p => ({x: p.x + 9, y: p.y + 25})), true);
+    g.fillStyle(0x9eaa77); g.fillPoints(corners.map(p => ({x: p.x, y: p.y + 16})), true);
+    for (let y = 0; y < 2; y++) for (let x = 0; x < columns; x++) this.polygon(g, x, y, (x + y) % 2 ? 0xb7d797 : 0xb5d493);
+    g.lineStyle(3, 0xd6e6b1, .7); g.strokePoints(corners, true);
+    // Soft patches replace the strong checkerboard without changing the projection.
+    for (let i = 0; i < columns * 9; i++) {
+      const p = gridPoint(.08 + ((i * 43) % (columns * 94)) / 100, .12 + ((i * 29) % 174) / 100);
+      g.fillStyle(i % 2 ? 0xd6e6a9 : 0x8db276, .16); g.fillEllipse(p.x, p.y, 44 + i % 4 * 11, 14 + i % 3 * 6);
+    }
     // Deterministic decorative flowers; never use the gameplay random generator.
     for (let i = 0; i < 150; i++) {
       const p = gridPoint(((i * 71) % (columns * 100 - 13)) / 100, ((i * 37) % 193) / 100);
-      g.fillStyle(i % 3 === 0 ? 0xf2dc9c : i % 3 === 1 ? 0xe6a5b3 : 0xfff8dc); g.fillCircle(p.x, p.y, 2.3);
+      // Keep taller plants away from occupied building footprints.
+      const cell = gridCell(p), center = gridPoint(cell.x + .5, cell.y + .5);
+      if (this.current?.buildings.some(b => b.x === cell.x && b.y === cell.y) && Math.abs(p.x - center.x) < 83 && Math.abs(p.y - center.y) < 63) continue;
+      g.fillStyle(0x688955, .12); g.fillEllipse(p.x + 2, p.y + 6, 7, 3);
       g.lineStyle(1, 0x80a065); g.lineBetween(p.x, p.y + 2, p.x - 2, p.y + 6);
+      g.fillStyle(i % 3 === 0 ? 0xf2dc9c : i % 3 === 1 ? 0xe6a5b3 : 0xfff8dc); g.fillCircle(p.x, p.y, 2.3);
+      if (i % 7 === 0) { g.fillCircle(p.x - 2.5, p.y, 2); g.fillCircle(p.x + 2.5, p.y, 2); g.fillCircle(p.x, p.y - 2.5, 2); g.fillStyle(0xffedb6); g.fillCircle(p.x, p.y, 1.2); }
     }
     if (width < columns) {
       for (let y = 0; y < 2; y++) for (let x = width; x < columns; x++) {
@@ -86,33 +99,7 @@ export class MeadowScene extends Phaser.Scene {
       const p = gridPoint(b.x + .5, b.y + .5), x = p.x, y = p.y;
       g.fillStyle(0x506b42, .13); g.fillEllipse(x + 5, y + 30, 150, 65);
       if (b.kind === 'enclosure') {
-        g.fillStyle(HABITATS[b.habitat!.type].ground); g.fillEllipse(x, y + 8, 145, 82);
-        g.lineStyle(7, HABITATS[b.habitat!.type].fence); g.strokeRoundedRect(x - 72, y - 35, 144, 88, 16);
-        g.lineStyle(3, 0xedd2a6); g.strokeRoundedRect(x - 72, y - 41, 144, 88, 16);
-        for (const dx of [-70, -25, 25, 70]) { g.fillStyle(0x97724d); g.fillRoundedRect(x + dx - 4, y + 30, 8, 31, 2); }
-        // Small details occupy the border; the logical cell and rabbit hit targets stay unchanged.
-        const type = b.habitat!.type;
-        if (type === 'paille') {
-          g.fillStyle(0xe9c774); g.fillRoundedRect(x - 67, y - 44, 30, 15, 4);
-          g.lineStyle(2, 0xb79a66); g.lineBetween(x - 58, y - 44, x - 58, y - 29); g.lineBetween(x - 47, y - 44, x - 47, y - 29);
-        } else if (type === 'neige') {
-          g.fillStyle(0xffffff); g.fillEllipse(x - 53, y - 32, 36, 12);
-          g.fillStyle(0xaad6e5); g.fillTriangle(x + 48, y - 33, x + 56, y - 55, x + 65, y - 33);
-        } else if (type === 'terre') {
-          g.fillStyle(0x8a7769); g.fillEllipse(x - 54, y - 32, 30, 19);
-          g.fillStyle(0x5e554c); g.fillEllipse(x - 54, y - 29, 17, 12);
-          g.fillStyle(0xb6b0a2); g.fillEllipse(x + 59, y - 32, 22, 16);
-        } else if (type === 'feu') {
-          for (const dx of [-58, 56]) { g.fillStyle(0xbc9581); g.fillEllipse(x + dx, y - 31, 23, 13); g.fillStyle(0xf0ac73); g.fillCircle(x + dx, y - 37, 7); g.fillStyle(0xf5d59c); g.fillCircle(x + dx, y - 37, 3); }
-        } else if (type === 'metal') {
-          for (const dx of [-64, 64]) { g.fillStyle(0xdce3e7); g.fillRoundedRect(x + dx - 6, y - 41, 12, 12, 2); g.fillStyle(0x8495a5); g.fillCircle(x + dx, y - 35, 2); }
-        } else if (type === 'vol') {
-          g.lineStyle(3, 0x95a5b7); g.lineBetween(x - 61, y - 30, x - 61, y - 56); g.lineBetween(x - 70, y - 50, x - 48, y - 50);
-          g.fillStyle(0xe8b6c4); g.fillTriangle(x - 61, y - 56, x - 42, y - 50, x - 61, y - 44);
-          g.fillStyle(0xf1f5e7); g.fillEllipse(x + 59, y - 37, 9, 24);
-        }
-        for (let level = 0; level < b.habitat!.level; level++) { g.fillStyle(0xffefb4); g.fillCircle(x - 10 + level * 10, y + 53, 3.5); }
-
+        drawHabitat(g, x, y, b.habitat!.type, b.habitat!.level);
       } else if (b.kind === 'farm') {
         g.fillStyle(0xb88d68); g.fillRoundedRect(x - 62, y - 27, 124, 77, 10);
         for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
@@ -133,7 +120,9 @@ export class MeadowScene extends Phaser.Scene {
         g.lineStyle(2, 0xe7c69d); for (let i = 0; i < 5; i++) g.lineBetween(x - 40 + i * 19, y + 13, x - 34 + i * 17, y + 35);
         this.ground.add(this.add.text(x + 30, y - 54, '✦', {fontSize: '24px', color: '#f4df93'}).setOrigin(.5));
       }
-      this.ground.add(this.add.text(x, y + 67, b.kind === 'enclosure' ? habitatName(b) : BUILDING_NAMES[b.kind], {fontFamily: 'Arial', fontSize: '14px', color: '#435b38', backgroundColor: '#e4ebce', padding: {x: 6, y: 3}}).setOrigin(.5));
+      const label = this.add.text(x, y + 70, b.kind === 'enclosure' ? habitatName(b) : BUILDING_NAMES[b.kind], {fontFamily: 'Arial', fontSize: '13px', color: '#435b38', padding: {x: 7, y: 3}}).setOrigin(.5);
+      g.fillStyle(0xf8f4de, .92); g.fillRoundedRect(x - label.width / 2, y + 70 - label.height / 2, label.width, label.height, 7);
+      this.ground.add(label);
     }
   }
   private drawAnimals(): void {
@@ -142,9 +131,9 @@ export class MeadowScene extends Phaser.Scene {
       const residents = this.current!.rabbits.filter(r => r.enclosureId === enclosure.id);
       const center = gridPoint(enclosure.x + .5, enclosure.y + .5);
       residents.forEach((rabbit, index) => {
-        const offset = (residents.length > 3 ? VISUAL.rabbit.crowdedOffsets : VISUAL.rabbit.offsets)[index];
+        const offset = rabbitOffset(index, residents.length);
         const base = {x: center.x + offset.x, y: center.y + offset.y};
-        const object = this.add.container(base.x, base.y).setScale(VISUAL.rabbit.scale);
+        const object = this.add.container(base.x, base.y).setScale(VISUAL.rabbit.scale).setDepth(base.y);
         const coat = COATS[rabbit.species], color = Phaser.Display.Color.HexStringToColor(coat.body).color, patch = Phaser.Display.Color.HexStringToColor(coat.patch).color;
         const ears = coat.lop ? [this.add.ellipse(-19, -6, 10, 29, color), this.add.ellipse(19, -6, 10, 29, color)] :
           [this.add.ellipse(-7, -24, 8, 26, color), this.add.ellipse(7, -25, 8, 26, coat.frost ? patch : color)];
@@ -212,8 +201,9 @@ export class MeadowScene extends Phaser.Scene {
     const world = this.view.world(screen), cell = gridCell(world);
     if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
     for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
-    const closest = this.rabbitViews.map(r => ({r, p: this.view.screen({x: r.object.x, y: r.object.y - 7 * VISUAL.rabbit.scale})})).sort((a, b) => Math.hypot(a.p.x - screen.x, a.p.y - screen.y) - Math.hypot(b.p.x - screen.x, b.p.y - screen.y))[0];
-    if (closest && Math.hypot(closest.p.x - screen.x, closest.p.y - screen.y) < VISUAL.rabbit.hitRadius) { this.select({kind: 'rabbit', id: closest.r.id}); return; }
+    const closest = rabbitHit(screen, this.rabbitViews.map(r => ({id: r.id,
+      point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y})));
+    if (closest) { this.select({kind: 'rabbit', id: closest.id}); return; }
     if (this.current && cell.x >= terrainWidth(this.current) && cell.x < visibleColumns(this.current) && cell.y >= 0 && cell.y < 2) { this.select({kind: 'extension'}); return; }
     const building = this.current?.buildings.find(b => b.x === cell.x && b.y === cell.y);
     this.select(building ? {kind: 'building', id: building.id} : {kind: 'empty'});
@@ -221,9 +211,10 @@ export class MeadowScene extends Phaser.Scene {
   update(time: number): void {
     for (const rabbit of this.rabbitViews) {
       const t = time / 1000 + rabbit.phase;
-      rabbit.object.x = rabbit.base.x + Math.sin(t * .5) * 7;
-      rabbit.object.y = rabbit.base.y + Math.sin(t * .65) * 3 - (rabbit.fedUntil > time ? Math.abs(Math.sin(t * 14)) * 7 : 0);
+      const position = rabbitPosition(rabbit.base, time, rabbit.phase, rabbit.fedUntil);
+      rabbit.object.setPosition(position.x, position.y).setDepth(position.y);
       rabbit.ears.forEach((ear, index) => { ear.rotation = Math.sin(t * 1.4 + index) * .13; });
     }
+    this.animals?.sort('depth');
   }
 }

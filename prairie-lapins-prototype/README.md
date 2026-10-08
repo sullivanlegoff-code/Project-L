@@ -1,10 +1,22 @@
-# Prairie de lapins — étape 8 : habitats et aménagement
+# Prairie de lapins — consolidation visuelle des habitats
 
-**361 tests réussis, TypeScript et build réussis.** Six habitats spécialisés, trois niveaux pour tous les habitats, deuxième extension et sauvegardes v4 avec migrations v1/v2/v3. Les paramètres sont dans `src/config/habitats.ts`. Aucun nouveau lapin ni dépendance.
+Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des sources récentes de `prairie-lapins-habitats-v4.zip`. Il contient les six habitats spécialisés, leurs trois niveaux, la deuxième extension et les sauvegardes **v4** avec migrations v1/v2/v3. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
 
-Le test humain précédent valide perspective, zoom, déplacement, pincement, Recentrer, taille des lapins, collection de onze espèces et lisibilité des panneaux. Les réglages de zoom, projection, compteurs et panneaux sont conservés. **Habitats de cette étape, missions, nouvelles reproductions, dépenses de cœurs et export/import restent à vérifier sur iPhone.**
+La référence habitats compte **361 tests** ; cette passe ajoute **8 tests de disposition et sélection**, soit **369 tests réussis dans 10 fichiers**, avec TypeScript et build validés. Le bilan de validation final et les captures sont dans [docs/progress.md](docs/progress.md). Aucun nouveau lapin ni dépendance.
 
-## Livraison
+Le test humain précédent valide perspective, zoom, déplacement, pincement, Recentrer, taille des lapins, collection de onze espèces et lisibilité des panneaux. Les réglages de zoom, projection, compteurs et panneaux sont conservés. **Cette nouvelle passe et les habitats, missions, nouvelles reproductions, dépenses de cœurs et export/import restent à vérifier sur iPhone.**
+
+## Passe visuelle
+
+- Prairie avec ombre sous le terrain, bordure claire, taches d'herbe douces et fleurs écartées des empreintes occupées.
+- Habitats avec socle, sol texturé, clôture commune et repères de niveau. Paille dorée et épis, neige et cristaux, terre et terrier, pierres chaudes du feu, dallage et rivets du métal, nuages et fanions du vol. Les dessins vectoriels originaux sont conservés dans `src/display/habitatArt.ts`.
+- Dispositions équilibrées pour quatre à sept occupants : cinq en deux rangées, sept en trois rangées. Les occupants avant laissent les noms des habitats lisibles.
+- Lapins dessinés selon leur profondeur et sélection suivant leur position animée. Le corps le plus proche du toucher est choisi ; à distance égale, celui au premier plan est prioritaire.
+- Déplacement discret de ±3 pixels horizontalement et ±1,5 verticalement, petit bond de 5 pixels après nourriture. Taille ×1,3, rayon de sélection de 27 pixels écran, identité des onze espèces, projection et zooms 0,8 / 1,05 / 1,65 conservés.
+
+Les changements sont visuels : mêmes règles, ressources, probabilités, clés de stockage et format v4. Aucune migration supplémentaire.
+
+## Fonctionnalités de la livraison habitats
 
 - Six variantes : paille, neige, terre, feu, métal et vol ; universels conservés.
 - Achat, accueil et transfert contrôlent le type et la place disponible avant toute dépense. Hybrides compatibles avec chacun de leurs types.
@@ -21,39 +33,44 @@ Le test humain précédent valide perspective, zoom, déplacement, pincement, Re
 
 Plafonds et coûts exprimés en pattes. Aucun multiplicateur de revenus. Les six noms et types sont dans [les règles](docs/game-design.md).
 
-**À lire : [parcours court iPhone](docs/habitats-iphone-test.md), [bilan précis](docs/progress.md), [règles et tableaux](docs/game-design.md).** Scénario facultatif : `docs/test-saves/habitats-ready-v4.json`, uniquement à importer en mode test. Il contient explicitement des ressources et neuf espèces de test, dont les trois rares, sans en offrir aux parties normales. Les anciens guides de missions, collection, cœurs et export restent utiles.
+**À lire : [nouveau parcours visuel sur iPhone](docs/visual-iphone-test.md), [parcours des habitats](docs/habitats-iphone-test.md), [bilan précis](docs/progress.md), [règles et tableaux](docs/game-design.md).** Scénario facultatif : `docs/test-saves/habitats-ready-v4.json`, uniquement à importer en mode test. Il contient explicitement des ressources et neuf espèces de test, dont les trois rares, sans en offrir aux parties normales. Les anciens guides de missions, collection, cœurs et export restent utiles.
 
 ## Lancer le projet
 
-Installer Node.js 22.12+ ou 24 LTS, extraire l'archive puis ouvrir un terminal dans le dossier `prairie-lapins-prototype` :
+Installer Node.js 22.12+ ou 24 LTS. Sur Windows 11, ouvrir PowerShell dans **`Project-L/prairie-lapins-prototype`**, ou utiliser le chemin réel à la place de celui ci-dessous :
 
-```bash
+```powershell
+cd "C:\chemin\vers\Project-L\prairie-lapins-prototype"
 npm ci
-npm run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0 --port 5175 --strictPort
 ```
 
-Sur Windows, garder le terminal ouvert. L'iPhone et l'ordinateur doivent être sur le même réseau. Sur l'iPhone, ouvrir l'adresse **Network** affichée par Vite, avec **`?dev=1`** pour les essais isolés (exemple : `http://192.168.1.20:5173/?dev=1`, à remplacer par l'adresse réelle). Ne pas utiliser `localhost` sur l'iPhone.
+Garder le terminal ouvert. Le port **5175** réserve un aperçu distinct de la version utilisée sur 5173. `--strictPort` signale un port déjà occupé au lieu de changer silencieusement d'adresse. L'iPhone et l'ordinateur doivent être sur le même réseau. Sur l'iPhone, ouvrir l'adresse **Network** affichée par Vite, avec **`?dev=1`** pour les essais isolés (exemple : `http://192.168.1.13:5175/?dev=1`, à remplacer par l'adresse réelle). Ne pas utiliser `localhost` sur l'iPhone.
 
-Sur ordinateur, ouvrir l'adresse locale affichée, normalement `http://localhost:5173/`. Sur ordinateur : cliquer pour sélectionner, glisser pour déplacer la vue et utiliser la molette pour zoomer. Sur téléphone : paysage, glisser avec un doigt et pincer avec deux doigts. En portrait, une invitation propose de tourner l'appareil ; un bouton permet néanmoins de continuer.
+Sur ordinateur, ouvrir `http://localhost:5175/?dev=1`. Cliquer pour sélectionner, glisser pour déplacer la vue et utiliser la molette pour zoomer. Sur téléphone : paysage, glisser avec un doigt et pincer avec deux doigts. En portrait, une invitation propose de tourner l'appareil ; un bouton permet néanmoins de continuer.
 
 Si l'environnement affiche `uv_interface_addresses`, utiliser :
 
 ```bash
-npm run dev -- --host 127.0.0.1
+npm run dev -- --host 127.0.0.1 --port 5175 --strictPort
 ```
 
-Puis ouvrir `http://127.0.0.1:5173/`. Ce lancement ne publie pas de lien HTTPS ; le déploiement sera une étape distincte.
+Puis ouvrir `http://127.0.0.1:5175/?dev=1` dans le navigateur de cet environnement.
+
+L'adresse communiquée par le joueur, `http://192.168.1.13:5173/?dev=1`, est un accès au serveur de développement sur son réseau local. Aucune URL publique ni configuration de déploiement public n'a été identifiée dans le dépôt. La configuration de l'environnement cloud, l'aperçu Vite et un éventuel site public sont des éléments distincts. Cet aperçu ne publie pas le jeu et ne fournit pas de fonctionnement hors connexion.
 
 ```bash
 npm test
 npm run typecheck
-npm run build
-npm run preview
+npm run build -- --outDir ../build-visual
+npm run preview -- --outDir ../build-visual --host 0.0.0.0 --port 4175 --strictPort
 ```
+
+Le build est écrit dans `Project-L/build-visual` pour préserver le dossier `dist` livré et versionné. L'aperçu de ce build s'ouvre sur le port 4175, sans outils de développement : `?dev=1` n'y active pas de partie de test. Pour les essais isolés avec l'horloge et les scénarios, utiliser le serveur de développement sur 5175.
 
 ## Ce qui est jouable
 
-- Prairie Phaser plein écran, vue aérienne inclinée, fleurs et terrain à débloquer ; caméra bornée, glissade, pincement et molette.
+- Prairie Phaser plein écran, vue aérienne à profondeur comprimée, fleurs et terrain à débloquer ; caméra bornée, glissade, pincement et molette.
 - Boutique Bâtiments/Lapins. Choix d'une case, aperçu, validation avec prix ou annulation gratuite. Grille visible pendant le placement/déplacement, avec ✓ et × en complément des couleurs.
 - Enclos en bois, ferme végétale, nid, nurserie et onze variantes de lapins originales ; petits déplacements, oreilles animées et réaction à la nourriture.
 - Pattes, herbe et cœurs toujours affichés. Panneaux latéraux avec fermeture, informations d'enclos et fiches individuelles.
@@ -69,14 +86,14 @@ npm run preview
 
 ## Tester rapidement avec l'horloge de développement
 
-Avec `npm run dev`, ouvrir `http://localhost:5173/?dev=1` (ou la même URL sur `127.0.0.1` si c'est l'hôte choisi). Un badge « Mode test · partie séparée » apparaît. Dans **Paramètres**, les boutons +5, +20, +60, +360 et +1440 minutes avancent une horloge injectée dans le contrôleur.
+Avec la commande de développement ci-dessus, ouvrir `http://localhost:5175/?dev=1` (ou la même URL sur `127.0.0.1` si c'est l'hôte choisi). Un badge « Mode test · partie séparée » apparaît. Dans **Paramètres**, les boutons +5, +20, +60, +360 et +1440 minutes avancent une horloge injectée dans le contrôleur.
 
 - Les coûts, délais et probabilités officiels ne changent pas ; aucune ressource de test n’est offerte automatiquement ; la récompense normale de cœurs devient réclamable à son échéance simulée.
 - L'horloge, les préférences et la sauvegarde sont isolées sous `prairie-lapins.development.*`.
 - La partie normale utilise toujours `prairie-lapins.save.v1`.
 - Revenir à l'URL sans `?dev=1` retrouve la partie normale.
 - Le module de développement n'est pas inclus dans le bundle de production. `?dev=1` n'a aucun effet avec le build normal.
-- Un export effectué en mode test est un JSON version 3 : ne l'importer dans une partie normale que volontairement.
+- Un export effectué en mode test est un JSON version 4 : ne l'importer dans une partie normale que volontairement.
 
 Le parcours du nouveau palier est dans [collection-iphone-test.md](docs/collection-iphone-test.md). Il propose l'import volontaire de `docs/test-saves/collection-ready-v2.json` **uniquement dans la partie de test** : six communs d'affection 2, bâtiments et extension, ressources préparées et neuf échecs simulés pour exercer la garantie. Ce fichier n'est jamais chargé automatiquement ; une nouvelle partie garde 300 pattes, 10 herbes et 12 cœurs.
 
@@ -124,13 +141,17 @@ La clé active reste `prairie-lapins.save.v1`, avec contenu v4. Copie brute v3 s
 | `src/display/` | scène Phaser, événements du canvas, panneau de sauvegarde, export |
 | `src/ui/` | panneaux de jeu, projections sans révélation prématurée, gestes, portraits, sons et préférences |
 | `src/dev/` | horloge de développement isolée, exclue de la production |
-| `tests/` | 361 tests, dont 35 parcours via les éléments HTML dans un DOM simulé |
+| `tests/` | 361 tests existants et 8 tests de disposition/sélection ; 35 parcours HTML dans un DOM simulé |
 
 Les commandes visuelles utilisent exclusivement `GameController.perform`. La scène ne modifie jamais l'état. Les confirmations d'import et de redémarrage réutilisent les fonctions transactionnelles du contrôleur. Les snapshots sont des copies. Le moteur intègre les commandes de cœurs et le contrôleur fournit son horloge à la migration. Les règles précédentes et la géométrie visuelle sont conservées.
 
-Vérifications exécutées : **361 tests réussis dans 9 fichiers**, TypeScript strict et build réussis. Les 230 tests existants sont conservés ; leurs attentes de version et la confirmation d'extension sont adaptées. Ajouts : 125 tests d'habitats/migrations/caméra et 6 parcours HTML. Parmi les 125, 77 cas couvrent les onze espèces dans chacun des sept types d'habitat. Une sauvegarde v3 a été générée avec le code non modifié de la livraison précédente pour vérifier la conservation exacte des champs. `happy-dom` reste réservé aux tests.
+**Bilan historique de la livraison habitats, avant cette passe :** 361 tests réussis dans 9 fichiers, TypeScript strict et build réussis. Les 230 tests du palier missions sont conservés ; leurs attentes de version et la confirmation d'extension sont adaptées. Ajouts historiques : 125 tests d'habitats/migrations/caméra et 6 parcours HTML. Parmi les 125, 77 cas couvrent les onze espèces dans chacun des sept types d'habitat. Une sauvegarde v3 a été générée avec le code non modifié de la livraison précédente pour vérifier la conservation exacte des champs. `happy-dom` reste réservé aux tests.
 
-Build : 45 modules ; JavaScript 1 360,20 ko minifié / 377,90 ko gzip ; CSS 6,91 ko. L'avertissement de taille du bundle Phaser reste non bloquant. Le serveur Vite démarre ; le navigateur disponible refuse sa connexion locale (`ERR_CONNECTION_REFUSED`). Pas de capture ni validation du rendu réel dans cette livraison.
+Build historique : 45 modules ; JavaScript 1 360,20 ko minifié / 377,90 ko gzip ; CSS 6,91 ko. Le navigateur de cette ancienne livraison refusait sa connexion locale (`ERR_CONNECTION_REFUSED`) ; elle ne comprenait donc aucune capture ni validation du rendu réel.
+
+**Consolidation actuelle :** 369 tests réussis dans 10 fichiers, TypeScript strict et build validés. Les 8 nouveaux tests exercent la sélection de chaque occupant parmi cinq/sept lapins aux zooms minimum et initial, avec les mouvements réels et leurs extrema, le dégagement des étiquettes et la priorité en cas de distance égale. Build : 47 modules, JavaScript 1 364,65 ko minifié / 379,48 ko gzip, CSS 6,91 ko ; l'avertissement de taille lié à Phaser reste non bloquant.
+
+Un navigateur réel Chromium utilise une partie de test séparée et un viewport paysage de **852 × 393**. Avant et après la passe, les 21 sélections des sept occupants aux zooms 0,8 / 1,05 / 1,65 réussissent, les panneaux Boutique et Missions s'ouvrent et aucune erreur de console ou de réseau n'est constatée. Les captures et les autres contrôles sont consignés dans [docs/progress.md](docs/progress.md). Ce viewport simulé ne constitue pas un test sur iPhone physique.
 
 ## Limites et validation restante
 
@@ -138,8 +159,8 @@ Le test humain précédent, effectué sur iPhone Safari en paysage via un serveu
 
 Le dernier test humain complète ces résultats : perspective stable, lapins grands et reconnaissables, zoom confortable, déplacement/pincement/Recentrer fonctionnels, collection de onze espèces, boutique et conditions du carnet correctes, listes et panneaux lisibles. **La caméra est désormais validée par l'humain et conservée.** Cela ne valide pas les nouvelles reproductions, dépenses de cœurs ou l'export/import sur iPhone.
 
-Pour cette livraison, les parcours HTML utilisent un **DOM simulé** : boutons, textes, confirmations et état sont contrôlés, pas le rendu Safari ou les gestes physiques. Le navigateur réel disponible ne rejoint pas le serveur local. Aucun test iPhone des habitats, des missions, des nouvelles reproductions, des dépenses de cœurs ou de l'export/import n'est revendiqué.
+Les parcours HTML utilisent un **DOM simulé** : boutons, textes, confirmations et état sont contrôlés, pas le rendu Safari ou les gestes physiques. Les essais Chromium de cette passe complètent ces contrôles. Aucun test iPhone physique de la passe visuelle, des habitats, des missions, des nouvelles reproductions, des dépenses de cœurs ou de l'export/import n'est revendiqué.
 
-Vérifier particulièrement les rangées de cinq/sept lapins, les destinations compatibles, les détails des niveaux et le déplacement vers les dix-huit cases avec le [guide court](docs/habitats-iphone-test.md). La caméra précédemment validée garde ses valeurs de zoom et de projection ; seules les limites latérales s'adaptent et un agencement est ajouté pour plus de trois occupants.
+Vérifier d'abord la nouvelle disposition de cinq/sept lapins avec le [parcours visuel](docs/visual-iphone-test.md), puis les destinations compatibles, les détails des niveaux et le déplacement vers les dix-huit cases avec le [guide des habitats](docs/habitats-iphone-test.md). La caméra précédemment validée garde ses valeurs de zoom et de projection ; seules les limites latérales s'adaptent et un agencement est ajouté pour plus de trois occupants.
 
-Aucun nouveau lapin, décoration indépendante, mini-jeu, déploiement HTTPS ou PWA. Prochaine étape recommandée après validation humaine : préparer un petit palier de collection avec recettes dépendant d'espèces précises et objectifs d'aménagement, à chiffrer avant développement.
+Aucun nouveau lapin, décoration indépendante, mini-jeu, déploiement HTTPS ou PWA. Prochaine étape : valider cette version sur iPhone avec le guide, puis examiner les résultats avant d'ajouter du contenu ou de préparer une publication publique.

@@ -1,94 +1,79 @@
-# Progression — étape 8 : habitats et aménagement
+# Consolidation et première passe visuelle — 8 octobre 2026
 
-Étape terminée. Livraison : projet Phaser/TypeScript, configuration, simulation, contrôleur, interface HTML et rendu Phaser, tests, documentation, scénario de test et build. Aucun déploiement, PWA, nouveau lapin, mini-jeu ou décoration indépendante. Aucune dépendance ajoutée.
+La cible réelle est `prairie-lapins-prototype`, sauvegardes **v4**. Le dossier `V1.0.4` correspond au palier précédent des missions, sauvegardes v3 et 230 tests. Les sources habitats et leur archive existaient déjà ; aucune mécanique n'a été réimplémentée depuis le brief.
 
-## Résultats humains conservés
+Révision de départ : `e3e4b8924ce09e065ccd552bef5cd7db0c416828`, branche initiale `work`, copie de travail propre. `origin/main` porte la même révision ; aucune autre branche distante ni tag trouvé. Travail dans `visual/meadow-habitats`. Dossiers historiques, archive originale et builds versionnés conservés.
 
-Le dernier compte rendu humain valide sur iPhone Safari : prairie sans impression de pente/déformation, lapins reconnaissables, zoom confortable, glissade/pincement/Recentrer, collection de onze espèces, trois nouveaux communs en boutique, rares non achetables, carnet des conditions et listes/panneaux lisibles au toucher.
+## Fonctionnalités et corrections
 
-Ces résultats concernent la version testée par l'humain. **Ils ne valident pas les nouvelles reproductions, dépenses de cœurs, export/import, missions ni les habitats de cette livraison.** Tous restent ouverts sur iPhone. Les valeurs de zoom, projection et rayon de sélection, les compteurs et dimensions des panneaux sont conservés.
+Onze espèces, affection, revenus fractionnaires, fermes, reproduction/garantie, nurserie, cœurs, missions et export/import sont présents. Six habitats spécialisés et universels, niveaux 1–3, capacités 3/5/7, coûts/plafonds validés, deux extensions (3×2 → 6×2 → 9×2), migrations v1/v2/v3 vers v4 : tout est conservé.
 
-## Implémentation réelle
+Défauts visuels constatés : cinq occupants utilisaient les cinq premiers emplacements de la disposition pour sept ; à sept, les lapins du premier plan empiétaient sur le nom de l'habitat. Aucun défaut de simulation reproductible trouvé dans cette étape.
 
-- `src/config/habitats.ts` : types stables, noms/couleurs, prix, trois niveaux et deux extensions, selon les chiffres demandés.
-- `src/simulation/habitats.ts` : compatibilité, statistiques, places, largeur et prochaine extension. Tous les habitats réutilisent `kind: enclosure`, les revenus, récoltes et transferts existants.
-- Achat, accueil et déplacement contrôlent type/place avant paiement ou transfert. Un hybride est compatible avec chacun de ses types ; l'universel accepte toutes les espèces. Aucun déménagement des anciens lapins.
-- `upgradeHabitat` : niveau attendu porté par la commande, paiement et effet atomiques, refus des confirmations périmées, niveau maximal 3. Stock et fractions conservés ; calcul jusqu'au paiement avec l'ancien plafond, sans récupérer de revenus perdus.
-- Deuxième extension : 1 000 pattes après la première, terrain 9 × 2, coordonnées conservées. La mission de première extension ne redonne rien.
-- Compléments facultatifs en cœurs réutilisés pour achat spécialisé, amélioration et deuxième extension ; conditions, prix maximum et confirmations uniques conservés. Un placement annulé ne paie rien.
-- Boutique en sections, destinations avec type/effectif/capacité et motifs ; panneau d'habitat complet, amélioration et extensions confirmées. Vocabulaire « habitat » pour les destinations.
-- Rendu pastel différencié, repères de niveau et rangées pour cinq/sept lapins. Même empreinte logique, taille des lapins et zone de toucher. Caméra avec bornes adaptées à la prochaine bande de terrain ; zoom initial/min/max inchangés, aucun recentrage automatique lors des achats. Changements de bornes/orientation différés pendant un geste.
-- JSON v4 : propriété `habitat` et `secondExpanded`. Migrations v1/v2/v3 ; v3 conserve toutes les missions, cœurs, échéances et autres champs. Ancien enclos = universel niveau 1. Validation stricte des types, niveaux, capacités, compatibilités, plafonds et extensions.
-- Copie brute v3 avant écriture v4 ; import écrit avant remplacement actif, échec/annulation sans perte. Export v4. Horloge et stockage de développement restent séparés.
+- Dispositions équilibrées de quatre à sept occupants, premier plan remonté pour dégager le nom ; zones de toucher suivant les positions animées, priorité au premier plan à distance égale, tri des animaux par profondeur.
+- Animation réduite à ±3 pixels horizontalement, ±1,5 verticalement et un bond de nourriture de 5 pixels. Taille 1,3 et rayon de sélection 27 pixels écran conservés.
+- Prairie moins quadrillée : nuances et plaques végétales, fleurs déterministes, liseré et ombre légère. Plantes éloignées des bâtiments.
+- Habitats aux proportions communes : sol en relief, bordures et repères de niveau. Paille : botte et épis ; neige : congères/cristaux ; terre : terrier/pierres ; feu : galets lumineux/fleurs chaudes ; métal : dallage/bornes ; vol : nuages/rubans.
+- Noms sur cartouches arrondis, panneaux et boutons conservés. Dessins vectoriels originaux dans `src/display/habitatArt.ts`, sans dépendance ni asset externe.
 
-L'économie historique, la reproduction et le cadeau de cœurs sont conservés. Seuls les coûts/capacités/plafonds nouveaux explicitement validés sont ajoutés. La description de la mission d'extension précise désormais « première extension » ; son identifiant, sa condition et sa récompense ne changent pas.
+Projection, zoom 1,05 et limites 0,8–1,65, recentrage et identité des espèces inchangés. Économie, probabilités et horloges inchangées. Le décor est indépendant des tirages de reproduction. Des ailes peuvent se recouvrir légèrement à sept ; les visages et cibles restent distincts.
 
 ## Vérifications exécutées
 
-| Ensemble | Résultat |
-|---|---:|
-| Simulation initiale | 38 réussis |
-| Contrôleur et cycle de vie | 32 réussis |
-| Adaptateurs/export | 6 réussis |
-| Gestes/caméra/modèles historiques | 19 réussis |
-| Cœurs et migrations | 40 réussis |
-| Collection et reproduction étendue | 27 réussis |
-| Missions, temps et transactions | 39 réussis |
-| Habitats, niveaux, extensions, caméra et migrations | 125 réussis |
-| Parcours HTML happy-dom | 35 réussis |
-| `npm test` | **361 réussis, 9 fichiers** |
-| `npm run typecheck` | **réussi** |
-| `npm run build` | **réussi** |
-| Démarrage Vite | **réussi**, port 5173 |
-| Navigateur réel | **bloqué : ERR_CONNECTION_REFUSED** à l'ouverture du serveur local |
-| iPhone pour cette livraison | **non testé par l'IA, validation humaine attendue** |
+| Vérification | Résultat |
+|---|---|
+| Référence avant modifications | 361 tests / 9 fichiers, TypeScript et build réussis |
+| Version finale | **369 tests / 10 fichiers réussis**, aucun échec ni test ignoré |
+| Nouveaux tests | 8 : sélection cinq/sept, animation/nourriture aux extrêmes, profondeur et noms dégagés |
+| TypeScript strict | Réussi, seul et dans le build |
+| Build final | Réussi, 47 modules ; JS 1 364,65 ko / gzip 379,48 ko ; CSS 6,91 ko |
+| Avertissement Phaser | Taille du bundle, non bloquant |
+| Vite | Version visuelle démarrée sur 5175, réponses HTTP vérifiées |
+| Chromium réel | Prairie rendue, six spécialisés et universel niveau 3 avec sept occupants |
+| Clics canvas | Sept occupants aux zooms 0,8 / 1,05 / 1,65 : **21/21**, avant et après |
+| Panneaux | Boutique et Missions ; panneau contenu dans le viewport paysage |
+| Console/réseau | Aucune erreur ni requête échouée dans les parcours |
+| Persistance en mode test | Nourriture par contrôleur, affection 4→5 écrite puis conservée au rechargement ; aucune sauvegarde normale créée |
+| Build en navigateur | Partie initiale v4 affichée, aucune erreur ; `?dev=1` ne crée pas de mode test en production |
+| Safari sur iPhone physique | Validation humaine attendue |
 
-Les 230 tests précédents sont conservés, avec adaptation des attentes de version, des fixtures historiques et de la confirmation explicite d'extension. Les 131 nouveaux tests comprennent :
+Contextes navigateur jetables, sauvegarde de développement uniquement. Captures ordinateur **1500×700** et paysage mobile **852×393**. Les scènes sont figées pour les captures/clics comparables ; les cibles pendant l'animation sont couvertes par les tests. Ces résultats ne valident pas Safari ni les gestes physiques.
 
-- Matrice de 77 cas : onze espèces × sept types d'habitat ; achat des six habitats et de leurs communs, compatibilité des hybrides, refus sans mutation, accueil réservé et déplacement.
-- Niveaux successifs et plafond maximal, capacités 3/5/7, revenus fractionnaires, ancien plafond avant amélioration, absence de production rétroactive, revenu des parents en reproduction.
-- Compléments exacts, manque de cœurs, confirmations périmées/doubles pressions, accélération de croissance tenant compte des capacités améliorées sans nouveau tirage.
-- Séquence des extensions, paiement unique, mission conservée, placement jusqu'à la colonne 9, aller-retour projection/sélection, bornes de caméra, zoom conservé et report pendant les gestes/orientations.
-- Migrations 1/2/3 et export/import v4, absence de redotation, copies de secours et échecs d'écriture, validation de fichiers corrompus, refus d'import sans remplacement.
-- Un export v3 a été généré par le **code non modifié de la livraison précédente**, conservé dans `tests/fixtures/before-habitats-v3.json`. Le test compare tous ses champs après migration en retirant uniquement les nouveaux champs : ressources, cœurs, missions réclamées, extension, fractions et résultat réservé sont identiques.
-- Six parcours HTML supplémentaires : catalogue/placement annulé/complément, améliorations confirmées, destinations compatibles/pleines, complément d'amélioration et invalidation après import, deuxième extension confirmée, isolation du mode test.
+Helper reproductible : `docs/visual-browser-check.cjs`, avec Playwright et Chromium disponibles dans le cloud sans modification du lockfile. Il exécute également une nourriture via le contrôleur, vérifie la sauvegarde de développement écrite, puis la retrouve après rechargement ; aucune clé de partie normale créée.
 
-Les premiers échecs portaient sur les anciens helpers fabriquant du JSON v1/v2 à partir de l'état courant : ils ont été corrigés pour retirer les nouveaux champs v4 avant validation de l'ancien format. Aucun test historique n'a été supprimé. Le parcours de première extension a été adapté à la confirmation désormais exigée.
+```bash
+PRAIRIE_TEST_URL='http://127.0.0.1:5175/?dev=1' node docs/visual-browser-check.cjs after
+```
 
-Build : **45 modules**, JavaScript **1 360,20 ko minifié / 377,90 ko gzip**, CSS **6,91 ko**. L'avertissement de taille du bundle Phaser est non bloquant ; l'avertissement npm `http-proxy` est propre à l'environnement. Aucun ajout de dépendance.
+Captures et rapports sous `/workspace/artifacts/prairie-visual/` : `before-desktop.png`, `after-desktop.png`, `before-mobile-seven.png`, `after-mobile-seven.png`, variantes habitats/boutique et rapports JSON. La référence avant provient d'une copie temporaire de la révision Git originale ; les modifications en cours n'ont pas été effacées. Sortie configurable par `PRAIRIE_CAPTURE_DIR`.
 
-Le navigateur disponible n'a pas pu joindre Vite malgré son démarrage. Les 35 parcours HTML utilisent un **DOM simulé**, pas Safari : ils vérifient les boutons/textes/transactions, pas le rendu ni le toucher. Aucune capture de rendu réel n'est livrée. La disposition à sept lapins nécessite particulièrement un essai humain.
+## Version accessible et lancement
 
-## Parcours humain et fichiers
+L'adresse fournie, `http://192.168.1.13:5173/?dev=1`, est un **serveur Vite sur le réseau local du joueur**, en mode de test séparé. Elle ne révèle pas le dossier lancé sur Windows. Aucun hébergeur, workflow de déploiement ou URL publique n'est configuré dans le dépôt. Les builds statiques ne constituent pas une publication du jeu. La publication de l'environnement Codex prépare les tâches futures ; elle ne publie pas le site. Aucun site public remplacé, aucun aperçu cloud partageable disponible ici. Pas de PWA ni de promesse de fonctionnement hors connexion.
 
-Guide : `docs/habitats-iphone-test.md`. Scénario facultatif : `docs/test-saves/habitats-ready-v4.json`, à importer seulement après vérification du badge Mode test. Il contient des ressources de test, les six habitats, neuf espèces dont les trois rares, et la première extension déjà achetée/récompensée ; aucune ressource n'est ajoutée automatiquement au jeu normal.
-
-Sous Windows, extraire l'archive puis ouvrir un terminal dans `prairie-lapins-prototype` :
+Sous Windows, ouvrir un terminal dans **`prairie-lapins-prototype`** :
 
 ```bash
 npm ci
-npm run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0 --port 5175 --strictPort
 ```
 
-Sur l'iPhone du même Wi-Fi : adresse **Network** avec **`?dev=1`**. Tester achat/annulation, compatibilités des trois rares, deux améliorations, stockage plein, seconde extension, déplacement d'un habitat occupé, rechargement et reprise. Les guides précédents de missions, collection et cœurs complètent les essais encore ouverts.
+Sur l'iPhone du même Wi-Fi : adresse **Network** avec `?dev=1`. Si Windows conserve `192.168.1.13`, la nouvelle version utilise **5175**. La session actuelle sur 5173 reste distincte. Scénario facultatif : `docs/test-saves/visual-ready-v4.json`, à importer seulement après vérification du badge Mode test. Guide : [parcours iPhone](visual-iphone-test.md).
 
-**L'export/import iPhone demeure à vérifier**, y compris l'enregistrement réel du JSON dans Fichiers, l'annulation, le remplacement confirmé et le refus des fichiers invalides. Les sauvegardes sont liées à l'origine (protocole, adresse, port). Changement de domaine/adresse ou passage du serveur de développement au futur site HTTPS : export/import nécessaire. Le stockage local peut être effacé ; aucune permanence ni synchronisation entre appareils n'est promise.
+Compilation sans écraser le dist versionné :
 
-## Prochaine étape recommandée
+```bash
+npm run build -- --outDir ../build-visual
+```
 
-Faire le parcours humain des habitats et des fonctions restées ouvertes. Ensuite, préparer un palier de collection avec recettes dépendant d'espèces précises et objectifs d'aménagement, afin de donner un usage durable à la place créée par les améliorations. Définir et valider son contenu et ses chiffres avant de développer. Aucun élément de cette prochaine étape n'est implémenté ici.
+Build cloud vérifié sous `/workspace/project-l-build/habitats-visual`. Un aperçu de production n'active pas `?dev=1` ; les outils de développement sont exclus du bundle.
 
-## Historique
+Archive de cette passe : `/workspace/artifacts/prairie-lapins-visuel-v4.zip`, avec sources, tests, documents, scénario, build final et captures dans `validation/`. L'archive historique du dépôt n'a pas été remplacée. Les champs cloud `install_script` et `start_skill` ont été enregistrés dans un nouveau brouillon pour cibler le bon dossier et le port 5175 ; ce brouillon ne publie ni l'environnement ni le jeu. Sa revue/enregistrement/publication se fait dans les paramètres de l'environnement.
 
-| Étape | Livré | Tests |
-|---|---|---:|
-| 1 | Socle et simulation | 38 |
-| 2 | Sauvegarde locale et export/import | 76 |
-| 3 | Interface jouable et outils de test | 100 |
-| 4 | Perspective, cadrage et recentrage | 107 |
-| 5 | Cœurs et migration v2 | 155 |
-| 6 | Onze espèces et carnet | 187 |
-| 7 | Missions et migration v3 | 230 |
-| 8 — actuelle | Habitats, améliorations, deuxième extension et migration v4 | **361** |
+## Sauvegardes et suite
 
-Le bilan complet de l'étape 7 est conservé sous `docs/history/progress-missions-v3.md` ; ses validations et limites sont historiques.
+JSON **v4** et clés inchangés, aucune migration supplémentaire ni redotation. Les v4 restent compatibles ; l'ancienne version v3 ne lit pas les v4. Changer de protocole, domaine ou port impose un export/import volontaire : garder l'export original. Aucun scénario chargé automatiquement dans une partie normale.
+
+Prochaine étape : essai iPhone de cette passe (habitats, sept sélections, gestes/recentrage, panneaux, améliorations et extension), puis export/import et reprise. Recueillir le retour avant d'élargir l'illustration ou d'ajouter du contenu. Missions, nouvelles rares et dépenses de cœurs restent aussi à valider sur appareil.
+
+Bilans historiques : [habitats, 361 tests](history/progress-habitats-v4.md) et [missions, 230 tests](history/progress-missions-v3.md).

@@ -1,12 +1,14 @@
-# Référence du prototype — habitats et aménagement, étape 8
+# Référence du prototype — habitats et consolidation visuelle
 
 Cette référence reprend les règles et chiffres approuvés par le joueur. Une modification d'équilibrage doit être précédée d'une explication de sa raison. Les paramètres exécutables se trouvent dans `src/config/balance.ts`, `src/config/missions.ts` et `src/config/habitats.ts`.
+
+La version de travail est `Project-L/prairie-lapins-prototype`, sources des habitats à sauvegarde **v4**, avec une référence de 361 tests. Le dossier historique `V1.0.4` correspond au palier missions à sauvegarde **v3**, avec 230 tests. La consolidation visuelle ajoute huit tests de disposition/sélection ; elle conserve intégralement les règles ci-dessous. Le bilan courant est dans [progress.md](progress.md).
 
 ## Concept et périmètre
 
 Jeu mobile solo de collection et de gestion d'une prairie de lapins. Boucle : récolter des pattes, produire de l'herbe, nourrir, reproduire, accueillir, construire et agrandir. Univers, noms, interface et visuels originaux. Les pattes financent les achats et productions ; l'herbe augmente l'affection. Aucun entretien obligatoire, faim, maladie, perte d'affection ou lapin perdu pendant l'absence.
 
-Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari, lien HTTPS, puis PWA. Progression locale avec export/import de secours. Aucun compte, serveur de jeu, achat réel ou publicité dans la première version.
+Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari. Un lien public HTTPS et une PWA restent des objectifs futurs : seule une adresse Vite sur réseau local a été communiquée, et aucune publication publique n'a été identifiée dans le dépôt. Progression locale avec export/import de secours. Aucun compte, serveur de jeu, achat réel ou publicité dans la première version.
 
 Prototype : onze espèces, collection, carnet de reproduction, missions principales et quotidiennes, enclos, ferme, nid, nurserie, achats, placement, déplacement, récolte, nourriture, reproduction, accueil, deux extensions, habitats spécialisés et améliorations, et sauvegarde. Les espèces ont des types fixes et une rareté distincte. Les six types de base sont paille, neige, terre, feu, métal et vol. Arc-en-ciel reste réservé à une étape future.
 
@@ -235,7 +237,7 @@ Bouton Missions sous les compteurs, indicateur discret de récompenses disponibl
 
 Commandes `claimMainMission`, `claimDailyMission`, `claimDailyBonus`, traitées par la simulation et le contrôleur. Les réclamations quotidiennes portent l'identité temporelle du cycle : un ancien bouton ne peut réclamer une récompense d'un cycle suivant. Les boutons de mission devenus obsolètes après import sont inactifs. L'état conserve le droit acquis et le paiement ensemble ; double pression ou rechargement ne redonne pas une récompense déjà enregistrée. Un refus ne change aucune ressource. L'avancement du temps séparé par le contrôleur reste conservé, comme avant.
 
-### Sauvegarde version 3
+### Sauvegarde version 3 — historique du palier missions
 
 La v3 ajoute `missions` : principales acquises/réclamées, référence et indice du cycle, compteurs/réclamations courants et bonus réclamé. Cette structure persistante justifie le changement de version. Les v1 et v2 sont validées selon leur format, puis converties ; l'import v3 conserve son état de missions et avance normalement le temps, sans réinitialisation ni fusion.
 
@@ -253,15 +255,15 @@ Les sauvegardes restent liées à l'origine du site. Le mode développement cons
 
 Les chiffres suivants sont ceux approuvés dans la demande de cette étape ; aucune proposition d'équilibrage supplémentaire n'est appliquée. Les règles de reproduction, revenus par lapin, affection, missions et cadeaux de cœurs sont conservées.
 
-| Identifiant | Habitat | Types acceptés | Achat | Détail provisoire |
+| Identifiant | Habitat | Types acceptés | Achat | Identité visuelle actuelle |
 |---|---|---|---:|---|
-| universal | Enclos universel | tous | 120 pattes | bois et herbe |
-| paille | Prairie de paille | paille | 200 pattes | herbe dorée, botte de paille |
-| neige | Jardin enneigé | neige | 200 pattes | neige douce, cristal |
-| terre | Terrier de terre | terre | 200 pattes | terre brune, rochers et terrier |
-| feu | Clairière de feu | feu | 200 pattes | pierres chaudes, fleurs orange |
-| metal | Atelier de métal | métal | 200 pattes | clôture grise et rivets |
-| vol | Jardin des airs | vol | 200 pattes | perchoir, plume et fanion |
+| universal | Enclos universel | tous | 120 pattes | bois, herbe, buissons et fleurs pastel |
+| paille | Prairie de paille | paille | 200 pattes | sol doré, botte de paille et épis |
+| neige | Jardin enneigé | neige | 200 pattes | sol glacé, neige douce et cristaux bleus |
+| terre | Terrier de terre | terre | 200 pattes | terre brune texturée, rochers, buisson et terrier |
+| feu | Clairière de feu | feu | 200 pattes | sol pêche, pierres chaudes et fleurs orange |
+| metal | Atelier de métal | métal | 200 pattes | sol dallé, clôture grise et poteaux à rivets |
+| vol | Jardin des airs | vol | 200 pattes | sol vert pâle, nuages et fanions pastel |
 
 | Famille | Niveau | Places | Plafond de pattes | Coût pour atteindre le niveau |
 |---|---:|---:|---:|---:|
@@ -296,3 +298,19 @@ Chaque bâtiment reçoit `habitat` : `{type, level}` pour les enclos/habitats, `
 - Clé active inchangée `prairie-lapins.save.v1`. Copie brute v3 avant migration sous `prairie-lapins.backup.before-v4`. Les copies historiques v1 et v2 gardent leurs clés. Un échec de copie/écriture conserve l'ancien contenu actif et signale l'erreur. Les anciennes versions du jeu ne lisent pas v4.
 
 Le mode test garde stockage et horloge séparés. Aucune ressource de test n'est attribuée automatiquement ; le scénario facultatif du guide ne remplace la partie de test qu'après un import explicite. Les sauvegardes restent locales, liées à l'origine et sans garantie de permanence.
+
+## Consolidation visuelle — prairie, habitats et occupants
+
+La prairie reçoit une ombre légère sous sa bordure, des nuances végétales douces et des fleurs déterministes. Le décor végétal reste à l'écart des empreintes des bâtiments. Il n'utilise jamais le générateur aléatoire de la reproduction.
+
+Les sept variantes d'habitat partagent un socle bas, un sol texturé, une bordure claire et une clôture avec un à trois repères de niveau. Les six spécialisés utilisent les couleurs et motifs de la table précédente. Les motifs les plus grands restent sur les bords pour laisser les visages et les bulles lisibles. Les sources des dessins vectoriels originaux sont `src/display/habitatArt.ts` ; aucun asset externe ni décoration achetable n'est ajouté.
+
+Les dispositions de quatre à sept lapins sont adaptées à l'effectif : quatre en deux rangées de deux, cinq en trois puis deux, six en deux rangées de trois, sept en trois puis deux puis deux. Les trois emplacements initiaux restent inchangés. Les lapins avant sont remontés pour dégager le nom de l'habitat et sa bordure. Oreilles, ailes, plumages, lunettes et autres signes distinctifs des onze espèces sont conservés.
+
+Le rendu classe les occupants selon leur profondeur animée. La sélection suit le centre visible du corps à chaque image ; elle choisit le corps le plus proche du toucher et, seulement à distance égale, le lapin au premier plan. La liste du panneau d'habitat reste un autre moyen de choisir chaque individu.
+
+Les petits déplacements sont limités à ±3 pixels horizontalement et ±1,5 pixel verticalement, avec un bond supplémentaire de 5 pixels après nourriture. Ces mesures sont dans les coordonnées du monde avant zoom. La taille des lapins reste ×1,3, le rayon de sélection reste 27 pixels écran, et les boutons/panneaux gardent leurs dimensions tactiles. La projection régulière de 176 × 148 par case et les zooms minimum 0,8, initial 1,05 et maximum 1,65 sont conservés.
+
+Cette passe ne change aucun état persistant, règle économique, probabilité, revenu ou capacité. Le format reste v4, avec les mêmes migrations et les mêmes clés `prairie-lapins.save.v1` et `prairie-lapins.development.*`. L'aperçu conseillé utilise le port 5175 et `?dev=1`, séparément de la version utilisée sur 5173. L'origine changeant avec le port, le transfert d'une partie se fait par export/import volontaire ; le stockage de 5173 reste distinct.
+
+La référence de 361 tests est complétée par huit tests utiles de disposition/sélection, notamment pour tous les occupants d'un habitat de niveau 3 aux zooms minimum et initial et aux extrema des mouvements : **369 tests réussis dans 10 fichiers**, TypeScript strict et build validés. Les essais dans Chromium, avec un viewport paysage de 852 × 393 et une partie de test séparée, complètent les parcours HTML simulés. Ils ne valident pas Safari ni les gestes sur iPhone physique ; le nouveau parcours humain et le bilan courant sont dans [visual-iphone-test.md](visual-iphone-test.md) et [progress.md](progress.md), avec les autres vérifications dans [habitats-iphone-test.md](habitats-iphone-test.md).
