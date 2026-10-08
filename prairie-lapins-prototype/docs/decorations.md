@@ -1,7 +1,7 @@
 # Décorations — prévisualisation v5
 
 Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.
-Branche `feature/meadow-decoration`, depuis `production` `45323cb`. La révision exacte de l’application se lit dans Paramètres et dans `build-revision.txt` à cette adresse.
+Branche `feature/meadow-decoration`, depuis `production` `45323cb`. Application publiée figée sur **`5feff8dcebd9dbcea331a312e95b51f807da2975`**, par le [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37860899136) de `production` `ae31131`. Cette révision se lit dans Paramètres et dans `build-revision.txt`. [PR #2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion ; des commits documentaires/publisher plus récents dans la branche ne changent pas les sources applicatives figées.
 
 Le jeu normal reste en v4 à [l’adresse habituelle](https://sullivanlegoff-code.github.io/Project-L/), le [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/) aussi. Les [comptes expérimentaux](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/) restent sur leurs sources v4 figées `3e70d9e8cbe9228c63c73db007fff199199d6470` ; connexion email et synchronisation en pause. Cette livraison ajoute seulement une quatrième route, dans le même artefact Pages. Aucune intégration de la v5 en production avant retour visuel du joueur.
 
