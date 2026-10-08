@@ -1,18 +1,20 @@
-# Référence du prototype — habitats et consolidation visuelle
+# Référence du prototype — habitats et aménagement
 
 Cette référence reprend les règles et chiffres approuvés par le joueur. Une modification d'équilibrage doit être précédée d'une explication de sa raison. Les paramètres exécutables se trouvent dans `src/config/balance.ts`, `src/config/missions.ts` et `src/config/habitats.ts`.
 
-La version de travail est `Project-L/prairie-lapins-prototype`, sources des habitats à sauvegarde **v4**, avec une référence de 361 tests. Le dossier historique `V1.0.4` correspond au palier missions à sauvegarde **v3**, avec 230 tests. La consolidation visuelle ajoute huit tests de disposition/sélection ; elle conserve intégralement les règles ci-dessous. Le bilan courant est dans [progress.md](progress.md).
+La version de travail est `Project-L/prairie-lapins-prototype`. `production` conserve les sauvegardes **v4** et les règles stables ; `feature/meadow-decoration` ajoute les sauvegardes **v5** dans une prévisualisation isolée. La référence habitats antérieure comptait 361 tests. Le dossier historique `V1.0.4` correspond au palier missions à sauvegarde **v3**, avec 230 tests. La consolidation visuelle ajoute huit tests de disposition/sélection ; elle conserve intégralement les règles ci-dessous. Le bilan courant est dans [progress.md](progress.md).
 
 ## Concept et périmètre
 
 Jeu mobile solo de collection et de gestion d'une prairie de lapins. Boucle : récolter des pattes, produire de l'herbe, nourrir, reproduire, accueillir, construire et agrandir. Univers, noms, interface et visuels originaux. Les pattes financent les achats et productions ; l'herbe augmente l'affection. Aucun entretien obligatoire, faim, maladie, perte d'affection ou lapin perdu pendant l'absence.
 
-Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari. Un lien public HTTPS et une PWA restent des objectifs futurs : seule une adresse Vite sur réseau local a été communiquée, et aucune publication publique n'a été identifiée dans le dépôt. Progression locale avec export/import de secours. Aucun compte, serveur de jeu, achat réel ou publicité dans la première version.
+Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari. Le jeu normal est publié sur https://sullivanlegoff-code.github.io/Project-L/ et fonctionne ordinateur éteint. Laboratoire `/dev/`, comptes expérimentaux `/preview/accounts/` (en pause), décorations `/preview/decorations/` (v5 locale séparée). Progression locale avec export/import de secours ; PWA et mode hors connexion restent ultérieurs. Aucun achat réel ni publicité.
 
 Prototype : onze espèces, collection, carnet de reproduction, missions principales et quotidiennes, enclos, ferme, nid, nurserie, achats, placement, déplacement, récolte, nourriture, reproduction, accueil, deux extensions, habitats spécialisés et améliorations, et sauvegarde. Les espèces ont des types fixes et une rareté distincte. Les six types de base sont paille, neige, terre, feu, métal et vol. Arc-en-ciel reste réservé à une étape future.
 
-Reportés : mini-jeux, énergie, vêtements, décorations avancées, événements, catalogue complet et recettes dépendant d'espèces précises.
+Le chantier Aménagement ajoute douze décorations esthétiques, achetées uniquement en pattes. Inventaire d’exemplaires uniques, grille fine 4 × 4 par case de bâtiment, rotations du banc et de l’arche, trois slots intérieurs indépendants des lapins, déplacements/rangement gratuits et mode photo. Aucun bonus ni modification des règles économiques/reproduction. Catalogue, collisions, propriété, migrations et prix : [decorations.md](decorations.md).
+
+Reportés : mini-jeux, énergie, vêtements, événements, catalogue complet et recettes dépendant d’espèces précises.
 
 ## Partie initiale et terrain
 

@@ -1,0 +1,86 @@
+# Décorations — prévisualisation v5
+
+Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.
+Branche `feature/meadow-decoration`, depuis `production` `45323cb`. Application publiée figée sur **`5feff8dcebd9dbcea331a312e95b51f807da2975`**, par le [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37860899136) de `production` `ae31131`. Cette révision se lit dans Paramètres et dans `build-revision.txt`. [PR #2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion ; des commits documentaires/publisher plus récents dans la branche ne changent pas les sources applicatives figées.
+
+Le jeu normal reste en v4 à [l’adresse habituelle](https://sullivanlegoff-code.github.io/Project-L/), le [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/) aussi. Les [comptes expérimentaux](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/) restent sur leurs sources v4 figées `3e70d9e8cbe9228c63c73db007fff199199d6470` ; connexion email et synchronisation en pause. Cette livraison ajoute seulement une quatrième route, dans le même artefact Pages. Aucune intégration de la v5 en production avant retour visuel du joueur.
+
+## Catalogue original
+
+Paramètres : `src/config/decorations.ts`. Illustrations SVG originales : `src/display/decorationArt.ts`, utilisées à la fois dans la boutique et comme textures Phaser mises en cache. L’image DragonVale fournie sert de référence d’intention ; aucun de ses éléments n’a été copié.
+
+| Identifiant stable | Objet | Pattes | Empreinte / destination |
+|---|---|---:|---|
+| `wildflowers` | Massif de fleurs sauvages | 20 | 1 × 1 extérieur |
+| `flowering-bush` | Buisson fleuri | 30 | 1 × 1 extérieur |
+| `moss-rock` | Petit rocher moussu | 40 | 1 × 1 extérieur |
+| `garden-lantern` | Lanterne de jardin | 60 | 1 × 1 extérieur |
+| `wood-bench` | Banc en bois | 80 | 2 × 1, ou 1 × 2 après rotation |
+| `flower-arch` | Arche fleurie | 100 | 2 × 1, ou 1 × 2 après rotation |
+| `fruit-tree` | Petit arbre fruitier | 120 | 2 × 2 extérieur |
+| `small-pond` | Petit bassin | 150 | 2 × 2 extérieur |
+| `soft-cushion` | Coussin douillet | 30 | Emplacement d’habitat |
+| `ball-toys` | Balle et jouets | 40 | Emplacement d’habitat |
+| `play-tunnel` | Tunnel de jeu | 60 | Emplacement d’habitat |
+| `small-parasol` | Petit parasol | 80 | Emplacement d’habitat |
+
+Objets esthétiques : aucun bonus, mission, revenu, affection ou changement des probabilités. Achats uniquement en pattes, jamais par complément en cœurs. Plusieurs exemplaires sont permis ; chaque achat possède son identifiant `decoration-N`. Pas de vente, démolition ni suppression définitive. Déplacements et rangements gratuits. Hypothèse de protection des imports/appareils modestes : 512 exemplaires possédés maximum, objets rangés compris. Un refus ne détruit aucun objet.
+
+## Utilisation et gestes
+
+Boutique → Décorations → choisir un objet → confirmer l’achat. L’objet est enregistré dans l’inventaire avant de proposer sa pose. **Annuler la pose conserve l’achat.**
+
+« Aménager » ouvre l’inventaire et affiche le mode actif. Toucher un objet posé ouvre Déplacer, Tourner pour banc/arche, Ranger. Une destination est un aperçu : vert et ✓ si valide, rouge et × sinon. Confirmer la pose est toujours explicite. Annuler un déplacement conserve l’ancien placement. Fermer le panneau, quitter le mode ou ouvrir une autre section annule l’aperçu. Aucun retour arrière global.
+
+Glisser déplace la caméra, pincer zoome ; ces gestes n’effectuent aucune pose ni sélection. Les panneaux HTML ne commandent pas la caméra. Hors Aménagement, les objets ne participent pas aux tests de sélection : lapins, récoltes, bâtiments et bulles gardent leurs commandes habituelles. Projection, proportions des lapins, zoom 0,8–1,65 et rayon de sélection écran de 27 px conservés.
+
+Chaque case de bâtiment contient 4 × 4 cellules fines : 12 × 8, 24 × 8 et 36 × 8 selon l’extension. Empreinte entière sur terrain débloqué, sans bâtiment ni autre décoration. Traverser deux cases libres est permis. Rotation à 90° réservée au banc et à l’arche : empreinte et texture changent ensemble. Aucun arrangement automatique.
+
+Un bâtiment bloqué propose de **ranger les objets de cette case avec confirmation**, puis il faut confirmer séparément l’achat ou le déplacement du bâtiment. Aucune dépense pendant le rangement. Le rangement inclut tout exemplaire dont l’empreinte traverse la case.
+
+Chaque habitat a exactement trois emplacements stables sur ses bords, quel que soit son type ou niveau. Ils ne consomment aucune place de lapin. Les références `habitatId` + `slot` suivent le déplacement/amélioration de l’habitat. Un emplacement occupé refuse la nouvelle pose et propose un rangement confirmé de l’ancien objet ; aucune substitution silencieuse. Les objets sont dessinés derrière les lapins, les noms devant les objets et les bulles au-dessus.
+
+Le bouton appareil photo, près de Recentrer, masque temporairement HUD, panneaux, bulles et grille. La caméra reste utilisable ; un bouton discret permet de revenir au jeu. Aucun état de partie modifié et le cycle de sauvegarde de cinq secondes continue. Utiliser la capture système de l’iPhone.
+
+## Stockage et transfert volontaire
+
+La séparation dépend des clés, pas des chemins : les quatre versions partagent une origine GitHub Pages.
+
+| Espace | Préfixe / clés |
+|---|---|
+| Partie normale v4 | `prairie-lapins.save.v1`, préférences `prairie-lapins.ui.v1` |
+| Laboratoire v4 | `prairie-lapins.development.` + clés ; horloge `…clock`, préférences `…ui` |
+| Prévisualisation comptes v4 | `prairie-lapins.preview.accounts.` ; compte propriétaire et session sous ce même espace |
+| Décorations v5 | `prairie-lapins.preview.decorations.` + **toutes** les clés du contrôleur |
+
+Dans Décorations : partie `prairie-lapins.preview.decorations.prairie-lapins.save.v1`, préférences `prairie-lapins.preview.decorations.ui`, horloge `prairie-lapins.preview.decorations.clock`, secours v4 `prairie-lapins.preview.decorations.prairie-lapins.backup.before-v5`. Les autres secours historiques sont également préfixés. Aucun repli vers une autre route.
+
+Pour tester une copie : exporter dans le jeu normal, garder le fichier source, puis l’importer volontairement dans Décorations. Migration v4 → v5 = mêmes champs de progression, `version: 5` et `decorations: []`, sans redotation de cœurs ni récompenses. Versions v1/v2/v3 toujours importables par les migrations existantes suivies de cette étape. Avant toute écriture de migration, le JSON original est conservé dans son secours local ; un échec d’écriture laisse la sauvegarde active originale intacte.
+
+Les imports v5 sont stricts : catalogue, limite d’exemplaires, identifiants uniques/counter, localisation exclusive, empreintes, rotation, terrain, références et slots. Export complet **v5** avec nom `prairie-lapins-PREVIEW-DECORATIONS-v5-MODE-TEST-…json`. Ne pas l’importer dans les trois versions encore en v4 : elles ne le prennent pas en charge. Aucun déguisement en v4 ni suppression de décoration pour forcer une compatibilité.
+
+« Outils test » ouvre des commandes visibles et séparées : ajouts de ressources prédéfinis, cinq avances de temps, démonstration décorée, habitat décoré à sept occupants, anciens scénarios, export/import et nouveau départ confirmé. Reset conserve l’horloge, les préférences et les secours de cette prévisualisation ; aucune autre sauvegarde touchée.
+
+Aucun SDK, compte, client cloud ou requête Supabase dans le build Décorations. La politique de session `onlineServicesAllowed: false` doit être respectée par tout futur adaptateur. [Adaptations futures des comptes pour v5](accounts-v5-compatibility.md).
+
+## Construction et publication
+
+Node 24, lockfile npm inchangé : `npm ci`, `npm test`, `npm run typecheck`, `npm run build:decorations`. Contrôle du build : `node scripts/verify-decorations.mjs CHEMIN_BUILD`. L’outil `build:pages` de cette branche vérifie également que le build normal exclut les commandes de test ; **ses builds v5 root/dev servent uniquement aux contrôles, ils ne sont pas publiés**.
+
+Le workflow `production` construit root + laboratoire depuis leurs sources stables v4, récupère les comptes au SHA v4 figé et Décorations au SHA v5 figé de la branche dédiée. Quatre chemins sont réunis avant un unique upload/déploiement Pages ; chaque chemin indique sa propre révision. Actions externes épinglées. Une mise à jour de la preview nécessite de tester le nouveau SHA, changer uniquement sa référence figée, puis publier l’artefact complet.
+
+Point de retour avant cette quatrième route : `45323cb`, sans format ni données normales modifiés. Un retour au workflow précédent retire seulement la route Décorations du site ; ses clés locales v5 restent conservées. Un retour de la preview vers un ancien SHA v5 compatible conserve sa partie. Ne pas publier un ancien lecteur v4 sur le préfixe Décorations v5.
+
+## Vérifications et essai iPhone
+
+Tests automatisés : achats/refus/double pression, collisions, rotations, limites, propriété, annulations, rangement, construction bloquée, slots, références lors de déplacements/améliorations, migrations et erreurs d’écriture, import invalide, export/rechargement, préfixage de chaque accès et économie/reproduction préservées. Rapport réel et captures : [progress.md](progress.md). [Avant](images/decorations/before.png), [après](images/decorations/after.png), [sept occupants](images/decorations/seven.png), [photo](images/decorations/photo.png). Le script `decorations-browser-check.cjs` vérifie le rendu Phaser/gestes dans Chromium ; `decorations-hosted-check.cjs` vérifie les quatre builds sur la même origine, avec profils jetables.
+
+Essai iPhone, ordinateur éteint :
+
+1. Ouvrir la prévisualisation dans Safari paysage et vérifier « PRÉVISUALISATION DÉCORATIONS v5 — PARTIE SÉPARÉE ».
+2. Outils test → démonstration décorée, puis sept occupants : toucher les sept lapins, glisser et pincer.
+3. Boutique → Décorations : acheter un banc, annuler sa pose, retrouver l’exemplaire dans Aménager ; le poser, tourner, déplacer puis ranger.
+4. Poser un coussin dans un habitat, essayer son emplacement occupé, puis recharger et vérifier la conservation. Essayer aussi le Mode photo.
+5. Exporter le JSON v5 de test ; revenir au jeu normal et vérifier sa progression habituelle. Garder cet export séparé des exports normaux.
+
+Limites : esthétique seulement, 512 exemplaires, trois slots intérieurs fixes, pas de vente ni téléchargement photo intégré. Pas de mesure sur iPhone physique ; validation Safari et retour visuel du joueur nécessaires avant intégration. Pas de comptes ni migration serveur dans cette étape.
