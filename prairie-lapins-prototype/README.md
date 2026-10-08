@@ -8,7 +8,7 @@ Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des so
 
 La branche de livraison **`production`** provient de `visual/meadow-habitats` (`87862a0`), avec seulement la préparation d'hébergement et une information de version dans Paramètres. Le dépôt est déjà public et GitHub Pages fournit une formule gratuite adaptée. Aucune visibilité ni règle de jeu modifiée.
 
-Adresse attendue après activation et vérification : **`https://sullivanlegoff-code.github.io/Project-L/`**. La configuration prête ne prouve pas que le site est déjà en ligne ; lire [le statut dans progress.md](docs/progress.md). Le [guide de publication](docs/deployment.md) décrit le build sous `/Project-L/`, le workflow limité à `production`, les mises à jour/retours arrière et l'import depuis l'ancienne partie locale.
+**Jouer : [https://sullivanlegoff-code.github.io/Project-L/](https://sullivanlegoff-code.github.io/Project-L/)**. Publication réussie et huit contrôles du jeu sur l'adresse HTTPS réussis le 8 octobre 2026 : rendu, menus, nourriture, export/import, refus invalide, persistance et exclusion des outils de développement. La première révision vérifiée est `520d4a4` ; la révision actuellement servie est indiquée dans Paramètres et [build-revision.txt](https://sullivanlegoff-code.github.io/Project-L/build-revision.txt). Lire [le bilan précis](docs/progress.md) et [le guide de publication](docs/deployment.md) pour le build sous `/Project-L/`, les mises à jour depuis `production`, les retours arrière et l'import depuis l'ancienne partie locale.
 
 La progression reste locale à chaque appareil/navigateur. Une nouvelle origine HTTPS ne récupère pas automatiquement la sauvegarde de `:5175`. Exporter depuis l'ancien site, garder le JSON, puis importer avec confirmation sur le nouveau. Une ancienne partie `?dev=1` est accélérée : l'importer volontairement ou choisir une partie normale neuve. Mêmes format v4, clés et migrations, aucune fusion/redotation. Les assets sont nommés par hash ; aucun service worker ni nettoyage des données Safari requis pour une mise à jour.
 
@@ -138,7 +138,7 @@ Le JSON exporté est en **version 4**. Les v1/v2/v3 sont migrées. Depuis v3, an
 
 La clé active reste `prairie-lapins.save.v1`, avec contenu v4. Copie brute v3 sous `prairie-lapins.backup.before-v4`, v2 sous `prairie-lapins.backup.before-v3`, v1 sous `prairie-lapins.backup.before-v2`. Échec de copie/écriture : ancien contenu actif intact et état en mémoire exportable avec avertissement. Les anciennes versions du jeu ne lisent pas v4. Garder un export de secours ; ces copies techniques n'ont pas de panneau dédié.
 
-**Les sauvegardes sont liées à l'origine : protocole, domaine et port.** Changer d'adresse, de `localhost` à `127.0.0.1`, ou passer au futur site HTTPS nécessite un export/import. Le navigateur peut effacer ses données ; aucune permanence n'est garantie. Privilégier un seul onglet. Les préférences de sons/tutoriel sont séparées du JSON de partie et ne sont pas transférées par export.
+**Les sauvegardes sont liées à l'origine : protocole, domaine et port.** Changer d'adresse, de `localhost` à `127.0.0.1`, ou passer au site HTTPS nécessite un export/import. Le navigateur peut effacer ses données ; aucune permanence n'est garantie. Privilégier un seul onglet. Les préférences de sons/tutoriel sont séparées du JSON de partie et ne sont pas transférées par export.
 
 ## Architecture et vérifications
 
@@ -173,4 +173,4 @@ Les parcours HTML utilisent un **DOM simulé** : boutons, textes, confirmations 
 
 Vérifier d'abord la nouvelle disposition de cinq/sept lapins avec le [parcours visuel](docs/visual-iphone-test.md), puis les destinations compatibles, les détails des niveaux et le déplacement vers les dix-huit cases avec le [guide des habitats](docs/habitats-iphone-test.md). La caméra précédemment validée garde ses valeurs de zoom et de projection ; seules les limites latérales s'adaptent et un agencement est ajouté pour plus de trois occupants.
 
-Aucun nouveau lapin, décoration indépendante, mini-jeu, déploiement HTTPS ou PWA. Prochaine étape : valider cette version sur iPhone avec le guide, puis examiner les résultats avant d'ajouter du contenu ou de préparer une publication publique.
+La version visuelle est maintenant publiée sur HTTPS, sans ajout de lapin, décoration indépendante ou mini-jeu. Prochaine étape : vérifier le site dans Safari sur iPhone, avec Windows éteint et en données mobiles, puis examiner les résultats avant d'ajouter du contenu. La PWA et le fonctionnement hors connexion restent ultérieurs.

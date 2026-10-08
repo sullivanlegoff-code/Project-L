@@ -1,24 +1,33 @@
 # Consolidation et première passe visuelle — 8 octobre 2026
 
-## Mise en ligne HTTPS — préparation en cours
+## Mise en ligne HTTPS — publiée et vérifiée
 
-Retour du joueur après installation depuis GitHub et essai iPhone : **« tout fonctionne bien pendant mon essai »**. Aucun détail des scénarios n'a été communiqué ; ne pas en déduire une validation exhaustive.
+**Jouer : [https://sullivanlegoff-code.github.io/Project-L/](https://sullivanlegoff-code.github.io/Project-L/)**. Publication gratuite sur GitHub Pages réussie le 8 octobre 2026 depuis `production`. Première révision publique vérifiée : `520d4a457877420a97ea709bb918e2cf013f573a`, [workflow 37800632189 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37800632189). La révision servie après chaque mise à jour se lit dans Paramètres et [build-revision.txt](https://sullivanlegoff-code.github.io/Project-L/build-revision.txt).
 
-La source validée est `visual/meadow-habitats`, commit `87862a073eafd6cc699236ea3b863607fa4c35b1`. Une branche de livraison `production` a été créée depuis cette source ; `main` reste à `e3e4b89`. Le dépôt est déjà public, constaté sur sa page GitHub. GitHub Pages a été retenu selon sa documentation officielle : formule gratuite pour dépôts publics, site statique avec HTTPS et URL stable, sans achat ni changement de visibilité.
+Retour du joueur après installation depuis GitHub et essai iPhone : **« tout fonctionne bien pendant mon essai »**. Aucun détail des scénarios n'a été communiqué ; ne pas en déduire une validation exhaustive ni un essai du nouveau site HTTPS.
 
-Préparatifs : workflow `.github/workflows/deploy-pages.yml` limité à `production`, Node 24, installation verrouillée/tests/typecheck/build, actions officielles épinglées, seul le build distribué. Base Vite `/Project-L/` explicite, info de version discrète issue de `src/config/release.ts` et de la révision injectée. Favicon neutre évitant une requête implicite 404 hors du sous-chemin. Économie, graphiques/caméra, JSON v4, migrations et clés inchangés.
+La source validée est `visual/meadow-habitats`, commit `87862a073eafd6cc699236ea3b863607fa4c35b1`. La branche de livraison `production` a été créée depuis cette source ; `main` reste à `e3e4b89`. Le dépôt était déjà public ; visibilité conservée, aucun abonnement ni domaine acheté. Seul `production` déclenche le workflow de publication, avec Node 24, installation verrouillée/tests/typecheck/build, actions officielles épinglées et fichiers construits exclusivement. Base Vite `/Project-L/` explicite, version dans Paramètres issue de `src/config/release.ts` et de la révision injectée. Économie, graphismes/caméra, JSON v4, migrations et clés inchangés.
 
-Vérifications actuelles : **369 tests / 10 fichiers réussis**, TypeScript réussi, build de production réussi sous `/Project-L/`, 48 modules. JS 1 364,84 ko / gzip 379,60 ko, CSS 6,91 ko. Contrôle des chemins, fichiers distribués et exclusion des outils de développement réussi. Le premier parcours Chromium a révélé uniquement la requête favicon 404 corrigée. **Le parcours final local réussit ses huit contrôles**, sans erreur de console, requête échouée ou réponse HTTP d'erreur : rendu, menus, nourriture, export téléchargé, import annulé/confirmé/aller-retour, refus invalide, rechargement et `?dev=1` sans outils. Tests dans un navigateur réel en contexte jetable, à viewport paysage 852×393 ; ce n'est pas un nouveau test iPhone Safari physique. Rapport et captures : `/workspace/artifacts/production-validation/`.
+**Validation de construction : 369 tests / 10 fichiers réussis**, TypeScript et build sous `/Project-L/` réussis dans GitHub Actions. Contrôle des chemins, fichiers distribués et exclusion des outils de développement réussi. Le parcours final sur serveur statique local avait également réussi ses huit contrôles ; une requête favicon 404 a été corrigée avant publication.
 
-Accès Git lecture/écriture opérationnel. L'API GitHub et le domaine Pages ont d'abord été refusés par la politique réseau (403 au proxy). Les domaines `api.github.com`, `docs.github.com`, `sullivanlegoff-code.github.io` ont été ajoutés au brouillon, presets préservés. **L'accès API et HTTPS fonctionne maintenant**, constaté par les opérations réelles ; aucun nouvel identifiant demandé.
+**Validation du site réel HTTPS : huit contrôles Chromium réussis**, dans une partie jetable et un viewport paysage 852×393 :
 
-**Résultat de publication : en attente d'activation Pages par le propriétaire.** La branche `production` a été envoyée. Son commit de préparation `34e19445544c3d6be135139af4b75a1cffa95b40` a déclenché [le workflow GitHub](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37799781555) : installation, 369 tests, TypeScript, build et artefact Pages ont réussi. Le job de déploiement a échoué au contrôle de configuration : site Pages absent (404), étape de publication non exécutée. L'API confirme `has_pages: false`. L'activation directe a été tentée dans le périmètre autorisé mais refusée : **403 « Resource not accessible by integration »**. Les droits du compte affichés par GitHub ne donnent donc pas à cette intégration l'accès requis pour activer Pages.
+- Prairie et ressources affichées ; nouvelle partie normale v4, deux lapins.
+- Boutique, collection, missions, paramètres et version `520d4a4`.
+- Sélection réelle de Paille sur le canvas, bouton Nourrir : affection 1→2, herbe 10→8.
+- Export JSON v4 réellement téléchargé ; import annulé conservant la progression.
+- Import confirmé avec 317 pattes, conservation des lapins/herbes/cœurs/habitats et nouvel export cohérent.
+- JSON invalide refusé sans remplacer la partie.
+- Rechargement conservant 317 pattes, 8 herbes, 12 cœurs et affection 2.
+- `?dev=1` conserve la partie normale, sans badge, bouton ou sauvegarde de développement.
 
-Le domaine HTTPS répond, avec vérification TLS standard, mais l'adresse du jeu retourne encore **404**. Cela ne valide pas un jeu publié. Le build local portant `34e1944` a également réussi les huit contrôles Chromium, sans erreurs, après l'envoi GitHub. Les informations de version identifient bien le code préparé.
+Aucune erreur de console, requête échouée ou réponse HTTP d'erreur pendant ce parcours. Rapport, captures et exports : `/workspace/artifacts/production-https-validation/`. Les données du joueur n'ont pas été utilisées ni modifiées. L'essai physique Safari sur iPhone, Windows éteint et en données mobiles reste à effectuer par le joueur.
 
-Action nécessaire depuis le compte propriétaire : ouvrir **Settings → Pages → Build and deployment → Source : GitHub Actions**. Après activation, relancer le workflow échoué (ou demander à l'agent de le relancer), puis effectuer le parcours sur l'adresse HTTPS. Les mises à jour suivantes sont automatiques depuis la seule branche `production` ; aucune activation récurrente requise.
+HTTPS : `curl` réussit avec validation TLS système active, réponses 200 pour la page et l'identifiant de build. Le proxy cloud présente une autorité absente de Chromium ; le contrôle automatique a refusé son ajout permanent au magasin de confiance. Le parcours fonctionnel utilise donc un lanceur jetable limité à l'empreinte SPKI du certificat du site déjà validé par `curl`, sans changement permanent de confiance. Cela distingue la vérification TLS système du parcours Chromium derrière le proxy. Cache réellement observé : `max-age=600`, avec `ETag` et `Last-Modified`. Aucun service worker ajouté ni effacement des données Safari demandé.
 
-Adresse prévue : `https://sullivanlegoff-code.github.io/Project-L/`. **Aucune validation HTTPS publique n'est revendiquée tant que la publication et le parcours réel n'ont pas réussi.** Procédure complète, futures mises à jour, retour arrière et transfert d'une partie accélérée ou normale : [deployment.md](deployment.md).
+Historique des accès : les destinations API/Pages ont d'abord été bloquées par le proxy réseau, puis ajoutées au brouillon cloud en préservant les presets ; les opérations API et HTTPS fonctionnent. Le premier déploiement a échoué parce que Pages n'était pas activé (404) ; le compte propriétaire a choisi Source **GitHub Actions**. Le job suivant a été refusé par la règle de l'environnement `github-pages` autorisant seulement `main` ; le propriétaire a ajouté **`production`**. Ces deux réglages administratifs étaient refusés à l'intégration (403). Après vérification effective de la règle, la relance du job de déploiement a réussi. Aucun contournement des règles ni intégration du vieux `main`.
+
+Les prochaines mises à jour validées sont poussées sur `production`, avec tests et publication automatiques sur la même adresse. Le premier point de retour public fonctionnel est `520d4a4` ; les commits documentaires suivants ne changent pas les règles du jeu mais produisent un nouvel identifiant de build. Guide complet : [deployment.md](deployment.md), incluant transfert volontaire depuis l'ancienne adresse, cache et retour arrière compatible v4. Pas de synchronisation entre appareils ; le mode entièrement hors connexion reste ultérieur.
 
 ## Bilan de la passe visuelle précédente
 
@@ -57,7 +66,7 @@ Projection, zoom 1,05 et limites 0,8–1,65, recentrage et identité des espèce
 | Console/réseau | Aucune erreur ni requête échouée dans les parcours |
 | Persistance en mode test | Nourriture par contrôleur, affection 4→5 écrite puis conservée au rechargement ; aucune sauvegarde normale créée |
 | Build en navigateur | Partie initiale v4 affichée, aucune erreur ; `?dev=1` ne crée pas de mode test en production |
-| Safari sur iPhone physique | Validation humaine attendue |
+| Safari sur iPhone physique | Retour général reçu : « tout fonctionne bien pendant mon essai » ; scénarios détaillés non communiqués |
 
 Contextes navigateur jetables, sauvegarde de développement uniquement. Captures ordinateur **1500×700** et paysage mobile **852×393**. Les scènes sont figées pour les captures/clics comparables ; les cibles pendant l'animation sont couvertes par les tests. Ces résultats ne valident pas Safari ni les gestes physiques.
 
@@ -71,7 +80,7 @@ Captures et rapports sous `/workspace/artifacts/prairie-visual/` : `before-deskt
 
 ## Version accessible et lancement
 
-L'adresse fournie, `http://192.168.1.13:5173/?dev=1`, est un **serveur Vite sur le réseau local du joueur**, en mode de test séparé. Elle ne révèle pas le dossier lancé sur Windows. Aucun hébergeur, workflow de déploiement ou URL publique n'est configuré dans le dépôt. Les builds statiques ne constituent pas une publication du jeu. La publication de l'environnement Codex prépare les tâches futures ; elle ne publie pas le site. Aucun site public remplacé, aucun aperçu cloud partageable disponible ici. Pas de PWA ni de promesse de fonctionnement hors connexion.
+L'adresse fournie, `http://192.168.1.13:5173/?dev=1`, est un **serveur Vite sur le réseau local du joueur**, en mode de test séparé. Elle ne révèle pas le dossier lancé sur Windows. Lors de cette passe visuelle précédente, aucun hébergeur, workflow de déploiement ou URL publique n’était encore configuré dans le dépôt. Les builds statiques ne constituent pas une publication du jeu. La publication de l'environnement Codex prépare les tâches futures ; elle ne publie pas le site. Aucun site public remplacé, aucun aperçu cloud partageable disponible ici. Pas de PWA ni de promesse de fonctionnement hors connexion.
 
 Sous Windows, ouvrir un terminal dans **`prairie-lapins-prototype`** :
 
