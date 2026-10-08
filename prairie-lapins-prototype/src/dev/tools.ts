@@ -1,22 +1,98 @@
-import type {GameController} from '../application/GameController';
+import type {GameController, Operation} from '../application/GameController';
 import type {SaveStorage} from '../persistence/storage';
-/** This module is dynamically imported only inside import.meta.env.DEV. */
+import {encodeGame} from '../simulation';
+import {BUILD_REVISION} from '../config/release';
+import {sessionPolicy} from '../config/runtime';
+import {SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
+import type {GameState} from '../state/types';
+
+export const TEST_PREFIX = 'prairie-lapins.development.';
+export const TEST_CLOCK_KEY = TEST_PREFIX + 'clock';
+export const TIME_STEPS = [5, 20, 60, 360, 1440] as const;
+export const RESOURCE_STEPS = {pattes: [1000, 10000], grass: [100, 1000], hearts: [10, 100]} as const;
+type TestResult = Operation | {ok: false; reason: 'INVALID_TEST_VALUE' | 'NOT_TEST_SESSION'};
+
+/** Reuse transactional imports: validate and save before replacing any state. */
+export function replaceTestState(controller: GameController, state: GameState): TestResult {
+  if (controller.storageScope !== 'laboratory') return {ok: false, reason: 'NOT_TEST_SESSION'};
+  let json: string;
+  try { json = encodeGame(state); } catch { return {ok: false, reason: 'INVALID_TEST_VALUE'}; }
+  const prepared = controller.prepareImport(json);
+  return prepared.ok ? controller.confirmImport(prepared.token, true) : prepared;
+}
+
+/** Imported only by local test mode or the explicitly built laboratory. */
 export function developmentEnvironment(base: SaveStorage) {
-  const prefix = 'prairie-lapins.development.';
   let offset = 0;
-  try { offset = Number(base.getItem(prefix + 'clock')) || 0; } catch { /* optional */ }
+  try {
+    const saved = Number(base.getItem(TEST_CLOCK_KEY));
+    if (Number.isSafeInteger(saved) && saved >= 0 && saved < 8_000_000_000_000_000) offset = saved;
+  } catch { /* optional test clock; normal storage is never consulted */ }
   const clock = () => Date.now() + offset;
-  const storage: SaveStorage = {getItem: key => base.getItem(prefix + key), setItem: (key, value) => base.setItem(prefix + key, value)};
-  return {clock, storage, preferenceKey: prefix + 'ui', mount(controller: GameController) {
-    const host = document.getElementById('devtools')!;
-    host.hidden = false;
-    host.append(Object.assign(document.createElement('p'), {textContent: 'Mode test : horloge et sauvegarde séparées.'}));
-    for (const minutes of [5, 20, 60, 360, 1440]) {
-      const button = document.createElement('button'); button.textContent = `+ ${minutes} min`;
-      button.onclick = () => { offset += minutes * 60_000; try { base.setItem(prefix + 'clock', String(offset)); } catch { /* keep session clock */ } controller.refresh(); };
-      host.append(button);
-    }
-    document.getElementById('dev-badge')!.hidden = false;
-    return () => { host.replaceChildren(); host.hidden = true; };
-  }};
+  // Prefix EVERY controller key, including migration backups. No fallback to normal.
+  const storage: SaveStorage = {scope: 'laboratory', getItem: key => base.getItem(TEST_PREFIX + key), setItem: (key, value) => base.setItem(TEST_PREFIX + key, value)};
+  function advanceTime(controller: GameController, minutes: number): TestResult {
+    if (controller.storageScope !== 'laboratory') return {ok: false, reason: 'NOT_TEST_SESSION'};
+    if (!(TIME_STEPS as readonly number[]).includes(minutes)) return {ok: false, reason: 'INVALID_TEST_VALUE'};
+    const next = offset + minutes * 60_000;
+    if (!Number.isSafeInteger(next) || next >= 8_000_000_000_000_000) return {ok: false, reason: 'INVALID_TEST_VALUE'};
+    try { base.setItem(TEST_CLOCK_KEY, String(next)); } catch { return {ok: false, reason: 'WRITE_FAILED'}; }
+    offset = next; controller.refresh();
+    const snapshot = controller.getSnapshot();
+    return snapshot.issue ? {ok: false, reason: snapshot.issue} : {ok: true};
+  }
+  function grant(controller: GameController, resource: keyof typeof RESOURCE_STEPS, amount: number): TestResult {
+    if (!(RESOURCE_STEPS[resource] as readonly number[]).includes(amount)) return {ok: false, reason: 'INVALID_TEST_VALUE'};
+    const state = controller.getSnapshot().state;
+    if (!state) return {ok: false, reason: 'NO_GAME'};
+    state[resource] += amount;
+    return replaceTestState(controller, state);
+  }
+  function loadScenario(controller: GameController, id: ScenarioId): TestResult {
+    try { return replaceTestState(controller, scenarioState(id, clock())); }
+    catch { return {ok: false, reason: 'INVALID_TEST_VALUE'}; }
+  }
+  return {clock, storage, preferenceKey: TEST_PREFIX + 'ui', policy: sessionPolicy(true), advanceTime, grant, loadScenario,
+    mount(controller: GameController, onReplacement: () => void = () => {}) {
+      if (controller.storageScope !== 'laboratory') throw new Error('Test tools require isolated laboratory storage');
+      const host = document.getElementById('devtools')!;
+      host.hidden = false; host.replaceChildren();
+      const intro = document.createElement('p');
+      intro.textContent = 'Laboratoire public : partie, préférences, horloge et sauvegardes de secours séparées. Aucun compte ni service en ligne. Importez volontairement un export normal pour tester une copie. Les fichiers MODE-TEST peuvent contenir des ressources ajoutées et du temps avancé.';
+      host.append(intro);
+      const version = document.createElement('p'); version.textContent = `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
+      const status = document.createElement('p'); status.setAttribute('role', 'status'); status.id = 'dev-status';
+      const resultMessage = (result: TestResult, message: string) => { status.textContent = result.ok ? message : result.reason === 'NOT_CONFIRMED' ? 'Opération annulée. La partie de test est conservée.' : 'Opération de test refusée. Vérifiez la sauvegarde et l’espace disponible ; la partie normale est conservée.'; };
+      const section = (title: string) => { const h = document.createElement('h3'); h.textContent = title; host.append(h); };
+      const button = (label: string, id: string, click: () => void) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.id = id; b.onclick = click; host.append(b);
+      };
+      section('Avancer le temps de test');
+      for (const minutes of TIME_STEPS) button(`+ ${minutes} min`, `dev-time-${minutes}`, () => resultMessage(advanceTime(controller, minutes), `Horloge de test avancée de ${minutes} minutes.`));
+      section('Ajouter des ressources de test');
+      const names = {pattes: 'pattes', grass: 'herbes', hearts: 'cœurs'};
+      for (const resource of Object.keys(RESOURCE_STEPS) as (keyof typeof RESOURCE_STEPS)[]) {
+        for (const amount of RESOURCE_STEPS[resource]) button(`+ ${amount} ${names[resource]}`, `dev-grant-${resource}-${amount}`, () => resultMessage(grant(controller, resource, amount), 'Ressources ajoutées à la partie de test.'));
+      }
+      section('Scénarios préparés');
+      for (const id of Object.keys(SCENARIOS) as ScenarioId[]) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
+        if (!window.confirm(`Charger « ${SCENARIOS[id]} » remplace seulement la partie de test. Exportez-la pour la conserver. Continuer ?`)) return;
+        const result = loadScenario(controller, id); if (result.ok) onReplacement(); resultMessage(result, 'Scénario chargé et enregistré dans la partie de test.');
+      });
+      section('Sauvegarde de test');
+      button('Exporter la partie de test', 'dev-export', () => document.getElementById('export-game')!.click());
+      button('Importer dans la partie de test', 'dev-import', () => document.getElementById('import-game')!.click());
+      button('Remettre la partie de test à zéro', 'dev-reset', () => {
+        const result = controller.restart(window.confirm('Remplacer seulement la partie de test par une nouvelle partie ? La partie normale et les autres sauvegardes sont conservées. L’horloge et les préférences de test restent en place.'));
+        if (result.ok) onReplacement(); resultMessage(result, 'Nouvelle partie de test enregistrée.');
+      });
+      host.append(status);
+      const badge = document.getElementById('dev-badge')!;
+      document.body.classList.add('test-session');
+      badge.hidden = false; badge.replaceChildren(document.createTextNode('MODE TEST — PARTIE SÉPARÉE'));
+      const back = document.createElement('a'); back.textContent = 'Retour au jeu normal';
+      back.href = import.meta.env.MODE === 'laboratory' ? import.meta.env.BASE_URL + '../' : import.meta.env.BASE_URL;
+      badge.append(back);
+      return () => { host.replaceChildren(); host.hidden = true; badge.hidden = true; document.body.classList.remove('test-session'); };
+    }};
 }

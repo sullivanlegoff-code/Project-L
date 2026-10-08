@@ -36,12 +36,8 @@ jobs:
         run: npm test
       - name: Vérifier TypeScript
         run: npm run typecheck
-      - name: Construire le jeu pour GitHub Pages
-        run: |
-          npm run build -- --base=/Project-L/ --outDir "$RUNNER_TEMP/prairie-pages"
-          printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/build-revision.txt"
-          touch "$RUNNER_TEMP/prairie-pages/.nojekyll"
-          node scripts/verify-production.mjs "$RUNNER_TEMP/prairie-pages" /Project-L/
+      - name: Construire et contrôler le jeu normal et le laboratoire
+        run: npm run build:pages -- "$RUNNER_TEMP/prairie-pages"
       - name: Préparer uniquement les fichiers du site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:

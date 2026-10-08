@@ -1,5 +1,6 @@
 /** setItem must be atomic on failure, like Web Storage: old contents stay intact. */
 export interface SaveStorage {
+  readonly scope?: 'normal' | 'laboratory';
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 }

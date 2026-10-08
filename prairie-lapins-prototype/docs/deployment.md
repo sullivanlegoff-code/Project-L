@@ -14,6 +14,8 @@ Références officielles consultées : [GitHub Pages](https://docs.github.com/en
 
 ## Construction reproductible
 
+Pour la livraison comprenant le laboratoire, utiliser maintenant **`npm run build:pages -- /tmp/prairie-pages`**, avec la même variable `VITE_BUILD_REVISION`. Le workflow publie un artefact unique : jeu normal à la racine et laboratoire dans `dev/`, depuis la même révision. Détails, isolation du stockage et scénarios : [laboratory.md](laboratory.md). Les commandes suivantes décrivent la construction normale seule, utile pour un contrôle isolé.
+
 Racine : **`prairie-lapins-prototype`**, Node.js 24, `package-lock.json` inchangé.
 
 ```bash
@@ -26,7 +28,7 @@ node scripts/verify-production.mjs ../build-pages /Project-L/
 
 Le workflow utilise le même enchaînement, avec `VITE_BUILD_REVISION` issu de `github.sha` et une sortie dans le dossier temporaire du runner. Il ne touche pas au `dist` historique suivi par Git. Le contrôle vérifie les chemins, les fichiers distribués, l'absence des outils de temps de développement et des URLs de serveur local.
 
-Seuls `index.html`, les assets Vite nommés par hash, `build-revision.txt` et `.nojekyll` sont distribués. Aucun ZIP, source, test, scénario de sauvegarde ou secret n'est publié dans le site. Aucun service backend, tunnel ou serveur Vite de développement requis. Les sons et illustrations sont produits par le jeu ; aucune police ou image locale externe n'est nécessaire.
+Chaque route distribue uniquement `index.html`, les assets Vite nommés par hash et `build-revision.txt`, avec `.nojekyll` à la racine de l'artefact commun. Aucun ZIP, source TypeScript, test, fichier de sauvegarde du joueur ou secret n'est publié. Les générateurs de scénarios et commandes de test sont compilés uniquement dans les assets du laboratoire. Aucun service backend, tunnel ou serveur Vite de développement requis. Les sons et illustrations sont produits par le jeu ; aucune police ou image locale externe n'est nécessaire.
 
 Le sous-chemin **`/Project-L/`** est explicite dans la commande Vite. Pour un autre hébergeur ou nom de dépôt, adapter ce chemin et refaire les contrôles. La version discrète dans Paramètres vient de `src/config/release.ts` et de la révision injectée au build ; le fichier `build-revision.txt` permet également d'identifier l'artefact.
 

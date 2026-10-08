@@ -33,6 +33,8 @@ export class GameController {
   constructor(private storage: SaveStorage, private clock: () => number = Date.now,
     private rng: () => number = Math.random) { this.load(); }
 
+  get storageScope(): 'normal' | 'laboratory' { return this.storage.scope ?? 'normal'; }
+
   getSnapshot(): Snapshot {
     return {state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
       lastSavedAt: this.lastSavedAt, dirty: this.dirty,

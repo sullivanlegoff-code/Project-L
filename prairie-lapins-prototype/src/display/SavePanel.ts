@@ -18,7 +18,7 @@ export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   ENCODING_FAILED: 'La partie ne peut pas être encodée. Elle reste disponible en mémoire.',
 };
 
-export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}): () => void {
+export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}, environment: {test: boolean} = {test: false}): () => void {
   const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const status = get('save-status'), savedAt = get('saved-at'), notice = get('save-notice');
   const exportButton = get<HTMLButtonElement>('export-game'), importButton = get<HTMLButtonElement>('import-game');
@@ -29,6 +29,13 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
   const beforeImport = get<HTMLButtonElement>('export-before-import');
   const exporter = fileExporter();
+  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, 'prairie-lapins-MODE-TEST-') : name;
+  if (environment.test) {
+    exportButton.textContent = 'Exporter la partie de test';
+    importButton.textContent = 'Importer dans la partie de test';
+    restart.textContent = 'Recommencer la partie de test';
+    get('import-warning').textContent = 'Cet import remplace seulement la partie du laboratoire. La sauvegarde normale reste intacte. Les exports MODE-TEST peuvent contenir du temps avancé et des ressources ajoutées.';
+  }
   const abort = new AbortController();
   let importToken: number | null = null;
   let readSequence = 0;
@@ -63,11 +70,12 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   async function exportCurrent() {
     const result = controller.exportGame();
     if (!result.ok) { say(ERROR_MESSAGES[result.reason]); return; }
+    const filename = exportFilename(result.filename);
     try {
-      const outcome = await exporter.export(result.json, result.filename);
+      const outcome = await exporter.export(result.json, filename);
       if (!alive) return;
       if (outcome === 'fallback') {
-        pendingDownload = result; fallback.hidden = false;
+        pendingDownload = {json: result.json, filename}; fallback.hidden = false;
         say('Le partage n’a pas pu démarrer. Touchez « Télécharger le JSON » pour utiliser le téléchargement.');
       } else say(outcome === 'cancelled' ? 'Export annulé. La partie est conservée.' :
         outcome === 'shared' ? 'Partage effectué. Vérifiez que le fichier est conservé dans Fichiers ou à l’emplacement choisi.' :
@@ -111,7 +119,7 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     const result = controller.retrySave(); say(result.ok ? 'Sauvegarde réussie.' : ERROR_MESSAGES[result.reason]);
   }, options);
   restart.addEventListener('click', () => {
-    const confirmed = window.confirm('Créer une nouvelle partie remplacera la sauvegarde actuelle. Exportez d’abord le contenu protégé si vous souhaitez le conserver. Confirmer le nouveau départ ?');
+    const confirmed = window.confirm(environment.test ? 'Remplacer seulement la partie de test ? La partie normale est conservée. L’horloge et les préférences de test restent en place.' : 'Créer une nouvelle partie remplacera la sauvegarde actuelle. Exportez d’abord le contenu protégé si vous souhaitez le conserver. Confirmer le nouveau départ ?');
     if (!confirmed) { say('Nouveau départ annulé. La sauvegarde est conservée.'); return; }
     const result = controller.restart(true);
     if (result.ok) onReplacement();
@@ -119,9 +127,9 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   }, options);
   backup.addEventListener('click', () => {
     const raw = controller.unreadableBackup();
-    if (raw !== null) void exporter.export(raw, `prairie-lapins-sauvegarde-protegee-${new Date().toISOString().slice(0, 10)}.json`)
+    if (raw !== null) void exporter.export(raw, exportFilename(`prairie-lapins-sauvegarde-protegee-${new Date().toISOString().slice(0, 10)}.json`))
       .then(outcome => { if (alive) {
-        if (outcome === 'fallback') { pendingDownload = {json: raw, filename: 'prairie-lapins-sauvegarde-protegee.json'}; fallback.hidden = false; }
+        if (outcome === 'fallback') { pendingDownload = {json: raw, filename: exportFilename('prairie-lapins-sauvegarde-protegee.json')}; fallback.hidden = false; }
         say(outcome === 'cancelled' ? 'Export annulé.' : 'Export du contenu protégé demandé. Vérifiez le fichier.');
       } }).catch(() => { if (alive) say('L’export du contenu protégé a échoué.'); });
   }, options);

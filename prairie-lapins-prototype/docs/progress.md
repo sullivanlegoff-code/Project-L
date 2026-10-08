@@ -1,5 +1,19 @@
 # Consolidation et première passe visuelle — 8 octobre 2026
 
+## Laboratoire publié — préparation et validation locale
+
+Retour reçu : le jeu HTTPS fonctionne sur l’iPhone du joueur, **ordinateur éteint**. Ce retour confirme cet essai ; aucun test détaillé supplémentaire ni essai du futur laboratoire n’est inventé.
+
+Branche de travail `feature/published-laboratory`, depuis `production` `2d3ba56`. Jeu normal préservé à `/Project-L/`, laboratoire prévu à `/Project-L/dev/`, avec mêmes sources et révision. Le workflow produit les deux builds dans un artefact Pages unique : aucune publication indépendante qui retirerait l’autre route. Le paramètre normal `?dev=1` n’active toujours rien.
+
+Réutilisation du préfixe historique `prairie-lapins.development.` pour partie, migrations/backups, préférences et horloge de test. Adaptateur de sauvegarde préfixant toutes les clés, sans repli vers les clés normales. Scope explicite sur stockage/contrôleur ; les commandes de test refusent un contrôleur normal. Politique de session interdisant les futurs services en ligne dans le laboratoire ; aucun compte développé.
+
+Ajouts : lien dans Paramètres normal, bandeau permanent **MODE TEST — PARTIE SÉPARÉE** et retour normal, cinq avances de temps, six ajouts de ressources prédéfinis, reset confirmé, quatre scénarios validés v4, export/import existant et fichiers **MODE-TEST**. Le reset ne touche que la partie de test et conserve horloge, préférences et backups. Aucun format JSON ni règle normale modifié.
+
+Validation : **381 tests / 11 fichiers réussis**, dont 12 tests du laboratoire. TypeScript et les deux builds réussissent ; contrôle des chemins, absence des commandes dans le build normal et présence dans le laboratoire. Les quatre scénarios passent la validation v4. Deux parcours Chromium sur serveur statique sous les chemins réels ont réussi : huit contrôles normaux, puis sept groupes de contrôles d’isolation sur une même origine, sans erreur de console/réseau. Toutes les clés hors espace de test restent identiques pendant les commandes, imports et resets ; les rechargements restaurent leurs progressions et horloges respectives.
+
+Rapports locaux : `/workspace/artifacts/normal-laboratory-local/` et `/workspace/artifacts/laboratory-local-final/`. Publication réelle et vérification HTTPS des deux routes encore à effectuer. [Guide complet](laboratory.md) : commandes, clés exactes, transfert volontaire, builds, rollback et cinq étapes iPhone.
+
 ## Mise en ligne HTTPS — publiée et vérifiée
 
 **Jouer : [https://sullivanlegoff-code.github.io/Project-L/](https://sullivanlegoff-code.github.io/Project-L/)**. Publication gratuite sur GitHub Pages réussie le 8 octobre 2026 depuis `production`. Première révision publique vérifiée : `520d4a457877420a97ea709bb918e2cf013f573a`, [workflow 37800632189 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37800632189). La révision servie après chaque mise à jour se lit dans Paramètres et [build-revision.txt](https://sullivanlegoff-code.github.io/Project-L/build-revision.txt).
