@@ -39,7 +39,7 @@ jobs:
       - name: Construire et contrôler le jeu normal et le laboratoire
         run: npm run build:pages -- "$RUNNER_TEMP/prairie-pages"
       # Frozen experimental sources; the normal and laboratory sources above
-      # stay on production. Always ship all three routes in ONE Pages artifact.
+      # stay on production. Always ship all four routes in ONE Pages artifact.
       - name: Lire les sources figées de la prévisualisation des comptes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -64,6 +64,29 @@ jobs:
           npm run build:account-preview -- --outDir "$RUNNER_TEMP/prairie-pages/preview/accounts" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/accounts/build-revision.txt"
           node scripts/verify-production.mjs "$RUNNER_TEMP/prairie-pages/preview/accounts" /Project-L/preview/accounts/
+      - name: Lire les sources figées de la prévisualisation Décorations v5
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 5feff8dcebd9dbcea331a312e95b51f807da2975
+          path: decorations-preview-source
+          persist-credentials: false
+      - name: Installer et vérifier les décorations séparées
+        working-directory: decorations-preview-source/prairie-lapins-prototype
+        run: |
+          npm ci
+          npm test
+          npm run typecheck
+      - name: Construire Décorations sans client de comptes
+        working-directory: decorations-preview-source/prairie-lapins-prototype
+        env:
+          VITE_BUILD_REVISION: 5feff8dcebd9dbcea331a312e95b51f807da2975
+        run: |
+          npm run build:decorations -- --outDir "$RUNNER_TEMP/prairie-pages/preview/decorations" --emptyOutDir
+          printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/decorations/build-revision.txt"
+          node scripts/verify-decorations.mjs "$RUNNER_TEMP/prairie-pages/preview/decorations"
+      - name: Vérifier la présence des quatre routes avant publication
+        run: |
+          node -e "const fs=require('node:fs'),p=require('node:path'); for(const route of ['','dev','preview/accounts','preview/decorations']) for(const file of ['index.html','build-revision.txt']) fs.accessSync(p.join(process.argv[1],route,file)); console.log('Four complete routes in one Pages artifact');" "$RUNNER_TEMP/prairie-pages"
       - name: Préparer uniquement les fichiers du site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
