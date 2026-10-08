@@ -2,6 +2,16 @@
 
 Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des sources récentes de `prairie-lapins-habitats-v4.zip`. Il contient les six habitats spécialisés, leurs trois niveaux, la deuxième extension et les sauvegardes **v4** avec migrations v1/v2/v3. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
 
+**Retour iPhone reçu le 8 octobre 2026 : « tout fonctionne bien pendant mon essai ».** Aucun détail de scénario n'a été communiqué ; ce retour est consigné sans élargir ce qui a été testé.
+
+## Publication HTTPS
+
+La branche de livraison **`production`** provient de `visual/meadow-habitats` (`87862a0`), avec seulement la préparation d'hébergement et une information de version dans Paramètres. Le dépôt est déjà public et GitHub Pages fournit une formule gratuite adaptée. Aucune visibilité ni règle de jeu modifiée.
+
+Adresse attendue après activation et vérification : **`https://sullivanlegoff-code.github.io/Project-L/`**. La configuration prête ne prouve pas que le site est déjà en ligne ; lire [le statut dans progress.md](docs/progress.md). Le [guide de publication](docs/deployment.md) décrit le build sous `/Project-L/`, le workflow limité à `production`, les mises à jour/retours arrière et l'import depuis l'ancienne partie locale.
+
+La progression reste locale à chaque appareil/navigateur. Une nouvelle origine HTTPS ne récupère pas automatiquement la sauvegarde de `:5175`. Exporter depuis l'ancien site, garder le JSON, puis importer avec confirmation sur le nouveau. Une ancienne partie `?dev=1` est accélérée : l'importer volontairement ou choisir une partie normale neuve. Mêmes format v4, clés et migrations, aucune fusion/redotation. Les assets sont nommés par hash ; aucun service worker ni nettoyage des données Safari requis pour une mise à jour.
+
 La référence habitats compte **361 tests** ; cette passe ajoute **8 tests de disposition et sélection**, soit **369 tests réussis dans 10 fichiers**, avec TypeScript et build validés. Le bilan de validation final et les captures sont dans [docs/progress.md](docs/progress.md). Aucun nouveau lapin ni dépendance.
 
 Le test humain précédent valide perspective, zoom, déplacement, pincement, Recentrer, taille des lapins, collection de onze espèces et lisibilité des panneaux. Les réglages de zoom, projection, compteurs et panneaux sont conservés. **Cette nouvelle passe et les habitats, missions, nouvelles reproductions, dépenses de cœurs et export/import restent à vérifier sur iPhone.**
@@ -57,7 +67,7 @@ npm run dev -- --host 127.0.0.1 --port 5175 --strictPort
 
 Puis ouvrir `http://127.0.0.1:5175/?dev=1` dans le navigateur de cet environnement.
 
-L'adresse communiquée par le joueur, `http://192.168.1.13:5173/?dev=1`, est un accès au serveur de développement sur son réseau local. Aucune URL publique ni configuration de déploiement public n'a été identifiée dans le dépôt. La configuration de l'environnement cloud, l'aperçu Vite et un éventuel site public sont des éléments distincts. Cet aperçu ne publie pas le jeu et ne fournit pas de fonctionnement hors connexion.
+Les adresses locales communiquées par le joueur sont des accès au serveur de développement sur son réseau. La configuration de l'environnement cloud, l'aperçu Vite et le site GitHub Pages sont des éléments distincts. L'aperçu local ne publie pas le jeu et ne fournit pas de fonctionnement hors connexion.
 
 ```bash
 npm test

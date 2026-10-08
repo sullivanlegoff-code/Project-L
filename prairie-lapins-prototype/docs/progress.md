@@ -1,5 +1,21 @@
 # Consolidation et première passe visuelle — 8 octobre 2026
 
+## Mise en ligne HTTPS — préparation en cours
+
+Retour du joueur après installation depuis GitHub et essai iPhone : **« tout fonctionne bien pendant mon essai »**. Aucun détail des scénarios n'a été communiqué ; ne pas en déduire une validation exhaustive.
+
+La source validée est `visual/meadow-habitats`, commit `87862a073eafd6cc699236ea3b863607fa4c35b1`. Une branche de livraison `production` a été créée depuis cette source ; `main` reste à `e3e4b89`. Le dépôt est déjà public, constaté sur sa page GitHub. GitHub Pages a été retenu selon sa documentation officielle : formule gratuite pour dépôts publics, site statique avec HTTPS et URL stable, sans achat ni changement de visibilité.
+
+Préparatifs : workflow `.github/workflows/deploy-pages.yml` limité à `production`, Node 24, installation verrouillée/tests/typecheck/build, actions officielles épinglées, seul le build distribué. Base Vite `/Project-L/` explicite, info de version discrète issue de `src/config/release.ts` et de la révision injectée. Favicon neutre évitant une requête implicite 404 hors du sous-chemin. Économie, graphiques/caméra, JSON v4, migrations et clés inchangés.
+
+Vérifications actuelles : **369 tests / 10 fichiers réussis**, TypeScript réussi, build de production réussi sous `/Project-L/`, 48 modules. JS 1 364,84 ko / gzip 379,60 ko, CSS 6,91 ko. Contrôle des chemins, fichiers distribués et exclusion des outils de développement réussi. Le premier parcours Chromium a révélé uniquement la requête favicon 404 corrigée. **Le parcours final local réussit ses huit contrôles**, sans erreur de console, requête échouée ou réponse HTTP d'erreur : rendu, menus, nourriture, export téléchargé, import annulé/confirmé/aller-retour, refus invalide, rechargement et `?dev=1` sans outils. Tests dans un navigateur réel en contexte jetable, à viewport paysage 852×393 ; ce n'est pas un nouveau test iPhone Safari physique. Rapport et captures : `/workspace/artifacts/production-validation/`.
+
+Accès Git lecture/écriture opérationnel. L'API GitHub et le domaine GitHub Pages sont refusés par la politique réseau de cette machine (403 au proxy), ce qui empêche les vérifications et opérations via API. Les domaines `api.github.com`, `docs.github.com`, `sullivanlegoff-code.github.io` ont été ajoutés au brouillon réseau, presets préservés ; activation runtime à confirmer. Aucun nouvel identifiant demandé, aucune valeur secrète imprimée ou distribuée. L'activation initiale Pages peut nécessiter **Settings → Pages → Source : GitHub Actions** sur le compte propriétaire.
+
+Adresse prévue : `https://sullivanlegoff-code.github.io/Project-L/`. **Aucune validation HTTPS publique n'est revendiquée tant que la publication et le parcours réel n'ont pas réussi.** Procédure complète, futures mises à jour, retour arrière et transfert d'une partie accélérée ou normale : [deployment.md](deployment.md).
+
+## Bilan de la passe visuelle précédente
+
 La cible réelle est `prairie-lapins-prototype`, sauvegardes **v4**. Le dossier `V1.0.4` correspond au palier précédent des missions, sauvegardes v3 et 230 tests. Les sources habitats et leur archive existaient déjà ; aucune mécanique n'a été réimplémentée depuis le brief.
 
 Révision de départ : `e3e4b8924ce09e065ccd552bef5cd7db0c416828`, branche initiale `work`, copie de travail propre. `origin/main` porte la même révision ; aucune autre branche distante ni tag trouvé. Travail dans `visual/meadow-habitats`. Dossiers historiques, archive originale et builds versionnés conservés.

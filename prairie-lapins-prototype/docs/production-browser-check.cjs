@@ -1,0 +1,197 @@
+// Real production UI validation in a disposable Chromium context.
+// Usage: node docs/production-browser-check.cjs <URL> [expected-build-revision]
+// Requires Playwright and Chromium; optional PRAIRIE_CHROMIUM/PRAIRIE_CAPTURE_DIR.
+// No seeded save, application hook, network interception, or development tools.
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const {chromium} = require('playwright');
+
+async function run() {
+  assert.ok(process.argv[2], 'Supply the deployed game URL.');
+  const target = new URL(process.argv[2]);
+  assert.ok(['http:', 'https:'].includes(target.protocol), 'Use an HTTP or HTTPS URL.');
+  target.searchParams.delete('dev');
+  const expectedRevision = process.argv[3]?.slice(0, 7);
+  const output = process.env.PRAIRIE_CAPTURE_DIR || '/workspace/artifacts/prairie-production';
+  fs.mkdirSync(output, {recursive: true});
+  const report = {
+    url: target.href, browser: 'Chromium, 852 × 393 landscape; not physical iPhone Safari',
+    expectedRevision: expectedRevision || null, checks: [], screenshots: [], downloads: [],
+    errors: [], failedRequests: [], httpErrors: [], passed: false,
+  };
+  const browser = await chromium.launch({
+    executablePath: process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',
+    args: ['--no-sandbox'],
+  });
+  const context = await browser.newContext({viewport: {width: 852, height: 393}, acceptDownloads: true});
+  const page = await context.newPage();
+  page.setDefaultTimeout(15_000);
+  page.on('pageerror', error => report.errors.push({kind: 'pageerror', message: error.message}));
+  page.on('console', message => {
+    if (message.type() === 'error') report.errors.push({kind: 'console', message: message.text(), location: message.location()});
+  });
+  page.on('requestfailed', request => report.failedRequests.push({url: request.url(), error: request.failure()?.errorText}));
+  page.on('response', response => {
+    if (response.status() >= 400) report.httpErrors.push({url: response.url(), status: response.status(), type: response.request().resourceType()});
+  });
+  const save = () => page.evaluate(() => JSON.parse(localStorage.getItem('prairie-lapins.save.v1')));
+  const progress = state => ({
+    version: state.version, pattes: state.pattes, grass: state.grass, hearts: state.hearts,
+    rabbits: state.rabbits, discovered: state.discovered, expanded: state.expanded,
+    secondExpanded: state.secondExpanded, nextId: state.nextId, pityFailures: state.pityFailures,
+    missions: state.missions, nextHeartGiftAt: state.nextHeartGiftAt,
+    buildings: state.buildings.map(({incomeUnits, ...building}) => building),
+  });
+  async function ready() {
+    await page.waitForFunction(() => document.getElementById('save-status')?.dataset.status === 'saved');
+    await page.locator('#game canvas').waitFor({state: 'visible'});
+    const bounds = await page.locator('#game canvas').boundingBox();
+    assert.ok(bounds && bounds.width >= 851 && bounds.height >= 392, 'Canvas fills the landscape viewport.');
+  }
+  async function screenshot(name) {
+    const filename = path.join(output, `${name}.png`);
+    await page.screenshot({path: filename});
+    report.screenshots.push(filename);
+  }
+  async function closePanel() {
+    if (await page.locator('#game-panel').isVisible()) await page.click('#close-panel');
+  }
+  async function settings() {
+    await page.click('#open-settings');
+    assert.equal(await page.locator('#panel-title').textContent(), 'Paramètres');
+  }
+  async function exportSave(name) {
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('#export-game');
+    const download = await downloadPromise;
+    const filename = path.join(output, name);
+    await download.saveAs(filename);
+    assert.equal(await download.failure(), null);
+    const state = JSON.parse(fs.readFileSync(filename, 'utf8'));
+    assert.equal(state.version, 4);
+    assert.match(download.suggestedFilename(), /^prairie-lapins-.*\.json$/);
+    report.downloads.push({path: filename, suggestedFilename: download.suggestedFilename()});
+    return state;
+  }
+  async function importFile(json, name = 'roundtrip.json') {
+    await page.setInputFiles('#import-file', {name, mimeType: 'application/json', buffer: Buffer.from(json)});
+  }
+  async function noDevelopment() {
+    assert.equal(await page.locator('#dev-badge').isVisible(), false);
+    assert.equal(await page.locator('#devtools').isVisible(), false);
+    assert.equal(await page.locator('#devtools button').count(), 0);
+    assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('prairie-lapins.development.'))), []);
+  }
+  try {
+    const response = await page.goto(target.href, {waitUntil: 'networkidle'});
+    assert.equal(response?.status(), 200);
+    await ready();
+    assert.equal(await page.locator('#pattes').textContent(), '300');
+    assert.equal(await page.locator('#grass').textContent(), '10');
+    assert.equal(await page.locator('#hearts').textContent(), '12');
+    const initial = await save();
+    assert.equal(initial.version, 4);
+    assert.equal(initial.rabbits.length, 2);
+    assert.equal(initial.buildings.length, 1);
+    await noDevelopment();
+    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v4.');
+    await screenshot('production-initial');
+
+    for (const [button, title] of [['#open-shop', /^Boutique$/], ['#open-collection', /^Collection · 2\/11$/], ['#open-missions', /^Missions$/]]) {
+      await page.click(button);
+      assert.match(await page.locator('#panel-title').textContent(), title);
+      assert.equal(await page.locator('#game-panel').isVisible(), true);
+      await closePanel();
+    }
+    await settings();
+    await page.locator('#game-version').scrollIntoViewIfNeeded();
+    report.version = await page.locator('#game-version').textContent();
+    assert.match(report.version, /^Version : Habitats · passe visuelle · build /);
+    if (expectedRevision) assert.equal(report.version, `Version : Habitats · passe visuelle · build ${expectedRevision}`);
+    await noDevelopment();
+    report.checks.push('Shop, collection, missions, settings and release identifier.');
+    await screenshot('production-version');
+    await closePanel();
+
+    // Paille's initial body at the unchanged initial camera/zoom. Motion stays within ±3 px.
+    await page.click('#recenter-view');
+    await page.mouse.click(202, 137);
+    await page.waitForFunction(() => document.getElementById('panel-title')?.textContent === 'Lapin Paille');
+    await page.getByRole('button', {name: 'Nourrir · 2 herbes', exact: true}).click();
+    await page.waitForFunction(() => document.getElementById('grass')?.textContent === '8');
+    const fed = await save();
+    assert.equal(fed.rabbits.find(rabbit => rabbit.species === 'paille').affection, 2);
+    assert.equal(fed.pattes, 300);
+    assert.equal(fed.hearts, 12);
+    report.checks.push('Real canvas selection and feed button: Paille affection 1→2, grass 10→8.');
+    await screenshot('production-fed');
+    await settings();
+
+    const exported = await exportSave('production-export.json');
+    assert.deepEqual(progress(exported), progress(fed));
+    const imported = {...exported, pattes: 317};
+    const importJson = JSON.stringify(imported);
+    const beforeImport = progress(await save());
+    await importFile(importJson);
+    await page.locator('#import-dialog[open]').waitFor();
+    assert.match(await page.locator('#import-summary').textContent(), /^317 pattes · 8 herbes · 12 cœurs · 2 lapins\./);
+    await page.click('#cancel-import');
+    assert.equal(await page.locator('#import-dialog').isVisible(), false);
+    assert.deepEqual(progress(await save()), beforeImport);
+    report.checks.push('Export downloads valid v4 JSON; cancelling import preserves current progression.');
+
+    await importFile(importJson);
+    await page.locator('#import-dialog[open]').waitFor();
+    await page.click('#confirm-import');
+    await page.waitForFunction(() => document.getElementById('save-notice')?.textContent === 'Partie importée et enregistrée.');
+    assert.deepEqual(progress(await save()), progress(imported));
+    assert.equal(await page.locator('#pattes').textContent(), '317');
+    const roundtrip = await exportSave('production-roundtrip.json');
+    assert.deepEqual(progress(roundtrip), progress(imported));
+    report.checks.push('Confirmed import writes 317 pattes and retains rabbits, grass, hearts, habitats; export roundtrip matches.');
+    await screenshot('production-imported');
+
+    const beforeInvalid = progress(await save());
+    await importFile('this is not JSON', 'invalid.json');
+    await page.waitForFunction(() => document.getElementById('save-notice')?.textContent === 'Ce fichier ne contient pas un JSON lisible.');
+    assert.equal(await page.locator('#import-dialog').isVisible(), false);
+    assert.deepEqual(progress(await save()), beforeInvalid);
+    report.checks.push('Invalid JSON is rejected without replacing the game.');
+
+    await page.reload({waitUntil: 'networkidle'});
+    await ready();
+    assert.deepEqual(progress(await save()), progress(imported));
+    assert.equal(await page.locator('#grass').textContent(), '8');
+    assert.equal(await page.locator('#pattes').textContent(), '317');
+    report.checks.push('Reload preserves imported progression and fed affection.');
+
+    const query = new URL(target.href);
+    query.searchParams.set('dev', '1');
+    const queryResponse = await page.goto(query.href, {waitUntil: 'networkidle'});
+    assert.equal(queryResponse?.status(), 200);
+    await ready();
+    await settings();
+    await noDevelopment();
+    assert.deepEqual(progress(await save()), progress(imported));
+    await page.locator('#game-version').scrollIntoViewIfNeeded();
+    assert.equal(await page.locator('#game-version').textContent(), report.version);
+    report.checks.push('Production ?dev=1 keeps normal save, hides tools/badge and creates no development storage.');
+    await screenshot('production-final');
+
+    assert.deepEqual(report.errors, [], 'No browser or console errors.');
+    assert.deepEqual(report.failedRequests, [], 'No failed network requests.');
+    assert.deepEqual(report.httpErrors, [], 'No HTTP error responses.');
+    report.passed = true;
+  } catch (error) {
+    report.failure = error.stack || String(error);
+    await screenshot('production-failure').catch(() => {});
+    throw error;
+  } finally {
+    fs.writeFileSync(path.join(output, 'production-report.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report, null, 2));
+    await context.close();
+    await browser.close();
+  }
+}
+run().catch(error => { console.error(error); process.exitCode = 1; });

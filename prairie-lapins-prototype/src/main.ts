@@ -7,9 +7,11 @@ import {browserLifecycle} from './display/browserLifecycle';
 import {mountSavePanel} from './display/SavePanel';
 import {GameUI} from './ui/GameUI';
 import {PreferenceStore} from './ui/preferences';
+import {BUILD_REVISION, RELEASE_LABEL} from './config/release';
 import './display/styles.css';
 
 async function boot(): Promise<() => void> {
+  document.getElementById('game-version')!.textContent = `Version : ${RELEASE_LABEL} · build ${BUILD_REVISION.slice(0, 7)}`;
   const base = browserStorage();
   let storage = base, clock = Date.now, preferenceKey = 'prairie-lapins.ui.v1';
   let mountDev: ((controller: GameController) => () => void) | undefined;

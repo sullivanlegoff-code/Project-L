@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#b0d18b"><title>Prairie de lapins</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#b0d18b"><link rel="icon" href="data:,"><title>Prairie de lapins</title></head>
 <body>
   <main id="app">
     <div id="game" aria-label="Prairie : glissez pour déplacer la vue, pincez pour zoomer, touchez pour sélectionner"></div>
@@ -43,6 +43,7 @@
         <input id="import-file" type="file" accept=".json,application/json" hidden>
         <p id="save-notice" role="status"></p>
         <p class="small">La sauvegarde locale peut être effacée par le navigateur. Gardez un export de secours. Changer de domaine, de port ou passer à un site HTTPS nécessite un export/import.</p>
+        <p id="game-version" class="small"></p>
         <section id="devtools" hidden aria-label="Outils de développement"></section>
       </section>
     </aside>
