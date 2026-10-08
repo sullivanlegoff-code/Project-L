@@ -1,3 +1,13 @@
+# Prévisualisation des comptes — publication séparée
+
+8 octobre 2026. Le joueur confirme que **jeu normal et laboratoire fonctionnent pendant son essai iPhone** ; aucun scénario supplémentaire déduit. Les sources du jeu normal et du laboratoire restent celles de `1747ea6` ; seuls le workflow et ce suivi changent ici. Une troisième route `/Project-L/preview/accounts/` est ajoutée dans le même artefact Pages, depuis les sources expérimentales figées `608f49a` sur `feature/private-cloud-saves`.
+
+Comptes OTP, serveur de sauvegardes privées et historique préparés ; **aucun projet Supabase accessible ni email réel vérifié**, donc comptes non activés. Sans configuration, la preview indique clairement que la progression est locale. Son invité, ses préférences, sessions, comptes et backups utilisent un préfixe supplémentaire ; elle ne reprend pas automatiquement la partie normale.
+
+Validation des sources expérimentales : **414 tests / 15 fichiers**, TypeScript, trois builds ; PostgreSQL embarqué PGlite avec permissions/RLS/CAS/rétention ; parcours Chromium locaux normal, laboratoire et isolation preview/auth/reset. Ce ne sont pas encore des essais du SMTP, JWT ou API Supabase hébergés. La connexion réelle et reprise dans un second navigateur restent conditionnées à la configuration et aux comptes de test.
+
+[Guide comptes et parcours iPhone](https://github.com/sullivanlegoff-code/Project-L/blob/feature/private-cloud-saves/prairie-lapins-prototype/docs/accounts.md) ; [configuration externe et SQL](https://github.com/sullivanlegoff-code/Project-L/blob/feature/private-cloud-saves/prairie-lapins-prototype/backend/README.md). Le propriétaire devra créer/configurer un projet Free et les deux variables publiques **PRAIRIE_PREVIEW_SUPABASE_URL / PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY** dans GitHub (API d'administration indisponible à l'intégration, HTTP 403). Ces variables concernent uniquement la preview ; aucun SDK de comptes ajouté au jeu stable ni au laboratoire stable. Conserver l'export JSON indépendant. La livraison des comptes sur l'adresse normale attend les vérifications réelles. Point de retour intégral avant preview : `1747ea6`.
+
 # Consolidation et première passe visuelle — 8 octobre 2026
 
 ## Laboratoire publié — HTTPS vérifié

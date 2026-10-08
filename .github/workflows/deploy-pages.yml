@@ -38,6 +38,31 @@ jobs:
         run: npm run typecheck
       - name: Construire et contrôler le jeu normal et le laboratoire
         run: npm run build:pages -- "$RUNNER_TEMP/prairie-pages"
+      # Frozen experimental sources; the normal and laboratory sources above
+      # stay on production. Always ship all three routes in ONE Pages artifact.
+      - name: Lire les sources figées de la prévisualisation des comptes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 608f49a473fc1e275414119dd041d3dbdee6aeb0
+          path: accounts-preview-source
+          persist-credentials: false
+      - name: Installer et tester la prévisualisation séparée
+        working-directory: accounts-preview-source/prairie-lapins-prototype
+        run: |
+          npm ci
+          npm test
+          npm run typecheck
+      - name: Construire la prévisualisation avec sa propre révision
+        working-directory: accounts-preview-source/prairie-lapins-prototype
+        env:
+          VITE_BUILD_REVISION: 608f49a473fc1e275414119dd041d3dbdee6aeb0
+          # Public browser settings only, and ONLY for the separate preview.
+          VITE_SUPABASE_URL: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          npm run build:account-preview -- --outDir "$RUNNER_TEMP/prairie-pages/preview/accounts" --emptyOutDir
+          printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/accounts/build-revision.txt"
+          node scripts/verify-production.mjs "$RUNNER_TEMP/prairie-pages/preview/accounts" /Project-L/preview/accounts/
       - name: Préparer uniquement les fichiers du site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
