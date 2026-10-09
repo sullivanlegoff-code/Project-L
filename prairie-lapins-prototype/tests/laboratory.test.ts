@@ -120,7 +120,7 @@ describe('published laboratory isolation', () => {
     const before=normalSnapshot(), fixture=scenarioState(id,Date.now());expect(decodeGame(encodeGame(fixture),Date.now())).toEqual({ok:true,state:fixture});
     const {dev,controller}=setup();expect(dev.loadScenario(controller,id).ok).toBe(true);expect(normalSnapshot()).toEqual(before);
     if(id==='habitats')for(const home of fixture.buildings)expect(fixture.rabbits.filter(r=>r.enclosureId===home.id)).toHaveLength(7);
-    if(id==='collection')expect(fixture.discovered).toHaveLength(11);
+    if(id==='collection')expect(fixture.discovered).toHaveLength(15);
     if(id==='missions')expect(fixture.missions.completed).toHaveLength(8);
     if(id==='reproduction')expect(controller.perform({type:'breed',parents:['rabbit-2','rabbit-3']}).ok).toBe(true);
   });

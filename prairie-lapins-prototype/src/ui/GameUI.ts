@@ -4,7 +4,7 @@ import {habitatStats, habitatName, habitatEntryReason, nextExtension} from '../s
 import {MAIN_MISSION_IDS, MAIN_MISSIONS, DAILY_MISSION_IDS, DAILY_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {availableMissionRewards, mainProgress, dailyCycleStart, dailyCycleEnd, cycleIndexAt} from '../simulation/missions';
 import type {GameController, Snapshot} from '../application/GameController';
-import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId} from '../config/balance';
+import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId, type RabbitType} from '../config/balance';
 import type {Command, DecorationLocation, GameState, PattesCommand, TimedStage} from '../state/types';
 import {DECORATIONS, DECORATION_IDS, decorationResalePrice, type DecorationId} from '../config/decorations';
 import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from '../simulation/decorations';
@@ -16,7 +16,7 @@ import type {MeadowScene, MeadowSelection} from '../display/MeadowScene';
 import {ActionGate} from './gestures';
 import {portrait} from './portraits';
 import {PreferenceStore, Sounds} from './preferences';
-import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement} from './models';
+import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, TYPE_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement, type CollectionFilter} from './models';
 
 type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits' | 'decorations'} | {kind: 'building' | 'rabbit' | 'moveRabbit' | 'decoration' | 'arrangeHabitat'; id: string} |
   {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind: 'collection' | 'settings' | 'extension' | 'placement' | 'hearts' | 'recipes' | 'arrange' | 'decorationPlacement'} | null;
@@ -47,6 +47,7 @@ export class GameUI {
   private frame = 0;
   private abort = new AbortController();
   private oddsOpen = true;
+  private collectionFilter: CollectionFilter = {};
   private recipeDetails = new Set<SpeciesId>();
   private lastSecond = -1;
   private confirmationGeneration = 0;
@@ -485,7 +486,7 @@ export class GameUI {
     const selected = this.parents.map(id => s.rabbits.find(r => r.id === id));
     this.content.append(node('p', `Parent A : ${selected[0] ? SPECIES[selected[0].species].name : 'à choisir'} · Parent B : ${selected[1] ? SPECIES[selected[1].species].name : 'à choisir'}`));
     this.content.append(node('p', '20 pattes · 20 minutes de reproduction, puis croissance en nurserie.'));
-    this.content.append(node('p', 'Les nouvelles recettes rares exigent une affection 4 chez les deux parents. Avant ce seuil, elles sont exclues du tirage ; la reproduction reste possible dès 2.', 'small'));
+    this.content.append(node('p', 'Recettes rares : affection 4 ; épiques : 6 ; Dragon : 10 chez chacun des deux parents, avec Perroquet et Feu obligatoires. Les résultats inadmissibles sont exclus ; la reproduction ordinaire reste possible dès 2.', 'small'));
     this.button(this.content, 'Carnet de reproduction', () => this.open({kind: 'recipes'}), null, true);
     if (selected[0] && selected[1]) {
       const odds = oddsView(s, selected[0].species, selected[1].species, selected[0].affection, selected[1].affection);
@@ -495,7 +496,7 @@ export class GameUI {
       details.addEventListener('toggle', () => { if (details.isConnected) this.oddsOpen = details.open; }); this.content.append(details);
       this.content.append(node('p', odds.guaranteed ? 'Cette tentative garantit une espèce de reproduction encore inconnue, à parts égales entre les recettes admissibles.' : odds.eligible ? 'Cette paire est admissible à la garantie.' : 'Cette paire ne fait pas avancer la garantie.', 'badge'));
     }
-    this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit une espèce de reproduction inconnue admissible, à parts égales s’il y en a plusieurs. Un résultat inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
+    this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit une des six recettes ordinaires inconnues admissibles, à parts égales s’il y en a plusieurs. Un résultat ordinaire inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
     let reason: string | null = selected[0] && selected[1] ? (rabbitAvailability(s, selected[0].id, this.now()) ?? rabbitAvailability(s, selected[1].id, this.now()) ?? moneyReason(s, 20)) : 'Choisissez deux parents différents.';
     if (this.parents[0] && this.parents[0] === this.parents[1]) reason = REFUSALS.SAME_PARENT;
     this.button(this.content, 'Lancer la reproduction · 20 pattes', () => {
@@ -529,7 +530,23 @@ export class GameUI {
   private renderCollection(s: GameState): void {
     this.title.textContent = `Collection · ${s.discovered.length}/${SPECIES_IDS.length}`;
     this.button(this.content, 'Carnet de reproduction', () => this.open({kind: 'recipes'}), null, true);
-    for (const entry of collectionView(s)) {
+    const controls = node('div', '', 'collection-filters');
+    const select = (label: string, key: keyof CollectionFilter, choices: Record<string, string>) => {
+      const field = node('label', label), input = node('select'); input.setAttribute('aria-label', label); input.dataset.focus = `collection-filter-${key}`;
+      for (const [value, text] of Object.entries(choices)) { const option = node('option', text); option.value = value; input.append(option); }
+      input.value = this.collectionFilter[key] ?? '';
+      input.addEventListener('change', () => { this.collectionFilter = {...this.collectionFilter, [key]: input.value || undefined}; this.render(); });
+      field.append(input); controls.append(field);
+    };
+    select('Type', 'type', {'': 'Tous les types', ...Object.fromEntries(Object.entries(TYPE_NAMES).filter(([type]) => SPECIES_IDS.some(id => SPECIES[id].types.includes(type as RabbitType))))});
+    select('Rareté', 'rarity', {'': 'Toutes les raretés', ...RARITY_NAMES});
+    select('Découverte', 'discovery', {'': 'Toutes', known: 'Découvertes', unknown: 'À découvrir'});
+    this.content.append(controls);
+    const entries = collectionView(s, this.collectionFilter);
+    this.content.append(node('p', `${entries.length} espèce(s) affichée(s)`, 'small'));
+    if (!entries.length) this.content.append(node('p', 'Aucune espèce ne correspond à ces filtres.'));
+    if (Object.values(this.collectionFilter).some(Boolean)) this.button(this.content, 'Réinitialiser les filtres', () => { this.collectionFilter = {}; this.render(); }, null, true);
+    for (const entry of entries) {
       const card = this.card(entry.name); card.prepend(avatar(entry.known ? entry.species : undefined));
       if (entry.known) this.button(card, 'Consulter l’espèce', () => this.open({kind: 'species', species: entry.species}), null, true);
       else card.append(node('p', 'À découvrir', 'small'));
@@ -539,7 +556,7 @@ export class GameUI {
   private renderRecipes(s: GameState): void {
     this.title.textContent = 'Carnet de reproduction';
     this.content.append(node('p', 'Les types nécessaires doivent être réunis par deux individus distincts. Une recette possible reste un tirage aléatoire. Les probabilités ci-dessous incluent la garantie actuelle.'),
-      node('p', 'Une garantie choisit à parts égales parmi les espèces de reproduction inconnues admissibles. Une recette déjà découverte peut donc être temporairement exclue de ce tirage.', 'small'));
+      node('p', 'La garantie choisit à parts égales parmi les six recettes ordinaires inconnues admissibles. Géant, Magicien et Dragon en sont exclus. Une recette déjà découverte peut donc être temporairement exclue de ce tirage.', 'small'));
     this.button(this.content, 'Retour à la collection', () => this.open({kind: 'collection'}), null, true);
     const nest = s.buildings.find(b => b.kind === 'nest'), nursery = s.buildings.find(b => b.kind === 'nursery');
     const setupReason = !nest || !nursery ? 'Construisez un nid et une nurserie.' : nest.breeding ? 'Le nid est occupé.' : null;
@@ -549,10 +566,12 @@ export class GameUI {
       const card = this.card(recipe.known ? info.name : 'Espèce à découvrir', `${typeNames(recipe.types)} · ${RARITY_NAMES[info.rarity]}`);
       card.prepend(avatar(recipe.known ? recipe.species : undefined));
       card.append(node('p', `Affection ${recipe.minAffection} minimum pour chacun des deux parents. Croissance : ${growthDuration(recipe.species) / 60_000} min.`));
-      if (!recipe.pairs.length) card.append(node('p', 'Aucune paire possédée ne réunit encore ces types. Les communs sont disponibles en boutique.', 'small'));
+      if (info.recipe?.parents) card.append(node('p', `Parents requis : ${info.recipe.parents.map(id => SPECIES[id].name).join(' × ')}. Les types seuls ne suffisent pas.`));
+      card.append(node('p', info.recipe?.probability !== undefined ? `Hors garantie ordinaire : ${info.recipe.probability} %. Cette espèce ne bénéficie pas de la garantie de découverte.` : 'Cette espèce bénéficie de la garantie ordinaire si elle est encore inconnue et admissible.', 'small'));
+      if (!recipe.pairs.length) card.append(node('p', info.recipe?.parents ? 'Possédez les deux espèces requises pour préparer cette paire.' : 'Aucune paire possédée ne réunit encore ces types. Les communs sont disponibles en boutique.', 'small'));
       else {
         const details = node('details'); details.open = recipe.pairs.length <= 3 || this.recipeDetails.has(recipe.species);
-        details.append(node('summary', `${recipe.pairs.length} paire(s) possédée(s) compatible(s) par types`));
+        details.append(node('summary', `${recipe.pairs.length} paire(s) possédée(s) compatible(s) avec la recette`));
         details.addEventListener('toggle', () => { if (details.isConnected) {
           if (details.open) this.recipeDetails.add(recipe.species); else this.recipeDetails.delete(recipe.species);
         } });

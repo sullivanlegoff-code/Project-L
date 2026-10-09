@@ -11,6 +11,7 @@ import type {GameState} from '../src/state/types';
 import {developmentEnvironment} from '../src/dev/tools';
 import {SAVE_KEY, type SaveStorage} from '../src/persistence/storage';
 import testSave from '../docs/test-saves/collection-ready-v2.json';
+import {scenarioState} from '../src/dev/scenarios';
 import {SPECIES} from '../src/config/balance';
 
 const cleanups: (() => void)[] = [];
@@ -214,9 +215,9 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
   it('keeps incomplete saved species unknown in the collection', () => {
     const {ui} = setup(); ui.open({kind: 'collection'});
     expect(panel().textContent).not.toContain('Brumelin'); expect(panel().textContent).not.toContain('Mottelin');
-    expect([...panel().querySelectorAll('h3')].filter(e => e.textContent === '???')).toHaveLength(9);
+    expect([...panel().querySelectorAll('h3')].filter(e => e.textContent === '???')).toHaveLength(13);
   });
-  it.each(['feu', 'belier-gris', 'volant'] as const)('buys and welcomes %s from the six-common shop into the eleven-species collection', species => {
+  it.each(['feu', 'belier-gris', 'volant'] as const)('buys and welcomes %s from the six-common shop into the fifteen-species collection', species => {
     const {controller, ui} = setup(); ui.open({kind: 'shop', tab: 'rabbits'});
     expect(panel().querySelectorAll('article')).toHaveLength(6);
     expect(panel().textContent).not.toMatch(/Lapin à Lunettes|Lapin Perroquet|Lapin Feu Glacé/);
@@ -225,8 +226,8 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     expect(state(controller).pattes).toBe(220); expect(state(controller).rabbits.at(-1)?.species).toBe(species);
     const dialog = document.getElementById('game-dialog')!; expect(dialog.textContent).toContain(SPECIES[species].name);
     button('Bienvenue dans la prairie', dialog).click(); ui.open({kind: 'collection'});
-    expect(document.getElementById('panel-title')!.textContent).toBe('Collection · 3/11');
-    expect(panel().textContent).toContain(SPECIES[species].name); expect(panel().querySelectorAll('article')).toHaveLength(11);
+    expect(document.getElementById('panel-title')!.textContent).toBe('Collection · 3/15');
+    expect(panel().textContent).toContain(SPECIES[species].name); expect(panel().querySelectorAll('article')).toHaveLength(15);
   });
   it('explains feeding in the notebook, previews 50/50 then 40/40/20, and prepares parents without launching', () => {
     const parsed = decodeGame(JSON.stringify(testSave), testSave.lastSimulatedAt); if (!parsed.ok) throw Error(parsed.reason);
@@ -234,7 +235,7 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     const {ui, controller} = setup(initial);
     const recipe = () => [...panel().querySelectorAll('article')].find(c => c.textContent?.includes('feu + neige · Rare'))!;
     ui.open({kind: 'collection'}); button('Carnet de reproduction').click();
-    expect(panel().querySelectorAll('article')).toHaveLength(5); expect(panel().textContent).not.toContain('Lapin Feu Glacé');
+    expect(panel().querySelectorAll('article')).toHaveLength(9); expect(panel().textContent).not.toContain('Lapin Feu Glacé');
     expect(recipe().textContent).toContain('Affection 4 minimum'); expect(recipe().textContent).toContain('À nourrir');
     expect(button('Préparer cette paire au nid', recipe()).disabled).toBe(true);
     button('Voir le parent n° 3 à nourrir', recipe()).click(); expect(panel().textContent).toContain('Affection 2 / 20');
@@ -272,7 +273,7 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     expect(panel().textContent).toContain('Lapin Feu Glacé'); button('Enclos 3 · 0/3').click();
     expect(dialog.textContent).toContain('Nouvelle découverte'); expect(dialog.textContent).toContain('Lapin Feu Glacé');
     button('Bienvenue dans la prairie', dialog).click(); ui.open({kind: 'collection'});
-    expect(document.getElementById('panel-title')!.textContent).toBe('Collection · 7/11');
+    expect(document.getElementById('panel-title')!.textContent).toBe('Collection · 7/15');
     expect(decodeGame(data.get(SAVE_KEY)!)).toEqual({ok: true, state: state(controller)});
   });
   it('completes the farming, breeding, revealing, welcoming and movement loop through UI controls', () => {
@@ -630,5 +631,35 @@ describe('bubble actions retain priority during arrangement', () => {
     expect(document.getElementById('panel-title')!.textContent).toBe('Nurserie');
     expect(document.getElementById('arrange-banner')!.hidden).toBe(true);
     expect(panel().textContent).not.toContain('Trois emplacements');
+  });
+});
+
+
+describe('new collection and exact-species recipe UI', () => {
+  const change = (label: string, value: string) => {
+    const select = panel().querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;
+    select.value = value; select.dispatchEvent(new Event('change'));
+  };
+  it('composes filters, keeps them across refresh and shows an actionable empty result', () => {
+    const {controller, ui} = setup(scenarioState('collection', 0)); ui.open({kind: 'collection'});
+    change('Rareté', 'epic'); expect(panel().querySelectorAll('article')).toHaveLength(2);
+    expect(panel().textContent).toContain('Lapin Géant'); expect(panel().textContent).toContain('Lapin Magicien');
+    change('Type', 'feu'); expect(panel().querySelectorAll('article')).toHaveLength(0);
+    expect(panel().textContent).toContain('Aucune espèce'); controller.refresh();
+    expect(panel().querySelector<HTMLSelectElement>('select[aria-label="Rareté"]')!.value).toBe('epic');
+    button('Réinitialiser les filtres').click(); expect(panel().querySelectorAll('article')).toHaveLength(15);
+    change('Découverte', 'unknown'); expect(panel().querySelectorAll('article')).toHaveLength(0);
+    button('Réinitialiser les filtres').click(); ui.close(); ui.open({kind: 'collection'});
+    expect(panel().querySelectorAll('article')).toHaveLength(15);
+  });
+  it('explains Dragon species, threshold, duration, exclusion from guarantee and real two-percent pairs', () => {
+    const {controller,ui} = setup(scenarioState('collection',0)); const before = structuredClone(state(controller));
+    ui.open({kind:'recipes'}); const card = [...panel().querySelectorAll('article')].find(c=>c.querySelector('h3')?.textContent==='Lapin Dragon')!;
+    expect(card.textContent).toContain('Lapin Perroquet × Lapin Feu'); expect(card.textContent).toContain('Les types seuls ne suffisent pas');
+    expect(card.textContent).toContain('Affection 10 minimum'); expect(card.textContent).toContain('120 min'); expect(card.textContent).toContain('ne bénéficie pas');
+    expect(card.textContent).toContain('2 %'); expect(state(controller)).toEqual(before);
+    button('Préparer cette paire au nid',card).click(); expect(document.getElementById('panel-title')!.textContent).toBe('Nid');
+    expect(state(controller).buildings.find(b=>b.kind==='nest')!.breeding).toBeNull();
+    expect(state(controller)).toEqual(before);
   });
 });

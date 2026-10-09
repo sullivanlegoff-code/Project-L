@@ -2,7 +2,7 @@ import {HABITAT_TYPES, HABITAT_LEVELS, LAND, habitatLevel} from '../config/habit
 import {MAIN_MISSION_IDS, DAILY_MISSION_IDS, DAILY_MISSIONS, MISSION_CYCLE_DURATION} from '../config/missions';
 import {createMissions, cycleIndexAt} from '../simulation/missions';
 import {z} from 'zod';
-import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, SPECIES_IDS, growthDuration} from '../config/balance';
+import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, SPECIES_IDS, GUARANTEE_SPECIES, growthDuration} from '../config/balance';
 import type {GameState} from '../state/types';
 import {DECORATION_IDS, MAX_DECORATIONS} from '../config/decorations';
 import {decorationPlacementReason} from '../simulation/decorations';
@@ -93,7 +93,7 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine
     for (const newborn of [b.baby?.birth, b.breeding?.birth]) if (newborn) {
       ids.push(newborn.id);
       if (!newborn.id.startsWith('birth-') || (newborn.guaranteed && !newborn.reservedDiscovery) ||
-        (newborn.reservedDiscovery && SPECIES[newborn.species].recipe === null)) issue('Birth reservation');
+        (newborn.reservedDiscovery && !GUARANTEE_SPECIES.includes(newborn.species))) issue('Birth reservation');
     }
   }
   for (const kind of ['enclosure', 'farm', 'nest', 'nursery'] as const) {

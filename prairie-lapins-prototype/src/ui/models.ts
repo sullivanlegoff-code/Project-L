@@ -1,7 +1,7 @@
 import {habitatPrice, type HabitatType} from '../config/habitats';
 import {terrainWidth} from '../simulation/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
-import {breedingPool} from '../simulation/breeding';
+import {breedingPool, recipeMatches} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
 import {decorationsInCell} from '../simulation/decorations';
 
@@ -60,15 +60,19 @@ export function nurseryView(s: GameState, now: number): {stage: 'empty'} | {stag
   if (baby.readyAt > now) return {stage: 'growing', readyAt: baby.readyAt};
   return {stage: 'ready', species: baby.birth.species, birthId: baby.birth.id};
 }
-export function collectionView(s: GameState) {
-  return SPECIES_IDS.map(id => s.discovered.includes(id) ? {known: true as const, species: id, name: SPECIES[id].name} : {known: false as const, name: '???'});
+export type CollectionFilter = {type?: RabbitType; rarity?: Rarity; discovery?: 'known' | 'unknown'};
+export function collectionView(s: GameState, filter: CollectionFilter = {}) {
+  return SPECIES_IDS.filter(id => (!filter.type || SPECIES[id].types.includes(filter.type)) &&
+    (!filter.rarity || SPECIES[id].rarity === filter.rarity) &&
+    (!filter.discovery || s.discovered.includes(id) === (filter.discovery === 'known'))).map(id => s.discovered.includes(id) ? {known: true as const, species: id, name: SPECIES[id].name} : {known: false as const, name: '???'});
 }
 export const TYPE_NAMES: Record<RabbitType, string> = {paille: 'paille', neige: 'neige', terre: 'terre', feu: 'feu', metal: 'métal', vol: 'vol', 'arc-en-ciel': 'arc-en-ciel'};
-export const RARITY_NAMES: Record<Rarity, string> = {common: 'Commun', uncommon: 'Peu commun', rare: 'Rare'};
+export const RARITY_NAMES: Record<Rarity, string> = {common: 'Commun', uncommon: 'Peu commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire'};
 export const typeNames = (types: RabbitType[]) => types.map(type => TYPE_NAMES[type]).join(' + ');
 /** A repeating decimal is shown alongside its exact fraction, never as an exact rounded percent. */
 export function probabilityLabel(weight: number, total: number): string {
   if (weight * 100 % total === 0) return `${weight * 100 / total} %`;
+  if (weight * 10000 % total === 0) return `${String(weight * 100 / total).replace('.', ',')} %`;
   const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
   const divisor = gcd(weight, total);
   return `${weight / divisor}/${total / divisor} (≈ ${(weight * 100 / total).toFixed(2).replace('.', ',')} %)`;
@@ -89,8 +93,7 @@ export function recipeBook(s: GameState, now: number) {
     const pairs = [];
     for (let i = 0; i < s.rabbits.length; i++) for (let j = i + 1; j < s.rabbits.length; j++) {
       const a = s.rabbits[i], b = s.rabbits[j];
-      const types = new Set([...SPECIES[a.species].types, ...SPECIES[b.species].types]);
-      if (!config.types.every(type => types.has(type))) continue;
+      if (!recipeMatches(species, a.species, b.species)) continue;
       const feeding = [a, b].filter(r => r.affection < minAffection).map(r => r.id);
       const busy = parentBusy(s, a.id, now) || parentBusy(s, b.id, now);
       const pool = breedingPool(s, a.species, b.species, a.affection, b.affection);

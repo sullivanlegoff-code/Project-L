@@ -2,7 +2,7 @@ import {HABITAT_TYPES, LAND, habitatLevel, habitatPrice, type HabitatLevel} from
 import {habitatEntryReason, terrainWidth} from './habitats';
 import {DAILY_MISSIONS, DAILY_MISSION_IDS, MAIN_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {dailyCycleStart, recordMissionAction} from './missions';
-import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
+import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
 import {emptyBuilding} from '../state/initial';
 import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal} from '../state/types';
 import {chooseBirth} from './breeding';
@@ -197,7 +197,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         s.rabbits.push({id: birth.id, species: birth.species, affection: BALANCE.minAffection, enclosureId: command.enclosureId});
         if (!s.discovered.includes(birth.species)) {
           s.discovered.push(birth.species);
-          if (SPECIES[birth.species].recipe !== null) s.pityFailures = 0;
+          if (GUARANTEE_SPECIES.includes(birth.species)) s.pityFailures = 0;
         }
         nursery.baby = null; break;
       }

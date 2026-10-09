@@ -8,7 +8,7 @@ import {DECORATIONS, DECORATION_IDS, MAX_DECORATIONS} from '../config/decoration
 import {decorationPlacementReason} from '../simulation/decorations';
 
 export const DECORATION_SCENARIOS = ['islandStart', 'islandExpanded', 'islandFull', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'] as const;
-export const SCENARIOS = {islandStart: 'Île presque vide — 3 × 2', islandExpanded: 'Île presque vide — 6 × 2', islandFull: 'Île presque vide — 9 × 2',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — onze espèces', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat décoré — sept occupants'} as const;
+export const SCENARIOS = {islandStart: 'Île presque vide — 3 × 2', islandExpanded: 'Île presque vide — 6 × 2', islandFull: 'Île presque vide — 9 × 2',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — quinze espèces et recettes', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat décoré — sept occupants'} as const;
 export type ScenarioId = keyof typeof SCENARIOS;
 
 /** Explicit test fixtures only; ordinary play still uses act/controller.perform. */
@@ -75,19 +75,19 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
   } else {
     run({type: 'expand', stage: 1}); run({type: 'expand', stage: 2});
     s.rabbits = []; s.buildings = []; s.discovered = [];
-    const types = id === 'habitats' ? HABITAT_TYPES : ['universal', 'universal'] as const;
+    const types = id === 'habitats' ? HABITAT_TYPES : id === 'collection' ? ['universal', 'universal', 'universal'] as const : ['universal', 'universal'] as const;
     for (const [index, type] of types.entries()) {
       const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', index, 0, type);
       home.habitat!.level = 3; s.buildings.push(home);
-      const species: SpeciesId[] = id === 'habitats' ? SPECIES_IDS.filter(species => type === 'universal' || SPECIES[species].types.includes(type)) : SPECIES_IDS.slice(index * 7, index * 7 + 7);
+      const species: SpeciesId[] = id === 'habitats' ? SPECIES_IDS.slice(0, 11).filter(species => type === 'universal' || SPECIES[species].types.includes(type)) : (id === 'collection' ? SPECIES_IDS : SPECIES_IDS.slice(0, 11)).slice(index * 7, index * 7 + 7);
       const count = id === 'habitats' ? 7 : species.length;
       for (let i = 0; i < count; i++) {
         const speciesId = species[i % species.length];
-        s.rabbits.push({id: `rabbit-${s.nextId++}`, species: speciesId, affection: 5, enclosureId: home.id});
+        s.rabbits.push({id: `rabbit-${s.nextId++}`, species: speciesId, affection: id === 'collection' ? 10 : 5, enclosureId: home.id});
         if (!s.discovered.includes(speciesId)) s.discovered.push(speciesId);
       }
     }
-    if (id === 'missions') {
+    if (id === 'missions' || id === 'collection') {
       for (const [x, kind] of ['farm', 'nest', 'nursery'].entries()) s.buildings.push(emptyBuilding(`building-${s.nextId++}`, kind as 'farm' | 'nest' | 'nursery', x, 1));
     }
     s.missions = createMissions(s, now);

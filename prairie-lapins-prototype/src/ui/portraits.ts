@@ -12,6 +12,8 @@ export const COATS: Record<SpeciesId, Coat> = {
   lunettes: {body: '#d5c6ab', patch: '#b2b9c8', glasses: true},
   perroquet: {body: '#99cbb8', patch: '#f0bc76', wings: true, plumage: true},
   'feu-glace': {body: '#efb47d', patch: '#a0d4e7', flame: true, frost: true},
+  bouee: {body: '#efd483', patch: '#efd483'}, geant: {body: '#ae947e', patch: '#ae947e'},
+  magicien: {body: '#b7a2d6', patch: '#b7a2d6'}, dragon: {body: '#94b885', patch: '#94b885'},
 };
 export function portrait(species?: SpeciesId): string {
   const c: Coat = species ? COATS[species] : {body: '#b6c3b1', patch: '#b6c3b1'};

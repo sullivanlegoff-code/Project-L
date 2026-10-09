@@ -10,11 +10,11 @@ Jeu mobile solo de collection et de gestion d'une prairie de lapins. Boucle : r�
 
 Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari. Le jeu normal est publié sur https://sullivanlegoff-code.github.io/Project-L/ et fonctionne ordinateur éteint. Laboratoire `/dev/`, comptes expérimentaux `/preview/accounts/` (en pause), décorations `/preview/decorations/` (v5 locale séparée). Progression locale avec export/import de secours ; PWA et mode hors connexion restent ultérieurs. Aucun achat réel ni publicité.
 
-Prototype : onze espèces, collection, carnet de reproduction, missions principales et quotidiennes, enclos, ferme, nid, nurserie, achats, placement, déplacement, récolte, nourriture, reproduction, accueil, deux extensions, habitats spécialisés et améliorations, et sauvegarde. Les espèces ont des types fixes et une rareté distincte. Les six types de base sont paille, neige, terre, feu, métal et vol. Arc-en-ciel reste réservé à une étape future.
+Prévisualisation Décorations : quinze espèces, collection, carnet de reproduction, missions principales et quotidiennes, enclos, ferme, nid, nurserie, achats, placement, déplacement, récolte, nourriture, reproduction, accueil, deux extensions, habitats spécialisés et améliorations, et sauvegarde. Les espèces ont des types fixes et une rareté distincte. Les six types de base sont paille, neige, terre, feu, métal et vol. Arc-en-ciel reste réservé à une étape future.
 
 Le chantier Aménagement ajoute douze décorations esthétiques, achetées uniquement en pattes. Inventaire d’exemplaires uniques, grille fine 4 × 4 par case de bâtiment, rotations du banc et de l’arche, trois slots intérieurs indépendants des lapins, déplacements/rangement gratuits et mode photo. Aucun bonus ni modification des règles de reproduction. À la demande du joueur du 9 octobre 2026, les décorations seules deviennent revendables : 50 % du prix d’achat en pattes, arrondi inférieur, aucun cœur remboursé, confirmation explicite par exemplaire et écriture atomique avant activation. La sélection directe suit le dessin visible, avec priorité lapins en jeu normal et décorations en Aménagement ; photo sans panneau d’objet. Catalogue, collisions, propriété, migrations et prix : [decorations.md](decorations.md).
 
-Reportés : mini-jeux, énergie, vêtements, événements, catalogue complet et recettes dépendant d’espèces précises.
+Reportés : mini-jeux, énergie, vêtements, événements, catalogue complet et nouveaux visuels des lapins. Dragon introduit une recette à espèces précises.
 
 ## Partie initiale et terrain
 
@@ -28,7 +28,7 @@ Dans la prévisualisation Décorations seulement, le fond est une île arrondie 
 - Construction immédiate ; pas de démolition dans le prototype.
 - Enclos universel initial de niveau 1 : trois places, sans contrainte de type. Tous les habitats peuvent atteindre les niveaux 2 et 3, avec cinq puis sept places.
 - Deux fermes au maximum ; un nid et une nurserie au maximum.
-- Nurserie d'une place. Au niveau 1, onze individus demandent quatre habitats ; les améliorations permettent désormais de concentrer davantage de lapins sur les mêmes cases. Les deux extensions offrent plus de possibilités d'aménagement.
+- Nurserie d'une place. Au niveau 1, quinze individus demandent cinq habitats ; les améliorations permettent désormais de concentrer davantage de lapins sur les mêmes cases. Les deux extensions offrent plus de possibilités d'aménagement.
 
 ## Espèces
 
@@ -45,8 +45,12 @@ Dans la prévisualisation Décorations seulement, le fond est une île arrondie 
 | lunettes | Lapin à Lunettes | métal + paille | rare | reproduction uniquement | 4 | 30 min |
 | perroquet | Lapin Perroquet | vol + feu | rare | reproduction uniquement | 4 | 30 min |
 | feu-glace | Lapin Feu Glacé | feu + neige | rare | reproduction uniquement | 4 | 30 min |
+| bouee | Lapin en Bouée | paille + feu | rare | reproduction uniquement | 4 | 30 min |
+| geant | Lapin Géant | terre + paille | épique | reproduction uniquement | 6 | 60 min |
+| magicien | Lapin Magicien | métal + vol | épique | reproduction uniquement | 6 | 60 min |
+| dragon | Lapin Dragon | vol + feu | légendaire | exactement Perroquet × Feu | 10 | 120 min |
 
-L'achat d'un commun l'accueille immédiatement à l'affection 1 ; aucune croissance ni condition de niveau de joueur. Le minimum d'affection du tableau concerne uniquement la reproduction. Les types de la recette doivent tous être présents dans l'union des deux parents ; leurs espèces précises ne sont pas imposées. Les cinq espèces de reproduction ne sont jamais achetables, y compris avec un complément de cœurs.
+L'achat d'un commun l'accueille immédiatement à l'affection 1 ; aucune croissance ni condition de niveau de joueur. Le minimum d'affection du tableau concerne uniquement la reproduction. Les types de la recette doivent tous être présents dans l'union des deux parents ; leurs espèces précises ne sont pas imposées, sauf Dragon qui exige Perroquet et Feu. Les neuf espèces de reproduction ne sont jamais achetables, y compris avec un complément de cœurs.
 
 Brumelin et Mottelin restent des noms provisoires validés pour ce prototype. Une espèce est découverte au premier accueil dans un enclos, achat compris. La découverte reste enregistrée indépendamment des individus possédés.
 
@@ -91,7 +95,7 @@ Affection : de 1 à 20. Passer de A à A + 1 coûte `2 × A` herbes, immédiatem
 
 Deux individus distincts d'affection minimale 2. Pas de sexes à gérer. Toutes les paires d'espèces sont autorisées. Les parents sont conservés, peuvent être nourris et continuent à produire leurs revenus. Ils sont indisponibles pour une autre reproduction pendant les 20 minutes ; ils sont libérés à la fin, même si le résultat attend encore au nid.
 
-L'ordre des parents ne change pas le tirage. Les tables historiques suivantes restent exactement inchangées lorsque l'union contient uniquement paille, neige et/ou terre, quelle que soit l'affection autorisée :
+L'ordre des parents ne change pas le tirage. Les tables historiques suivantes restent exactement inchangées lorsque l'union contient uniquement paille, neige et/ou terre, pour la distribution ordinaire, avant la réservation éventuelle de Géant :
 
 | Types réunis | Paille | Neige | Terre | Brumelin | Mottelin |
 |---|---:|---:|---:|---:|---:|
@@ -107,21 +111,21 @@ L'ordre des parents ne change pas le tirage. Les tables historiques suivantes re
 
 1. Réunir les types des deux parents, sans doublon.
 2. Chaque commun correspondant à un type présent reçoit un poids de **40**.
-3. Chaque espèce de reproduction dont tous les types sont présents reçoit un poids de **20**, si ses conditions d'affection sont remplies. Brumelin et Mottelin demandent 2 ; Lunettes, Perroquet et Feu Glacé demandent **4 chez chacun des deux parents**.
+3. Chaque espèce de reproduction ordinaire dont tous les types sont présents reçoit un poids de **20**, si ses conditions d'affection sont remplies. Brumelin et Mottelin demandent 2 ; Lunettes, Perroquet, Feu Glacé et En Bouée demandent **4 chez chacun des deux parents**. Géant, Magicien et Dragon ne rejoignent pas ces poids.
 4. Retirer les recettes inaccessibles puis normaliser : `probabilité = poids / somme des poids`. Il n'y a pas de tirage suivi d'un refus ou d'une substitution.
 5. Appliquer, le cas échéant, la garantie décrite ci-dessous.
 
 Feu × Neige, hors garantie : aux affections 4/4, Feu 40 %, Neige 40 %, Feu Glacé 20 %. Aux affections 2/2 ou 4/3, Feu et Neige ont chacun 50 % ; Feu Glacé est exclu et cette paire ne fait pas avancer la malchance. Une reproduction reste autorisée dès 2 pour les deux parents.
 
-Exemple à quatre types, Lunettes × Feu Glacé, affections 4/4 et hors garantie : Paille, Neige, Feu et Bélier Gris reçoivent 40 chacun ; Brumelin, Lunettes et Feu Glacé reçoivent 20 chacun. Somme 220 : chaque commun a exactement `2/11` (≈ 18,18 %) et chaque recette `1/11` (≈ 9,09 %). Les poids ne sont donc pas toujours des pourcentages. L'affichage conserve la fraction exacte quand le pourcentage est périodique.
+Les recettes spéciales sont réservées après normalisation ordinaire : Géant 5 % avec terre+paille et affection 6/6 ; Magicien 5 % avec métal+vol et affection 6/6 ; Dragon 2 % avec exactement Perroquet et Feu, affection 10/10. Chacune compte une seule fois, ordre des parents indifférent. Les résultats ordinaires se partagent le reste proportionnellement. Exemples exacts et conditions : [catalogue quinze espèces](species.md). À plusieurs spéciaux admissibles, soustraire la somme de leurs chances, sans nouveau tirage ni substitution après échec.
 
 Le résultat est choisi une seule fois, au lancement, puis enregistré avec son identité. Recharger ne le retire jamais au hasard. Chaque lapereau accueilli commence à l'affection 1.
 
 ### Protection contre la malchance
 
-La protection concerne **Brumelin, Mottelin, Lunettes, Perroquet et Feu Glacé**. Une tentative est admissible si, après filtrage des types et de l'affection, sa table comprend au moins une de ces espèces non découverte. Les autres tentatives laissent le compteur inchangé. Chaque échec admissible incrémente le compteur. Après neuf échecs, la dixième tentative admissible garantit une espèce inconnue admissible ; si plusieurs sont possibles, chacune a exactement `1 / nombre de recettes inconnues admissibles` de chances. Les communs n'entrent jamais dans la garantie.
+La protection concerne **Brumelin, Mottelin, Lunettes, Perroquet, Feu Glacé et En Bouée**, exclusivement. Géant, Magicien et Dragon sont exclus. Un spécial sur une tentative admissible compte comme un échec ordinaire ; son accueil ne remet pas ce compteur à zéro. La garantie remplace entièrement le pool, chances spéciales comprises. Une tentative est admissible si, après filtrage des types et de l'affection, sa table comprend au moins une de ces espèces non découverte. Les autres tentatives laissent le compteur inchangé. Chaque échec admissible incrémente le compteur. Après neuf échecs, la dixième tentative admissible garantit une espèce inconnue admissible ; si plusieurs sont possibles, chacune a exactement `1 / nombre de recettes inconnues admissibles` de chances. Les communs n'entrent jamais dans la garantie.
 
-Précision pour les découvertes en attente : un résultat inédit d'une de ces cinq espèces tiré au lancement interrompt provisoirement la série d'échecs et ramène le compteur à zéro. Il porte une réservation de découverte persistée, sans ajouter son espèce aux découvertes. L'accueil effectif d'une nouvelle espèce de reproduction remet également le compteur à zéro. Ainsi, un résultat garanti en attente n'est pas laissé avec un compteur de neuf échecs et ne peut pas être annulé par un rechargement. Les tentatives admissibles suivantes comptent depuis cette réservation ; aucun résultat en attente n'est supprimable. Une réservation n'est pas une découverte : les règles antérieures d'admissibilité sont conservées.
+Précision pour les découvertes en attente : un résultat inédit d'une de ces six espèces tiré au lancement interrompt provisoirement la série d'échecs et ramène le compteur à zéro. Il porte une réservation de découverte persistée, sans ajouter son espèce aux découvertes. L'accueil effectif d'une nouvelle espèce de reproduction remet également le compteur à zéro. Ainsi, un résultat garanti en attente n'est pas laissé avec un compteur de neuf échecs et ne peut pas être annulé par un rechargement. Les tentatives admissibles suivantes comptent depuis cette réservation ; aucun résultat en attente n'est supprimable. Une réservation n'est pas une découverte : les règles antérieures d'admissibilité sont conservées.
 
 ### Nid et nurserie
 
@@ -129,7 +133,7 @@ Précision pour les découvertes en attente : un résultat inédit d'une de ces 
 
 ### Collection et carnet
 
-La collection est une liste défilante de onze espèces, compteur découvertes/11. Les espèces inconnues restent des silhouettes. Le carnet, accessible depuis la collection ou un nid libre équipé d'une nurserie, montre les cinq recettes, leurs types, leur affection minimale et leur durée de croissance. Il propose les paires d'individus possédés compatibles par types et signale les parents à nourrir ou occupés.
+La collection est une liste défilante de quinze espèces, compteur découvertes/15, avec filtres combinables de type, rareté et découverte. Les espèces inconnues restent des silhouettes. Le carnet, accessible depuis la collection ou un nid libre équipé d'une nurserie, montre les neuf recettes, leurs types, leur affection minimale et leur durée de croissance. Il propose les paires d'individus possédés compatibles par types et signale les parents à nourrir ou occupés.
 
 Les chances du carnet et du nid utilisent le même calcul que la simulation, garantie incluse. « Recette possible » ne promet pas une découverte ; une garantie partagée indique son exacte probabilité. Préparer une paire depuis le carnet sélectionne seulement les parents dans le nid, sans paiement ni tirage. Un nid occupé ou des parents insuffisamment nourris empêchent cette préparation. Le résultat déjà déterminé reste masqué jusqu'à la fin de croissance ; consulter les recettes ne le révèle pas. Les types, conditions et probabilités publiques restent consultables.
 
@@ -326,3 +330,8 @@ Les douze identifiants, prix, empreintes et règles v5 sont conservés. La démo
 Outils propres à Décorations : départ avec les ressources ordinaires ; démonstration aérée de tout le catalogue ; sept occupants et trois objets dans l’habitat initial ; terrain dense à deux extensions, 512 objets possédés dont 140 posés. Les exemplaires supplémentaires restent en réserve. Chaque changement de scénario demande confirmation et passe par le validateur/import transactionnel. Ces quatre commandes ne sont pas exposées dans le laboratoire ordinaire.
 
 Pendant une pose : message neutre avant sélection, refus ou validation avec symbole et texte, commandes de confirmation/annulation visibles pendant le défilement. L’objet à son ancien emplacement est atténué pendant l’aperçu ; il retrouve son apparence entière après annulation ou sortie. Prix, économie, perspective, zoom et taille des lapins inchangés. Arbres et arches sont légèrement réduits, avec la même échelle pour l’aperçu et l’objet posé. Photo utilise toujours la capture système et laisse fonctionner les sauvegardes.
+
+
+## Extension de contenu du 9 octobre 2026
+
+Les quatre nouvelles espèces réutilisent la silhouette et l’animation existantes, avec couleur unie séparée des règles par identifiant stable. Aucun nouvel art ou accessoire. La v5 reste inchangée et les naissances en cours conservent identité/délais. Seule la prévisualisation Décorations reçoit ce catalogue pendant cette étape ; normal/laboratoire/comptes publiés restent v4 et onze espèces. Le scénario de collection est volontairement préparé à quinze espèces dans le test isolé, avec parents affection 10 et nid libre. Les missions et les formules de revenus/nourriture ne sont pas rééquilibrées. [Règles exactes](species.md).
