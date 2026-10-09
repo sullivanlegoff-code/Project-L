@@ -28,6 +28,8 @@ Les quatre scénarios précédents restent accessibles : départ ordinaire, dém
 
 ## Validation reproductible
 
+**Validation distante réussie sur le SHA publié :** [Actions 37921805427](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37921805427), 474 tests, TypeScript/build et les quatre parcours Chromium. [Captures et rapports du runner](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37921805427/artifacts/11612484276), conservés jusqu’au 8 novembre 2026 ; [bilan durable](validation/island-2026-10-09.json). Stress CI : 3,60 images/s, p95 300 ms, images et 14 textures réutilisées ; aucune extrapolation à l’iPhone.
+
 `npm test` : **474 tests / 12 fichiers réussis**. Les trois scénarios sont couverts par les tests existants de validation v5, sérialisation et isolation ; leur visibilité et leur confirmation sont vérifiées dans le DOM. TypeScript, build Décorations et contrôle de son préfixe/outillage/absence du client de comptes réussis. Lockfile inchangé.
 
 `docs/island-browser-check.cjs` vérifie le véritable rendu Chromium tactile : trois tailles × trois zooms, douze poses/sélections aux coins, déplacement avec ancien placement conservé, annulation exacte puis validation, vente annulée puis double confirmation ne créditant qu’une fois, rangement gratuit, conservation au rechargement et bâtiment sur la case d’extrémité libérée. Récolte, photo/retour au jeu, vues 852 × 393 et 667 × 375, clés des autres routes préservées et absence de requête Supabase. Les hooks sont interceptés dans le profil de test ; ils ne sont pas ajoutés aux sources du jeu.
