@@ -34,3 +34,5 @@ npm run build:pages -- /tmp/prairie-pages
 Historique v5 : [PR nº 2 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/2), [preuve de publication](docs/validation/production-v5-2026-10-09.json). Les anciens rapports documentent leur étape, pas les règles actuelles.
 
 Fondations techniques : [architecture, invariants, stockage et vérifications](docs/technical-foundations.md).
+
+Visuel Neige uniquement : [original, comparaison en jeu et vérifications](docs/neige-v1.md).

@@ -136,6 +136,7 @@ jobs:
           node prairie-lapins-prototype/docs/production-browser-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/laboratory-browser-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/foundations-browser-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
+          node prairie-lapins-prototype/docs/snow-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves publiques
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

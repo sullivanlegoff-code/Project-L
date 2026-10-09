@@ -1,7 +1,7 @@
 import {VISUAL} from '../config/visual';
 import type {Point} from '../ui/gestures';
 
-export interface RabbitHitTarget {id: string; point: Point; depth: number}
+export interface RabbitHitTarget {id: string; point: Point; depth: number; radius?: number}
 
 /** Each capacity gets a balanced arrangement; the three original slots remain unchanged. */
 export function rabbitOffset(index: number, count: number): Point {
@@ -28,10 +28,10 @@ export function rabbitHitPoint(position: Point): Point {
 
 /** Nearest body wins; only an equal-distance overlap favors the rabbit drawn in front. */
 export function rabbitHit(screen: Point, targets: readonly RabbitHitTarget[]): RabbitHitTarget | null {
-  let best: RabbitHitTarget | null = null, bestDistance = VISUAL.rabbit.hitRadius ** 2;
+  let best: RabbitHitTarget | null = null, bestDistance = Infinity;
   for (const target of targets) {
     const distance = (target.point.x - screen.x) ** 2 + (target.point.y - screen.y) ** 2;
-    if (distance > VISUAL.rabbit.hitRadius ** 2) continue;
+    if (distance > (target.radius ?? VISUAL.rabbit.hitRadius) ** 2) continue;
     if (distance < bestDistance || (Math.abs(distance - bestDistance) < 1e-6 && (!best || target.depth > best.depth))) {
       best = target; bestDistance = distance;
     }

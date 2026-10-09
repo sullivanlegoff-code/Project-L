@@ -1,4 +1,10 @@
-# Fondations techniques v6 — livrées
+# Neige originale v1 — en validation
+
+Remplacement visuel du seul identifiant `neige`, depuis l’image fournie, détourée avec conservation des RGB opaques. Même asset dans la scène et les portraits ; proportions uniformes, ancrage au sol, animation de l’image entière et sélection par silhouette alpha. [Comparaison et documentation](neige-v1.md).
+
+TypeScript et builds normal/laboratoire réussis. Deux régressions de présentation ajoutées ; la suite historique reste réussie. Vingt-et-une sélections vérifiées parmi sept occupants mixtes aux trois zooms, puis fiche, boutique, collection, parents et portrait. Les deux builds servent le PNG attendu, avec contrôle SHA-256, transparence et pelage. CI et publication encore à confirmer ; aucun essai Safari physique annoncé.
+
+## Fondations techniques v6 — livrées
 
 Jeu normal et laboratoire : application `49cab78a87e4b68ca7f8ec90390980e391846cb4`, [PR nº 4 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/4). Publication et contrôles des quatre routes réussis. [Preuve durable](validation/foundations-v6-2026-10-09.json) · [Architecture, invariants et limites inter-onglets](technical-foundations.md).
 
