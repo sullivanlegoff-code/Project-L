@@ -1,12 +1,12 @@
-:root { font-family: ui-rounded, 'Trebuchet MS', system-ui, -apple-system, sans-serif; color: #3a4937; background: #d4e6b9; --hud-height: 70px; }
+:root { font-family: ui-rounded, 'Trebuchet MS', system-ui, -apple-system, sans-serif; color: #3a4937; background: #fffdf5; --hud-height: 70px; }
 * { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
 #app { height: 100dvh; position: relative; }
-#game { position: absolute; inset: 0; touch-action: none; background: #d4e6b9; }
+#game { position: absolute; inset: 0; touch-action: none; background: #fffdf5; }
 #game canvas { display: block; touch-action: none; }
 #hud { position: absolute; inset: 0 0 auto; min-height: var(--hud-height); padding: max(9px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 9px max(14px, env(safe-area-inset-left)); display: flex; align-items: center; gap: 10px; pointer-events: none; }
 #hud > * { pointer-events: auto; }
-#hud { background: #d4e6b9; }
+#hud { background: #fffdf5; }
 h1 { font-size: 19px; margin: 0 12px 0 0; max-width: 150px; font-weight: 800; }
 .resource { display: flex; align-items: center; gap: 6px; min-width: 106px; background: #fff2d9; border: 2px solid #fffaf0; box-shadow: 0 3px 0 #71885a25; padding: 8px 12px; border-radius: 18px; white-space: nowrap; }
 .resource span { color: #b6854f; font-size: 23px; } .resource.grass { background: #f0f6dc; } .resource.grass span { color: #6c9957; }

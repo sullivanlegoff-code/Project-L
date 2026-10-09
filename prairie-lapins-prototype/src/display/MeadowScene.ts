@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
 import type {GameController} from '../application/GameController';
 import {drawHabitat} from './habitatArt';
+import {drawIslandTerrain, ISLAND_PALETTE} from './islandArt';
 import {rabbitOffset, rabbitPosition, rabbitHitPoint, rabbitHit} from './rabbitLayout';
 import {habitatStats, habitatName, terrainWidth, visibleColumns, nextExtension} from '../simulation/habitats';
 import {HOUR} from '../config/balance';
@@ -48,7 +49,7 @@ export class MeadowScene extends Phaser.Scene {
     }
   }
   create(): void {
-    this.cameras.main.setBackgroundColor('#d4e6b9');
+    this.cameras.main.setBackgroundColor(ISLAND_PALETTE.background);
     this.ground = this.add.container(0, 0); this.animals = this.add.container(0, 0).setDepth(2);
     this.decorationsLayer = this.add.container(0, 0).setDepth(.5);
     this.decorationSelection = this.add.graphics().setDepth(.9);
@@ -120,11 +121,6 @@ export class MeadowScene extends Phaser.Scene {
     const heart = this.add.text(rabbit.object.x, rabbit.object.y - 40, '♥', {fontSize: '28px', color: '#d9788d'}).setDepth(5).setOrigin(.5);
     this.tweens.add({targets: heart, y: heart.y - 45, alpha: 0, duration: 1000, onComplete: () => heart.destroy()});
   }
-  private polygon(g: Phaser.GameObjects.Graphics, x: number, y: number, color: number, inset = 0): void {
-    const points = [gridPoint(x, y), gridPoint(x + 1, y), gridPoint(x + 1, y + 1), gridPoint(x, y + 1)];
-    const center = gridPoint(x + .5, y + .5);
-    g.fillStyle(color, .96); g.fillPoints(points.map(p => ({x: p.x + (center.x - p.x) * inset, y: p.y + (center.y - p.y) * inset})), true);
-  }
   private renderState(): void {
     const s = this.current;
     if (s) { this.view.setColumns(visibleColumns(s)); this.applyCamera(); }
@@ -174,37 +170,10 @@ export class MeadowScene extends Phaser.Scene {
     const g = this.add.graphics(); this.ground.add(g);
     const columns = this.current ? visibleColumns(this.current) : 6;
     const width = this.current ? terrainWidth(this.current) : 3;
-    const corners = [gridPoint(0, 0), gridPoint(columns, 0), gridPoint(columns, 2), gridPoint(0, 2)];
-    g.fillStyle(0x789060, .12); g.fillPoints(corners.map(p => ({x: p.x + 9, y: p.y + 25})), true);
-    g.fillStyle(0x9eaa77); g.fillPoints(corners.map(p => ({x: p.x, y: p.y + 16})), true);
-    for (let y = 0; y < 2; y++) for (let x = 0; x < columns; x++) this.polygon(g, x, y, (x + y) % 2 ? 0xb7d797 : 0xb5d493);
-    g.lineStyle(3, 0xd6e6b1, .7); g.strokePoints(corners, true);
-    // Soft patches replace the strong checkerboard without changing the projection.
-    for (let i = 0; i < columns * 9; i++) {
-      const p = gridPoint(.08 + ((i * 43) % (columns * 94)) / 100, .12 + ((i * 29) % 174) / 100);
-      g.fillStyle(i % 2 ? 0xd6e6a9 : 0x8db276, .16); g.fillEllipse(p.x, p.y, 44 + i % 4 * 11, 14 + i % 3 * 6);
-    }
-    // Deterministic decorative flowers; never use the gameplay random generator.
-    for (let i = 0; i < 150; i++) {
-      const p = gridPoint(((i * 71) % (columns * 100 - 13)) / 100, ((i * 37) % 193) / 100);
-      // Keep taller plants away from occupied building footprints.
-      const cell = gridCell(p), center = gridPoint(cell.x + .5, cell.y + .5);
-      if (this.current?.buildings.some(b => b.x === cell.x && b.y === cell.y) && Math.abs(p.x - center.x) < 83 && Math.abs(p.y - center.y) < 63) continue;
-      g.fillStyle(0x688955, .12); g.fillEllipse(p.x + 2, p.y + 6, 7, 3);
-      g.lineStyle(1, 0x80a065); g.lineBetween(p.x, p.y + 2, p.x - 2, p.y + 6);
-      g.fillStyle(i % 3 === 0 ? 0xf2dc9c : i % 3 === 1 ? 0xe6a5b3 : 0xfff8dc); g.fillCircle(p.x, p.y, 2.3);
-      if (i % 7 === 0) { g.fillCircle(p.x - 2.5, p.y, 2); g.fillCircle(p.x + 2.5, p.y, 2); g.fillCircle(p.x, p.y - 2.5, 2); g.fillStyle(0xffedb6); g.fillCircle(p.x, p.y, 1.2); }
-    }
+    drawIslandTerrain(g, width, columns);
     if (width < columns) {
-      for (let y = 0; y < 2; y++) for (let x = width; x < columns; x++) {
-        this.polygon(g, x, y, 0x95b579);
-        for (let n = 0; n < 17; n++) {
-          const p = gridPoint(x + ((n * 31) % 91) / 100 + .04, y + ((n * 43) % 89) / 100 + .05);
-          g.lineStyle(3, n % 2 ? 0x789b60 : 0xa7c181); g.lineBetween(p.x, p.y, p.x - 4, p.y - 17); g.lineBetween(p.x, p.y, p.x + 6, p.y - 12);
-        }
-      }
       const p = gridPoint(width + 1.4, .8);
-      this.ground.add(this.add.text(p.x, p.y, `Une prairie à explorer\nAgrandir · ${this.current ? nextExtension(this.current)!.cost : 500} pattes`, {fontFamily: 'Arial', fontSize: '19px', align: 'center', color: '#354c32', backgroundColor: '#edf0d6', padding: {x: 14, y: 10}}).setOrigin(.5));
+      this.ground.add(this.add.text(p.x, p.y, `Terrain réservé\nAgrandir · ${this.current ? nextExtension(this.current)!.cost : 500} pattes`, {fontFamily: 'Arial', fontSize: '19px', align: 'center', color: '#354c32', backgroundColor: '#edf0d6', padding: {x: 14, y: 10}}).setOrigin(.5));
     }
     for (const b of this.current?.buildings ?? []) {
       const p = gridPoint(b.x + .5, b.y + .5), x = p.x, y = p.y;

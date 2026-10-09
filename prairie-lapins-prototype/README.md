@@ -1,5 +1,7 @@
 # Prairie de lapins — décorations en prévisualisation
 
+**Île chaleureuse — 9 octobre 2026 :** plateau vert tendre et doré, contour arrondi en relief, fond blanc chaud, chemin périphérique et petite côte turquoise en bas à gauche. Projection, caméra, lapins, placements, sélection/vente et sauvegardes v5 conservés. Trois scénarios presque vides (3 × 2, 6 × 2, 9 × 2), chargés seulement après confirmation, complètent les quatre scénarios aménagés. **474 tests et TypeScript réussis.** [Référence, adaptation, captures et parcours iPhone](docs/island.md). Seule la prévisualisation Décorations reçoit ce terrain.
+
 Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**. La branche `feature/meadow-decoration` ajoute la personnalisation et les sauvegardes **v5**, avec migrations v1–v4, depuis la production stable `45323cb`. Le jeu normal et son laboratoire restent en v4. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
 
 **Retour iPhone reçu le 8 octobre 2026 : « tout fonctionne bien pendant mon essai ».** Aucun détail de scénario n'a été communiqué ; ce retour est consigné sans élargir ce qui a été testé.

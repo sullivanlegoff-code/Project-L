@@ -7,8 +7,8 @@ import type {Command, GameState} from '../state/types';
 import {DECORATIONS, DECORATION_IDS, MAX_DECORATIONS} from '../config/decorations';
 import {decorationPlacementReason} from '../simulation/decorations';
 
-export const DECORATION_SCENARIOS = ['decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'] as const;
-export const SCENARIOS = {decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — onze espèces', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat décoré — sept occupants'} as const;
+export const DECORATION_SCENARIOS = ['islandStart', 'islandExpanded', 'islandFull', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'] as const;
+export const SCENARIOS = {islandStart: 'Île presque vide — 3 × 2', islandExpanded: 'Île presque vide — 6 × 2', islandFull: 'Île presque vide — 9 × 2',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — onze espèces', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat décoré — sept occupants'} as const;
 export type ScenarioId = keyof typeof SCENARIOS;
 
 /** Explicit test fixtures only; ordinary play still uses act/controller.perform. */
@@ -21,6 +21,14 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
     if (!result.ok) throw new Error(`Scenario action refused: ${result.reason}`);
     s = result.state;
   };
+  if (id === 'islandStart' || id === 'islandExpanded' || id === 'islandFull') {
+    if (id !== 'islandStart') run({type: 'expand', stage: 1});
+    if (id === 'islandFull') run({type: 'expand', stage: 2});
+    // Almost empty, not an automatic reset: ordinary starting habitat and two rabbits.
+    const checked = decodeGame(encodeGame(s), now);
+    if (!checked.ok) throw new Error('Invalid island scenario');
+    return checked.state;
+  }
   if (id === 'decorationDemo' || id === 'decoratedHabitat' || id === 'decorationDense') {
     run({type: 'expand', stage: 1});
     run({type: 'upgradeHabitat', id: 'building-1', fromLevel: 1});

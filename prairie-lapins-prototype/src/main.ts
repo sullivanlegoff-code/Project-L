@@ -32,7 +32,7 @@ async function boot(): Promise<() => void> {
   const scene = new MeadowScene(controller, selection => ui?.select(selection), () =>
     !!document.querySelector('dialog[open]') || getComputedStyle(document.getElementById('portrait-notice')!).display !== 'none');
   const game = new Phaser.Game({
-    type: Phaser.AUTO, parent: 'game', backgroundColor: '#d4e6b9', transparent: true,
+    type: Phaser.AUTO, parent: 'game', backgroundColor: '#fffdf5', transparent: true,
     scale: {mode: Phaser.Scale.RESIZE, width: '100%', height: '100%'}, scene: [scene],
     render: {antialias: true}, input: {activePointers: 3},
   });

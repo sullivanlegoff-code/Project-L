@@ -1,5 +1,7 @@
 # Comptes en pause — future prise en charge des sauvegardes v5
 
+La refonte de l’île du 9 octobre 2026 est une présentation locale, sans nouveau champ de sauvegarde ni migration. Les sources et le build v4 des comptes restent figés ; aucun SQL, email ou réglage Supabase modifié. [Détails de l’île](island.md).
+
 La prévisualisation Décorations est locale et séparée. La branche `feature/private-cloud-saves`, sa PR en brouillon et son build publié v4 sont préservés. Aucun SQL Supabase, email, template, compte ou migration hébergée modifié dans le chantier Décorations.
 
 La confirmation d’exécution SQL avait été reçue auparavant ; la connexion email et la synchronisation authentifiée restent non validées et en pause. Le quota SMTP intégré de 2 emails/heure n’est pas un préalable au chantier d’aménagement.

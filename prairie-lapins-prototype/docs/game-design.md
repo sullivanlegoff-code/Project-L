@@ -18,6 +18,8 @@ Reportés : mini-jeux, énergie, vêtements, événements, catalogue complet et 
 
 ## Partie initiale et terrain
 
+Dans la prévisualisation Décorations seulement, le fond est une île arrondie vert-doré avec relief léger, chemin périphérique et petite côte turquoise décorative. Cela ne change ni les cases, ni les collisions, ni les ressources. Projection et caméra conservées ; format v5 inchangé. [Conception et validation visuelle](island.md).
+
 - 300 pattes, 10 herbes et 12 cœurs.
 - Un enclos en case `(0, 0)`, un Lapin Paille et un Lapin Neige d'affection 1.
 - Prairie initiale de 3 colonnes × 2 lignes : six cases constructibles.

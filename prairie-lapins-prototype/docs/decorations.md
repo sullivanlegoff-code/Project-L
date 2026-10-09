@@ -1,5 +1,7 @@
 # Décorations — prévisualisation v5
 
+**Refonte de l’île — 9 octobre 2026 :** herbe tendre et dorée dégagée, contour arrondi avec relief doux, petite côte turquoise/sable en bas à gauche, chemin courbe derrière les bâtiments et fond blanc chaud. Trois nouveaux scénarios presque vides (3 × 2, 6 × 2, 9 × 2) dans Outils test, uniquement après confirmation. Les quatre scénarios précédents restent disponibles ; projection, caméra, lapins, placements, sélection/vente et v5 conservés. [Analyse de l’image, fonctionnement, captures et essai iPhone](island.md).
+
 Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.
 Branche `feature/meadow-decoration`, [PR nº 2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion du jeu v5 sur la route normale. Les sources applicatives de Décorations sont épinglées par le publisher ; la révision actuelle est indiquée ci-dessous, dans Paramètres et dans `build-revision.txt`. Des commits documentaires plus récents dans la branche ne changent pas la révision applicative servie.
 
