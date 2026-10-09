@@ -43,7 +43,7 @@ async function run() {
     await page.evaluate(state => {const c = window.__prairieTestScene.controller, p = c.prepareImport(JSON.stringify(state)); if (!p.ok || !c.confirmImport(p.token, true).ok) throw Error('Demo import refused');}, demo);
     await screenshot('after');
     await page.locator('#open-shop').click(); await page.getByRole('button', {name: 'Décorations', exact: true}).click();
-    await page.locator('[data-catalog="wildflowers"]').scrollIntoViewIfNeeded(); await screenshot('shop'); await close();
+    await page.locator('[data-catalog="wildflowers"]').evaluate(element => element.scrollIntoView({block: 'nearest'})); await screenshot('shop'); await close();
     await load('decoratedHabitat');
     const decorated = await saved(); assert.equal(decorated.rabbits.filter(r => r.enclosureId === 'building-1').length, 7);
     for (const zoom of [.8, 1.05, 1.65]) {
