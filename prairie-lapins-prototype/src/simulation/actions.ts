@@ -8,7 +8,7 @@ import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal}
 import {chooseBirth} from './breeding';
 import {advance, validTime} from './time';
 import {complementCost, quoteAcceleration} from './hearts';
-import {DECORATIONS} from '../config/decorations';
+import {DECORATIONS, decorationResalePrice} from '../config/decorations';
 import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from './decorations';
 
 class Quoted extends Error { constructor(public price: number) { super(); } }
@@ -65,6 +65,13 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         const reason = purchaseDecorationReason(s, command.catalogId); requireRule(!reason, reason ?? 'INVALID_CHOICE');
         pay(DECORATIONS[command.catalogId].price); value = id('decoration');
         s.decorations.push({id: value, catalogId: command.catalogId, location: {kind: 'inventory'}}); break;
+      }
+      case 'sellDecoration': {
+        const index = s.decorations.findIndex(d => d.id === command.id);
+        requireRule(index >= 0, 'NOT_FOUND');
+        const amount = decorationResalePrice(s.decorations[index].catalogId);
+        requireRule(Number.isSafeInteger(s.pattes + amount), 'RESOURCE_LIMIT');
+        s.decorations.splice(index, 1); s.pattes += amount; value = amount; break;
       }
       case 'placeDecoration': {
         const reason = decorationPlacementReason(s, command.id, command.location); requireRule(!reason, reason ?? 'INVALID_CHOICE');

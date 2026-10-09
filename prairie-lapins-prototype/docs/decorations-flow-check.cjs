@@ -8,7 +8,7 @@ const out = process.env.PRAIRIE_CAPTURE_DIR || '/workspace/work/decorations-flow
 const prefix = 'prairie-lapins.preview.decorations.', key = prefix + 'prairie-lapins.save.v1';
 async function run() {
   fs.mkdirSync(out, {recursive: true});
-  const browser = await chromium.launch({executablePath: '/usr/bin/chromium', args: ['--no-sandbox']});
+  const browser = await chromium.launch({executablePath: process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium', args: ['--no-sandbox']});
   try {
     const context = await browser.newContext({viewport: {width: 852, height: 393}, hasTouch: true});
     context.setDefaultTimeout(20000);
@@ -54,7 +54,7 @@ async function run() {
     assert.equal(await page.locator('.placement-pending').count(), 1);
     await page.getByRole('button', {name: 'Annuler le placement', exact: true}).tap();
     assert.equal((await saved()).decorations[0].location.kind, 'inventory');
-    await page.locator('[data-decoration="' + id + '"] button').tap();
+    await page.locator('[data-decoration="' + id + '"]').getByRole('button', {name: 'Placer cet exemplaire', exact: true}).tap();
     await destination(1, 1); // Initial habitat occupies this cell: refusal without a payment.
     assert.equal(await page.getByRole('button', {name: 'Confirmer la pose · gratuit', exact: true}).isEnabled(), false);
     assert.equal((await saved()).pattes, 220);

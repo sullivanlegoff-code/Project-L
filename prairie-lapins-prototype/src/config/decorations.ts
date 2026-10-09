@@ -20,3 +20,7 @@ export const FINE_GRID = 4;
 export const HABITAT_DECORATION_SLOTS = [0, 1, 2] as const;
 /** A generous bound keeps imports and low-end devices bounded; never discards owned objects. */
 export const MAX_DECORATIONS = 512;
+
+/** Decorations only: refund pattes, never hearts. */
+export const DECORATION_RESALE_RATE = .5;
+export const decorationResalePrice = (id: DecorationId): number => Math.floor(DECORATIONS[id].price * DECORATION_RESALE_RATE);

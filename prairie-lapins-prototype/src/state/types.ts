@@ -61,6 +61,7 @@ export type TimedStage = 'order' | 'breeding' | 'growth';
 export type Command = BaseCommand
   | {type: 'buyDecoration'; catalogId: DecorationId}
   | {type: 'placeDecoration'; id: string; location: DecorationLocation}
+  | {type: 'sellDecoration'; id: string}
   | {type: 'storeDecorationsInCell'; x: number; y: number}
   | {type: 'claimMainMission'; id: MainMissionId}
   | {type: 'claimDailyMission'; id: DailyMissionId; cycleStart: number}

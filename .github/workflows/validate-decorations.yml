@@ -1,0 +1,61 @@
+name: Vérifier Décorations
+on:
+  push:
+    branches: [feature/meadow-decoration]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: decorations-validation
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: prairie-lapins-prototype
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: prairie-lapins-prototype/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Construire la prévisualisation isolée
+        env:
+          VITE_BUILD_REVISION: ${{ github.sha }}
+        run: |
+          npm run build:decorations -- --outDir "$RUNNER_TEMP/decorations-build" --emptyOutDir
+          node scripts/verify-decorations.mjs "$RUNNER_TEMP/decorations-build"
+      - name: Installer le navigateur de test
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Vérifier les interactions tactiles dans un profil jetable
+        env:
+          PRAIRIE_CAPTURE_DIR: ${{ runner.temp }}/decorations-captures
+          PRAIRIE_TEST_URL: http://127.0.0.1:5178/Project-L/preview/decorations/
+        run: |
+          export PRAIRIE_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          npm run dev -- --mode decorations-preview --port 5178 --base=/Project-L/preview/decorations/ > "$RUNNER_TEMP/vite.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in {1..30}; do curl -fsS "$PRAIRIE_TEST_URL" > /dev/null && break; sleep 1; done
+          node docs/decorations-selection-check.cjs
+          node docs/decorations-flow-check.cjs
+          node docs/decorations-browser-check.cjs
+      - name: Conserver captures et rapports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: decorations-validation-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/decorations-captures
+            ${{ runner.temp }}/vite.log
+          retention-days: 30

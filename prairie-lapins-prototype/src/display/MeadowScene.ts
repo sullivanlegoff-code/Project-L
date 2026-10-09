@@ -35,6 +35,9 @@ export class MeadowScene extends Phaser.Scene {
   private decorationViews = new Map<string, Phaser.GameObjects.Image>();
   private ghostView: Phaser.GameObjects.Image | null = null;
   private decorationsLayer!: Phaser.GameObjects.Container;
+  private selectedDecorationId: string | null = null;
+  private decorationSelection!: Phaser.GameObjects.Graphics;
+  private decorationPixels = new Map<string, Uint8ClampedArray>();
   private unsubscribe: (() => void) | null = null;
   readonly view = new MeadowCamera();
   constructor(private controller: GameController, private select: (selection: MeadowSelection) => void, private blocked: () => boolean) { super('Meadow'); }
@@ -48,6 +51,7 @@ export class MeadowScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#d4e6b9');
     this.ground = this.add.container(0, 0); this.animals = this.add.container(0, 0).setDepth(2);
     this.decorationsLayer = this.add.container(0, 0).setDepth(.5);
+    this.decorationSelection = this.add.graphics().setDepth(.9);
     this.labels = this.add.container(0, 0).setDepth(2.5);
     this.grid = this.add.graphics().setDepth(1); this.bubbles = this.add.container(0, 0).setDepth(3);
     this.resize(); this.recenter();
@@ -58,14 +62,56 @@ export class MeadowScene extends Phaser.Scene {
   }
   recenter(): void { if (!this.cameras?.main) return; this.view.recenter(); this.applyCamera(); }
   private resize(): void { this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
-  private applyCamera(): void { this.cameras.main.setZoom(this.view.zoom).centerOn(this.view.x, this.view.y); }
+  private applyCamera(): void { this.cameras.main.setZoom(this.view.zoom).centerOn(this.view.x, this.view.y); this.drawDecorationSelection(); }
   setPlacement(placement: Placement | null): void { this.placement = placement; if (this.grid) this.drawGrid(); }
   setArrangement(active: boolean, ghost: DecorationGhost | null = null): void {
     this.arrangement = active; this.ghost = ghost;
     if (this.grid) { this.drawDecorations(); this.drawGrid(); this.drawGhost(); }
   }
+  setDecorationSelection(id: string | null): void {
+    this.selectedDecorationId = id; this.drawDecorationSelection();
+  }
+  private drawDecorationSelection(): void {
+    if (!this.decorationSelection) return;
+    this.decorationSelection.clear();
+    const image = this.selectedDecorationId ? this.decorationViews.get(this.selectedDecorationId) : null;
+    this.decorationSelection.setVisible(!!image && !this.photo);
+    if (!image) return;
+    const r = image.getBounds(), pad = 5 / this.view.zoom;
+    this.decorationSelection.lineStyle(3 / this.view.zoom, 0xd19b39, 1);
+    this.decorationSelection.strokeRoundedRect(r.x - pad, r.y - pad, r.width + 2 * pad, r.height + 2 * pad, 8);
+  }
+  /** Hit the drawn silhouette, including tall portions above the logical footprint.
+   * Raster masks are cached per texture; only a tap samples pixels, never each frame. */
+  private decorationAt(screen: Point): string | null {
+    const world = this.view.world(screen), pad = 4 / this.view.zoom;
+    const images = [...this.decorationViews.entries()].reverse().sort((a, b) => b[1].depth - a[1].depth);
+    for (const [id, image] of images) {
+      const bounds = image.getBounds();
+      if (world.x < bounds.left - pad || world.x > bounds.right + pad || world.y < bounds.top - pad || world.y > bounds.bottom + pad) continue;
+      let pixels = this.decorationPixels.get(image.texture.key);
+      const width = image.frame.realWidth, height = image.frame.realHeight;
+      if (!pixels) {
+        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+        const context = canvas.getContext('2d', {willReadFrequently: true});
+        if (!context) continue;
+        context.drawImage(image.texture.getSourceImage() as CanvasImageSource, 0, 0, width, height);
+        pixels = context.getImageData(0, 0, width, height).data;
+        this.decorationPixels.set(image.texture.key, pixels);
+      }
+      const matrix = image.getWorldTransformMatrix();
+      for (const [dx, dy] of [[0, 0], [-pad, 0], [pad, 0], [0, -pad], [0, pad], [-pad, -pad], [-pad, pad], [pad, -pad], [pad, pad]]) {
+        const local = matrix.applyInverse(world.x + dx, world.y + dy);
+        const x = Math.floor(local.x + image.displayOriginX), y = Math.floor(local.y + image.displayOriginY);
+        // Transparent margins and faint ground shadows do not capture empty-space taps.
+        if (x >= 0 && y >= 0 && x < width && y < height && pixels[(y * width + x) * 4 + 3] > 48) return id;
+      }
+    }
+    return null;
+  }
   setPhoto(active: boolean): void {
     this.photo = active;
+    this.drawDecorationSelection();
     this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active);
   }
   reactToFeed(id: string): void {
@@ -110,7 +156,7 @@ export class MeadowScene extends Phaser.Scene {
         .setAlpha(this.ghost?.id === d.id ? .35 : 1);
     }
     for (const [id, image] of this.decorationViews) if (!visible.has(id)) { image.destroy(); this.decorationViews.delete(id); }
-    this.decorationsLayer.sort('depth');
+    this.decorationsLayer.sort('depth'); this.drawDecorationSelection();
   }
   private drawGhost(): void {
     const d = this.current?.decorations.find(d => d.id === this.ghost?.id);
@@ -297,8 +343,13 @@ export class MeadowScene extends Phaser.Scene {
   private tap(screen: Point): void {
     const world = this.view.world(screen), cell = gridCell(world);
     if (this.photo) return;
+    for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
     if (this.arrangement) {
       const chosen = this.current?.decorations.find(d => d.id === this.ghost?.id);
+      if (!chosen) {
+        const decorationId = this.decorationAt(screen);
+        if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
+      }
       // Interior destinations have stable slot IDs; tapping a habitat centre also opens its slots.
       if (!chosen || DECORATIONS[chosen.catalogId].area === 'habitat') {
         for (const b of this.current?.buildings.filter(b => b.kind === 'enclosure') ?? []) for (const slot of [0, 1, 2] as const) {
@@ -313,20 +364,17 @@ export class MeadowScene extends Phaser.Scene {
         this.select(DECORATIONS[chosen.catalogId].area === 'outside' ? {kind: 'fineCell', x: Math.floor((world.x - VISUAL.grid.originX) / (VISUAL.grid.width / 4)), y: Math.floor((world.y - VISUAL.grid.originY) / (VISUAL.grid.depth / 4))} :
           this.current?.buildings.some(b => b.kind === 'enclosure' && b.x === cell.x && b.y === cell.y) ? {kind: 'building', id: this.current!.buildings.find(b => b.x === cell.x && b.y === cell.y)!.id} : {kind: 'empty'}); return;
       }
-      const d = this.current?.decorations.find(d => d.location.kind === 'outside' && (() => {
-        const loc = d.location; if (loc.kind !== 'outside') return false;
-        const size = footprint(d.catalogId, loc.rotation), corner = gridPoint(loc.x / 4, loc.y / 4);
-        return world.x >= corner.x && world.x < corner.x + size.width * VISUAL.grid.width / 4 && world.y >= corner.y && world.y < corner.y + size.height * VISUAL.grid.depth / 4;
-      })());
-      if (d) { this.select({kind: 'decoration', id: d.id}); return; }
+      const decorationId = this.decorationAt(screen);
+      if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
       const home = this.current?.buildings.find(b => b.kind === 'enclosure' && b.x === cell.x && b.y === cell.y);
       this.select(home ? {kind: 'building', id: home.id} : {kind: 'empty'}); return;
     }
     if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
-    for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
     const closest = rabbitHit(screen, this.rabbitViews.map(r => ({id: r.id,
       point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y})));
     if (closest) { this.select({kind: 'rabbit', id: closest.id}); return; }
+    const decorationId = this.decorationAt(screen);
+    if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
     if (this.current && cell.x >= terrainWidth(this.current) && cell.x < visibleColumns(this.current) && cell.y >= 0 && cell.y < 2) { this.select({kind: 'extension'}); return; }
     const building = this.current?.buildings.find(b => b.x === cell.x && b.y === cell.y);
     this.select(building ? {kind: 'building', id: building.id} : {kind: 'empty'});

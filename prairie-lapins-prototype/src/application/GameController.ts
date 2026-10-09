@@ -108,12 +108,23 @@ export class GameController {
     if (this.updateTime(now)) this.saveCurrent(now);
     this.emit();
   }
-  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED'} {
+  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED'} {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};
     if (!this.state) return {ok: false, reason: 'NO_GAME'};
     const now = this.clock();
     const changed = this.updateTime(now);
     const result = act(this.state!, command, now, this.rng);
+    // A sale commits ownership and payment together, only after the complete save succeeds.
+    if (result.ok && command.type === 'sellDecoration') {
+      const saved = this.write(result.state, now);
+      if (!saved.ok) {
+        this.status = saved.reason === 'STORAGE_CHANGED' ? 'conflict' : saved.reason === 'READ_FAILED' ? 'read-error' : 'write-error';
+        this.issue = saved.reason; this.dirty = true; this.emit();
+        return {ok: false, reason: 'SALE_NOT_SAVED'};
+      }
+      this.state = result.state; this.status = 'saved'; this.issue = null; this.dirty = false;
+      this.emit(); return structuredClone(result);
+    }
     if (result.ok) { this.state = result.state; this.dirty = true; }
     if (changed || result.ok) this.saveCurrent(now);
     this.emit();

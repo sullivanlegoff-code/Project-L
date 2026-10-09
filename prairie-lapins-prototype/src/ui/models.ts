@@ -6,7 +6,8 @@ import type {GameState, Refusal} from '../state/types';
 import {decorationsInCell} from '../simulation/decorations';
 
 export const BUILDING_NAMES: Record<BuildingKind, string> = {enclosure: 'Enclos', farm: 'Ferme', nest: 'Nid', nursery: 'Nurserie'};
-export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED', string> = {
+export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED', string> = {
+  SALE_NOT_SAVED: 'La vente n’a pas pu être sauvegardée. Objet et pattes conservés. Réessayez après avoir résolu le problème de sauvegarde.',
   DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
   DECORATION_OVERLAP: 'Cette empreinte chevauche une autre décoration.',
   DECORATION_BLOCKS_BUILDING: 'Des décorations occupent cette case. Rangez-les avant de placer le bâtiment.',

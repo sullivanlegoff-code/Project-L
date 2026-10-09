@@ -26,7 +26,7 @@ function setup(initial = createGame(0)) {
   const data = new Map<string, string>([[SAVE_KEY, encodeGame(initial)]]);
   const storage: SaveStorage = {getItem: key => data.get(key) ?? null, setItem: (key, value) => { data.set(key, value); }};
   const clock = {now: 0}; const controller = new GameController(storage, () => clock.now, () => .9);
-  const scene = {setPlacement: vi.fn(), setArrangement: vi.fn(), setPhoto: vi.fn(), reactToFeed: vi.fn(), recenter: vi.fn()} as unknown as MeadowScene;
+  const scene = {setPlacement: vi.fn(), setArrangement: vi.fn(), setDecorationSelection: vi.fn(), setPhoto: vi.fn(), reactToFeed: vi.fn(), recenter: vi.fn()} as unknown as MeadowScene;
   const prefs = new PreferenceStore('test-ui'); prefs.set({muted: true, tutorial: false});
   const ui = new GameUI(controller, scene, () => clock.now, prefs);
   const disposeSave = mountSavePanel(controller, () => ui.onReplacement());
@@ -527,5 +527,91 @@ describe('habitat panels and controller transactions',()=>{
     expect(c.perform({type:'payWithHearts',action:{type:'upgradeHabitat',id:'building-4',fromLevel:1},maxPattes:100,maxHearts:8}).ok).toBe(true);
     expect(state(c).buildings[1].habitat).toEqual({type:'paille',level:2});expect(values.get(SAVE_KEY)).toBe(normal);
     expect(JSON.parse(values.get('prairie-lapins.development.'+SAVE_KEY)!).version).toBe(5);
+  });
+});
+
+describe('direct decoration selection and confirmed resale UI', () => {
+  function decorated() {
+    const s = createGame(0); s.pattes = 1000; s.nextId = 7;
+    s.decorations = [
+      {id: 'decoration-4', catalogId: 'wood-bench', location: {kind: 'outside', x: 4, y: 0, rotation: 1}},
+      {id: 'decoration-5', catalogId: 'soft-cushion', location: {kind: 'habitat', habitatId: 'building-1', slot: 1}},
+      {id: 'decoration-6', catalogId: 'wood-bench', location: {kind: 'inventory'}},
+    ]; return s;
+  }
+  it.each(['decoration-4', 'decoration-5'])('opens the selected %s actions in normal play and deselects on empty ground', id => {
+    const {ui, scene, controller} = setup(decorated()), before = state(controller);
+    ui.select({kind: 'decoration', id});
+    expect(document.getElementById('game-panel')!.hidden).toBe(false);
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(id);
+    expect(scene.setArrangement).toHaveBeenLastCalledWith(false, null);
+    expect(document.getElementById('panel-title')!.textContent).toBe(id === 'decoration-4' ? 'Banc en bois' : 'Coussin douillet');
+    expect(button('Déplacer').disabled).toBe(false); expect(button('Ranger dans l’inventaire').disabled).toBe(false);
+    expect([...panel().querySelectorAll('button')].some(b => b.textContent === 'Tourner de 90°')).toBe(id === 'decoration-4');
+    ui.select({kind: 'empty'}); expect(document.getElementById('game-panel')!.hidden).toBe(true);
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(null); expect(state(controller)).toEqual(before);
+  });
+  it('highlights a listed placed object and clears selection without exiting arrangement on empty ground', () => {
+    const {ui, scene} = setup(decorated()); document.getElementById('open-arrange')!.click();
+    button('Banc en bois · #4').click(); expect(scene.setDecorationSelection).toHaveBeenLastCalledWith('decoration-4');
+    ui.select({kind: 'empty'}); expect(document.getElementById('game-panel')!.hidden).toBe(true);
+    expect(document.getElementById('arrange-banner')!.hidden).toBe(false);
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(null); expect(scene.setArrangement).toHaveBeenLastCalledWith(true, null);
+    ui.select({kind: 'decoration', id: 'decoration-5'}); expect(scene.setDecorationSelection).toHaveBeenLastCalledWith('decoration-5');
+  });
+  it('keeps photo mode observational and ignores decoration and harvest selection', () => {
+    const {ui, controller, scene} = setup(decorated()), before = state(controller);
+    ui.select({kind: 'decoration', id: 'decoration-4'}); document.getElementById('open-photo')!.click();
+    ui.select({kind: 'decoration', id: 'decoration-5'}); ui.select({kind: 'income', id: 'building-1'});
+    expect(document.getElementById('game-panel')!.hidden).toBe(true);
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(null); expect(state(controller)).toEqual(before);
+  });
+  it('does not mutate a normal selection move until confirmation, cancellation and mode exit preserve the original', () => {
+    const {ui, controller} = setup(decorated()), before = state(controller);
+    ui.select({kind: 'decoration', id: 'decoration-4'}); button('Déplacer').click();
+    ui.select({kind: 'fineCell', x: 8, y: 4}); expect(state(controller)).toEqual(before);
+    button('Annuler le placement').click(); expect(state(controller)).toEqual(before);
+    ui.select({kind: 'decoration', id: 'decoration-5'}); button('Déplacer').click();
+    ui.select({kind: 'habitatSlot', habitatId: 'building-1', slot: 2});
+    document.getElementById('exit-arrange')!.click(); expect(state(controller)).toEqual(before);
+  });
+  it('asks the exact sale question, cancellation preserves everything, and double confirmation sells only the selected copy', () => {
+    const {ui, controller, data, scene} = setup(decorated()), before = state(controller);
+    ui.select({kind: 'decoration', id: 'decoration-4'}); button('Vendre · 40 pattes').click();
+    const dialog = document.getElementById('game-dialog')!;
+    expect(dialog.querySelector('h2')!.textContent).toBe('Vendre Banc en bois pour 40 pattes ?');
+    expect(dialog.textContent).toContain('Aucun remboursement en cœurs');
+    button('Annuler', dialog).click(); expect(state(controller)).toEqual(before);
+    button('Vendre · 40 pattes').click(); const confirm = button('Confirmer', dialog); confirm.click(); confirm.click();
+    const after = state(controller);
+    expect(after).toEqual({...before, pattes: before.pattes + 40, decorations: before.decorations.slice(1)});
+    expect(JSON.parse(data.get(SAVE_KEY)!)).toEqual(after);
+    expect(document.getElementById('game-panel')!.hidden).toBe(true);
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(null);
+  });
+  it('sells an inventory copy through its own actions and updates the arrangement list', () => {
+    const {controller, scene} = setup(decorated()), before = state(controller);
+    document.getElementById('open-arrange')!.click(); button('Actions de cet exemplaire', panel().querySelector('[data-decoration="decoration-6"]')!).click();
+    expect(button('Ranger dans l’inventaire').disabled).toBe(true);
+    button('Vendre · 40 pattes').click(); button('Confirmer', document.getElementById('game-dialog')!).click();
+    expect(state(controller)).toEqual({...before, pattes: before.pattes + 40, decorations: before.decorations.slice(0, 2)});
+    expect(panel().textContent).toContain('Votre inventaire est vide');
+    expect(scene.setDecorationSelection).toHaveBeenLastCalledWith(null);
+  });
+  it('a stale sale confirmation cannot sell another exemplar or credit twice', () => {
+    const {controller, ui} = setup(decorated());
+    ui.select({kind: 'decoration', id: 'decoration-4'}); button('Vendre · 40 pattes').click();
+    const confirm = button('Confirmer', document.getElementById('game-dialog')!);
+    controller.perform({type: 'sellDecoration', id: 'decoration-4'}); const after = state(controller);
+    confirm.click(); expect(state(controller)).toEqual(after);
+    expect(state(controller).decorations.find(d => d.id === 'decoration-6')).toBeDefined();
+  });
+  it('a refused save leaves the object panel usable and reports that the sale did not happen', () => {
+    const {controller, ui, storage} = setup(decorated()), before = state(controller);
+    ui.select({kind: 'decoration', id: 'decoration-4'});
+    vi.spyOn(storage, 'setItem').mockImplementation(() => {throw Error('quota');});
+    button('Vendre · 40 pattes').click(); button('Confirmer', document.getElementById('game-dialog')!).click();
+    expect(state(controller)).toEqual(before); expect(panel().textContent).toContain('Vendre · 40 pattes');
+    expect(document.getElementById('toast')!.textContent).toContain('vente n’a pas pu être sauvegardée');
   });
 });

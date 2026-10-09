@@ -6,7 +6,7 @@ import {availableMissionRewards, mainProgress, dailyCycleStart, dailyCycleEnd, c
 import type {GameController, Snapshot} from '../application/GameController';
 import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId} from '../config/balance';
 import type {Command, DecorationLocation, GameState, PattesCommand, TimedStage} from '../state/types';
-import {DECORATIONS, DECORATION_IDS, type DecorationId} from '../config/decorations';
+import {DECORATIONS, DECORATION_IDS, decorationResalePrice, type DecorationId} from '../config/decorations';
 import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from '../simulation/decorations';
 import {decorationSvg} from '../display/decorationArt';
 import {quoteComplement} from '../simulation/actions';
@@ -122,7 +122,7 @@ export class GameUI {
     if (this.placement && view.kind !== 'placement') { this.placement = null; this.scene.setPlacement(null); }
     const decorationView = ['arrange', 'decorationPlacement', 'decoration', 'arrangeHabitat'].includes(view.kind);
     if (!decorationView) { this.arranging = false; this.decorationDraft = null; }
-    else this.arranging = true;
+    else if (view.kind !== 'decoration') this.arranging = true;
     if (view.kind !== 'decorationPlacement') this.decorationDraft = null;
     this.content.scrollTop = 0;
     this.view = view; this.syncArrangement(); this.controller.refresh(); this.render();
@@ -136,19 +136,21 @@ export class GameUI {
     this.arranging = false; this.decorationDraft = null; this.setPhoto(false); this.syncArrangement();
     this.parents = [null, null]; this.placement = null; this.scene.setPlacement(null);
     if (this.dialog.open) this.dialog.close(); this.dialog.replaceChildren();
-    this.view = {kind: 'settings'}; this.render();
+    this.view = {kind: 'settings'}; this.syncArrangement(); this.render();
   }
   select(selection: MeadowSelection): void {
+    if (this.photo) return;
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
+    if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
+    if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
     if (this.arranging) { this.selectDecoration(selection); return; }
-    if (selection.kind === 'decoration' || selection.kind === 'fineCell' || selection.kind === 'habitatSlot') return;
+    if (selection.kind === 'decoration') { this.open({kind: 'decoration', id: selection.id}); return; }
+    if (selection.kind === 'fineCell' || selection.kind === 'habitatSlot') return;
     if (selection.kind === 'cell') {
       if (this.placement) { this.placement.cell = {x: selection.x, y: selection.y}; this.scene.setPlacement(this.placement); this.render(); }
       return;
     }
     if (selection.kind === 'empty') { this.close(); return; }
-    if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
-    if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
     if (selection.kind === 'extension') this.open({kind: 'extension'});
     else if (selection.kind === 'building' || selection.kind === 'rabbit') this.open({kind: selection.kind, id: selection.id});
   }
@@ -247,6 +249,7 @@ export class GameUI {
     document.getElementById('arrange-banner')!.hidden = !this.arranging;
     document.body.classList.toggle('arranging', this.arranging);
     this.scene.setArrangement(this.arranging, this.decorationDraft ? {id: this.decorationDraft.id, location: this.decorationDraft.location} : null);
+    this.scene.setDecorationSelection(this.view?.kind === 'decoration' ? this.view.id : this.view?.kind === 'decorationPlacement' ? this.decorationDraft?.id ?? null : null);
   }
   private setPhoto(active: boolean): void {
     if (this.photo === active) return;
@@ -279,14 +282,15 @@ export class GameUI {
   }
   private renderInventory(s: GameState): void {
     this.title.textContent = 'Aménager · inventaire';
-    this.content.append(node('p', 'Touchez un objet posé pour le déplacer ou le ranger. Glissez pour explorer, pincez pour zoomer. Toute pose demande une validation.', 'small'));
+    this.content.append(node('p', 'Touchez directement un objet posé pour le déplacer, le ranger ou le vendre. Glissez pour explorer, pincez pour zoomer. Toute pose demande une validation.', 'small'));
     this.button(this.content, 'Acheter des décorations', () => this.open({kind: 'shop', tab: 'decorations'}));
     const inventory = s.decorations.filter(d => d.location.kind === 'inventory');
     this.content.append(node('h3', `En réserve · ${inventory.length}`));
     if (!inventory.length) this.content.append(node('p', 'Votre inventaire est vide. Les objets rangés réapparaissent ici.', 'small'));
     for (const d of inventory) {
       const card = this.decorationCard(d.catalogId, `Exemplaire ${d.id.split('-')[1]} · pose gratuite`); card.dataset.decoration = d.id;
-      this.button(card, 'Placer cet exemplaire', () => this.beginDecorationPlacement(d.id)); this.content.append(card);
+      this.button(card, 'Placer cet exemplaire', () => this.beginDecorationPlacement(d.id));
+      this.button(card, 'Actions de cet exemplaire', () => this.open({kind: 'decoration', id: d.id}), null, true); this.content.append(card);
     }
     const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
     const details = node('details'); details.dataset.placedList = ''; details.append(node('summary', `Objets posés · ${placed.length}`));
@@ -295,13 +299,22 @@ export class GameUI {
     this.button(this.content, 'Quitter le mode Aménagement', () => this.close(), null, true);
   }
   private renderDecoration(s: GameState, id: string): void {
-    const d = s.decorations.find(d => d.id === id); if (!d) { this.open({kind: 'arrange'}); return; }
+    const d = s.decorations.find(d => d.id === id); if (!d) { this.finishDecorationAction(); return; }
     this.title.textContent = DECORATIONS[d.catalogId].name;
     this.content.append(this.decorationCard(d.catalogId, `Exemplaire ${id.split('-')[1]} · déplacements gratuits`));
     this.button(this.content, 'Déplacer', () => this.beginDecorationPlacement(id));
     if (DECORATIONS[d.catalogId].rotates && d.location.kind === 'outside') this.button(this.content, 'Tourner de 90°', () => { this.beginDecorationPlacement(id); this.rotateDecoration(); }, null, true);
-    this.button(this.content, 'Ranger dans l’inventaire', () => this.execute({type: 'placeDecoration', id, location: {kind: 'inventory'}}, 'Objet rangé, toujours possédé.', () => this.open({kind: 'arrange'})), d.location.kind === 'inventory' ? 'Cet objet est déjà dans l’inventaire.' : null, true);
+    this.button(this.content, 'Ranger dans l’inventaire', () => this.execute({type: 'placeDecoration', id, location: {kind: 'inventory'}}, 'Objet rangé, toujours possédé.', () => this.finishDecorationAction()), d.location.kind === 'inventory' ? 'Cet objet est déjà dans l’inventaire.' : null, true);
+    const resale = decorationResalePrice(d.catalogId);
+    this.button(this.content, `Vendre · ${resale} pattes`, () => this.confirm(
+      `Vendre ${DECORATIONS[d.catalogId].name} pour ${resale} pattes ?`,
+      'Cet exemplaire sera retiré définitivement. Aucun remboursement en cœurs.',
+      () => this.execute({type: 'sellDecoration', id}, value => `Objet vendu · + ${value} pattes.`, () => this.finishDecorationAction())
+    ), Number.isSafeInteger(s.pattes + resale) ? null : REFUSALS.RESOURCE_LIMIT, true);
     this.button(this.content, 'Mon inventaire', () => this.open({kind: 'arrange'}), null, true);
+  }
+  private finishDecorationAction(): void {
+    if (this.arranging) this.open({kind: 'arrange'}); else this.close();
   }
   private beginDecorationPlacement(id: string): void {
     const d = this.controller.getSnapshot().state?.decorations.find(d => d.id === id); if (!d) return;
@@ -327,6 +340,7 @@ export class GameUI {
     }
     if (selection.kind === 'decoration') this.open({kind: 'decoration', id: selection.id});
     else if (selection.kind === 'building') this.open({kind: 'arrangeHabitat', id: selection.id});
+    else if (selection.kind === 'empty') { this.view = null; this.syncArrangement(); this.render(); }
   }
   private renderDecorationPlacement(s: GameState): void {
     const draft = this.decorationDraft, d = s.decorations.find(d => d.id === draft?.id);
