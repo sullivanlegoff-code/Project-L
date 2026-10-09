@@ -61,5 +61,7 @@
         "rendererMeanCpuMs": 0.7193548386886476
       }
     }
-  ]
+  ],
+  "applicationAfter": "a7635ec44400dba55d2e57cdd7b94cc14e3bac46",
+  "afterSourceProvenance": "Measured against the exact application files uploaded in this revision, before commit; documentary follow-up does not change the application."
 }
