@@ -143,6 +143,10 @@ export class GameUI {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
     if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
     if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
+    // A ready nursery bubble opens its ordinary actions, including during arrangement.
+    if (this.arranging && selection.kind === 'building' && this.snapshot.state?.buildings.find(b => b.id === selection.id)?.kind !== 'enclosure') {
+      this.open({kind: 'building', id: selection.id}); return;
+    }
     if (this.arranging) { this.selectDecoration(selection); return; }
     if (selection.kind === 'decoration') { this.open({kind: 'decoration', id: selection.id}); return; }
     if (selection.kind === 'fineCell' || selection.kind === 'habitatSlot') return;

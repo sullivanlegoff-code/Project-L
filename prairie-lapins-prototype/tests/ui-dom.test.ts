@@ -615,3 +615,20 @@ describe('direct decoration selection and confirmed resale UI', () => {
     expect(document.getElementById('toast')!.textContent).toContain('vente n’a pas pu être sauvegardée');
   });
 });
+
+describe('bubble actions retain priority during arrangement', () => {
+  it('collects income without selecting an object and a nursery bubble opens ordinary building actions', () => {
+    const initial = createGame(0); initial.pattes = 1000; initial.buildings[0].incomeUnits = 10 * 3600000;
+    const {controller, ui} = setup(initial);
+    expect(controller.perform({type: 'buyBuilding', kind: 'nursery', x: 2, y: 0}).ok).toBe(true);
+    const before = state(controller).pattes;
+    document.getElementById('open-arrange')!.click();
+    ui.select({kind: 'income', id: 'building-1'});
+    expect(state(controller).pattes).toBe(before + 10);
+    expect(document.getElementById('arrange-banner')!.hidden).toBe(false);
+    ui.select({kind: 'building', id: state(controller).buildings.find(b => b.kind === 'nursery')!.id});
+    expect(document.getElementById('panel-title')!.textContent).toBe('Nurserie');
+    expect(document.getElementById('arrange-banner')!.hidden).toBe(true);
+    expect(panel().textContent).not.toContain('Trois emplacements');
+  });
+});
