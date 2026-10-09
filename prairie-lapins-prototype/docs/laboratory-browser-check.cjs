@@ -24,7 +24,7 @@ async function run() {
   const ready=()=>page.waitForFunction(()=>document.getElementById('save-status')?.dataset.status==='saved');
   const goto = async url=>{const response=await page.goto(url,{waitUntil:'networkidle'});assert.equal(response.status(),200);await ready();await page.locator('#game canvas').waitFor({state:'visible'});};
   const settings=()=>page.click('#open-settings');
-  const progress=s=>({pattes:s.pattes,grass:s.grass,hearts:s.hearts,rabbits:s.rabbits,discovered:s.discovered,nextId:s.nextId,nextHeartGiftAt:s.nextHeartGiftAt});
+  const progress=s=>({version:s.version,acquiredParcels:s.acquiredParcels,decorations:s.decorations,pattes:s.pattes,grass:s.grass,hearts:s.hearts,rabbits:s.rabbits,discovered:s.discovered,nextId:s.nextId,nextHeartGiftAt:s.nextHeartGiftAt});
   const screenshot=name=>page.screenshot({path:path.join(output,name+'.png')});
   async function exportFile(button,name,test) {
     const promise=page.waitForEvent('download');await page.click(button);const download=await promise;assert.equal(await download.failure(),null);await download.saveAs(path.join(output,name));
@@ -35,7 +35,7 @@ async function run() {
   }
   try {
     await goto(normal.href);assert.equal(await page.locator('#dev-badge').isVisible(),false);assert.equal(await page.locator('#devtools button').count(),0);
-    await page.mouse.click(202,137);await page.getByRole('button',{name:'Nourrir · 2 herbes',exact:true}).click();await page.waitForFunction(()=>document.getElementById('grass').textContent==='8');
+    await page.mouse.click(388,222);await page.getByRole('button',{name:'Nourrir · 2 herbes',exact:true}).click();await page.waitForFunction(()=>document.getElementById('grass').textContent==='8');
     await settings();const normalExport=await exportFile('#export-game','normal-export.json',false);
     const normalProgress=progress(JSON.parse(normalExport));assert.equal(normalProgress.grass,8);
     assert.equal(await page.locator('#environment-link').getAttribute('href'), laboratory.pathname);
@@ -51,7 +51,7 @@ async function run() {
     for(const [resource,amounts] of Object.entries({pattes:[1000,10000],grass:[100,1000],hearts:[10,100]}))for(const amount of amounts)await page.click(`#dev-grant-${resource}-${amount}`);
     const rich=await state(true);assert.equal(rich.pattes,11300);assert.equal(rich.grass,1110);assert.equal(rich.hearts,122);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('All five clock advances and six resource grants leave every normal-origin key byte-for-byte unchanged.');
-    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,5);
+    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,6);
     await importFile(normalExport,'normal-copy.json');await page.click('#cancel-import');assert.deepEqual(progress(await state(true)),progress(rich));
     await importFile(normalExport,'normal-copy.json');await page.click('#confirm-import');assert.deepEqual(progress(await state(true)),normalProgress);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('MODE-TEST JSON export; cancelled and confirmed normal-copy imports leave the source unchanged.');
@@ -59,8 +59,8 @@ async function run() {
     confirm=false;const beforeReset=await raw(prefix+saveKey);await page.click('#dev-reset');assert.equal((await state(true)).pattes,JSON.parse(beforeReset).pattes);
     confirm=true;await page.click('#dev-reset');assert.equal((await state(true)).grass,10);assert.equal((await state(true)).hearts,12);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('Laboratory reload restores its save/clock; cancelled and confirmed reset preserve normal storage.');
-    for(const id of ['collection','reproduction','missions','habitats','islandStart','islandExpanded','islandFull','decorationStart','decorationDemo','decoratedHabitat','decorationDense']) {
-      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,5);
+    for(const id of ['collection','reproduction','missions','habitats','islandStart','islandExpanded','islandFull','islandDiagonal','islandL','parcelEdges','decorationStart','decorationDemo','decoratedHabitat','decorationDense']) {
+      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,6);
       if(id==='collection') {
         assert.equal(fixture.discovered.length,15);
         await page.click('#open-collection');
@@ -75,7 +75,7 @@ async function run() {
       if(id==='habitats')for(const home of fixture.buildings)assert.equal(fixture.rabbits.filter(r=>r.enclosureId===home.id).length,7);
       assert.deepEqual(await protectedData(),baseline);
     }
-    report.checks.push('All eleven confirmed scenario loads produce valid saved v5 states without writing normal keys.');
+    report.checks.push('All fourteen confirmed scenario loads produce valid saved v6 states without writing normal keys.');
     await page.click('#close-panel');await screenshot('laboratory-habitats');
     await settings(); await page.click('#dev-scenario-habitats'); await page.click('#close-panel'); await page.reload({waitUntil:'networkidle'});await ready();assert.equal((await state(true)).rabbits.length,49);assert.deepEqual(await protectedData(),baseline);
     await page.setViewportSize({width:390,height:844});

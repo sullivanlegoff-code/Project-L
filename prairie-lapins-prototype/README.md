@@ -1,40 +1,32 @@
-# Prairie de lapins — jeu normal v5
+# Prairie de lapins — île carrée v6
 
-**Jouer : [jeu principal](https://sullivanlegoff-code.github.io/Project-L/).**
-**Tester : [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/)** avec bandeau permanent, ressources, horloge et onze scénarios dans une partie séparée.
+[Jouer](https://sullivanlegoff-code.github.io/Project-L/) · [Laboratoire séparé](https://sullivanlegoff-code.github.io/Project-L/dev/)
 
-La PR nº 2 est intégrée dans `production`. Révision applicative effectivement publiée : `7da76c747de6aec72cdcd3f1281bcf66dc2078d5`. Bilan de publication : [preuve](docs/validation/production-v5-2026-10-09.json), [suivi](docs/progress.md), [guide de publication](docs/deployment.md).
+Neuf parcelles de neuf cases : centre acquis au départ, huit achats libres de 500 à 4000 pattes selon leur ordre d’achat. Douze décorations exclusivement extérieures, dont tunnel tournable. Sélection directe, déplacement avec aperçu et annulation, rangement sans coût, vente confirmée à 50 % des pattes. Quinze espèces, neuf recettes, collection/carnet/filtres, missions, économie et habitats conservés ; aucune nouvelle illustration de lapin.
 
-Quinze espèces : onze conservées, plus En Bouée, Géant, Magicien et Dragon. Neuf recettes avec conditions d’affection, chances réellement applicables et garantie ordinaire à six espèces. Dragon exige exactement Perroquet × Feu. Carnet et filtres par type, rareté et découverte. [Catalogue et règles](docs/species.md).
+[Règles, conversion unique et parcours iPhone](docs/land-v6.md). Les anciens objets intérieurs rejoignent l’inventaire avec leurs identifiants. Les parties 1 à 5 passent directement en v6 avec secours, sans redotation ni perte. Les deux anciennes extensions deviennent Est puis Ouest ; huit nouvelles parcelles restent indépendantes. Les travaux et résultats déjà tirés conservent leurs échéances. Ne pas effacer les données Safari ; fermer les anciens onglets avant de rouvrir le jeu.
 
-Île validée, habitats compatibles par types, douze décorations, sélection directe avec mise en évidence, déplacement confirmé, rotation compatible, rangement et vente atomique confirmée à 50 % en pattes, sans remboursement de cœurs. Aménagement, mode photo et cache statique conservés. [Décorations](docs/decorations.md), [île](docs/island.md), [performances](docs/performance.md).
+| Route | Sources et sauvegardes |
+|---|---|
+| `/Project-L/` | Jeu normal v6, sans outils de test |
+| `/Project-L/dev/` | Même révision v6, partie/horloge/préférences/secours séparés |
+| `/Project-L/preview/decorations/` | Prévisualisation v5 conservée, révision `85fe255`, stockage distinct |
+| `/Project-L/preview/accounts/` | Comptes figés v4, révision `3e70d9e`, email/Supabase/SQL en pause |
 
-Les silhouettes, animations et couleurs provisoires des lapins restent séparées des règles, par identifiants stables. Aucune nouvelle illustration ni accessoire ; leur design attend les références du joueur.
+La révision réellement servie est lisible dans Paramètres et `build-revision.txt`. Les quatre routes sont publiées dans un seul artefact Pages. Aucun transfert automatique des parties entre espaces ; un import volontaire remplace uniquement la destination après confirmation. Les anciens clients et Comptes v4 ne peuvent pas lire les exports v6.
 
-## Adresses et sauvegardes
+Validation v6 : 569 tests / 15 fichiers, TypeScript, builds normal et laboratoire ; parcours Chromium de terrain, sélection tactile des douze objets, gestes et vente ; neuf groupes du normal et sept du laboratoire, quatorze scénarios isolés. Les tests automatisés ne remplacent pas un essai sur iPhone Safari physique.
 
-| Route | Usage | Format et source |
-|---|---|---|
-| `/Project-L/` | Partie normale, aucun outil de test | v5, `7da76c747de6aec72cdcd3f1281bcf66dc2078d5` |
-| `/Project-L/dev/` | Laboratoire, partie et horloge séparées | v5, même révision |
-| `/Project-L/preview/decorations/` | Prévisualisation conservée, stockage distinct | v5, `85fe255` |
-| `/Project-L/preview/accounts/` | Prévisualisation Comptes figée | v4, `3e70d9e` |
-
-Un seul artefact Pages publie les quatre routes. Chaque révision se lit dans Paramètres et `build-revision.txt`. `production` déclenche la livraison ; `main` et la branche Comptes restent conservées. Email, Supabase et SQL restent en pause ; aucun backend utilisé par le normal ou le laboratoire.
-
-La partie normale utilise les mêmes clés avec migration v4→v5 et secours, sans redotation ni effacement silencieux. Fermer les anciens onglets avant de rouvrir le jeu. Ne pas effacer les données Safari. Aucun transfert automatique depuis les espaces de test. Pour un transfert volontaire : exporter la source et la destination, puis importer la source dans la destination avec confirmation ; son ancienne partie sera remplacée. Les comptes v4 n’acceptent pas les fichiers v5. [Migration et récupération](docs/migration-v5.md).
-
-## Développement et validation
-
-Dans `prairie-lapins-prototype`, Node.js 24 :
+## Développement
 
 ```sh
 npm ci
 npm test
 npm run typecheck
+npm run dev
 npm run build:pages -- /tmp/prairie-pages
 ```
 
-Pour le développement : `npm run dev`. Les builds normal et laboratoire sont contrôlés séparément ; `?dev=1` ne permet pas d’activer les outils sur le jeu normal publié. Les commandes du laboratoire passent par le contrôleur dans un stockage préfixé.
+`?dev=1` active les outils seulement en développement ; le normal publié les exclut. `npm run build:lab` produit le laboratoire distinct. Règles dans `src/simulation`, contrôleur dans `src/application`, formats/migrations dans `src/persistence`, parcelles dans `src/config/land.ts`. Visuels des espèces liés aux identifiants stables dans `src/ui/portraits.ts`.
 
-Validation : 544 tests/14 fichiers, TypeScript, six parcours Chromium historiques, quatre builds, contrôles HTTPS de toutes les révisions et parcours réels normal/laboratoire après publication. Les profils navigateur sont jetables et n’accèdent à aucune partie du joueur. Le joueur a confirmé le fonctionnement général sur iPhone avant cette intégration ; les contrôles automatisés utilisent Chromium et ne constituent pas un nouvel essai Safari physique.
+Historique v5 : [PR nº 2 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/2), [preuve de publication](docs/validation/production-v5-2026-10-09.json). Les anciens rapports documentent leur étape, pas les règles actuelles.

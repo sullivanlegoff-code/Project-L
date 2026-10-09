@@ -1,3 +1,5 @@
+> Bilan historique v5. La livraison actuelle v6 utilise neuf parcelles et douze objets extérieurs : voir [règles et migration v6](land-v6.md). Les commandes intérieures et les deux extensions en bandes décrites ici ont été remplacées.
+
 # Île chaleureuse — prévisualisation Décorations
 
 **Publication vérifiée :** sources Décorations `db01f39215d2023b893fe266a68a2bbe1630b556`, [workflow 37922205251 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37922205251). Contrôle HTTP des quatre fichiers de révision et scripts réellement servis réussi le 9 octobre 2026 à 11:13 UTC. Jeu/laboratoire `ae31131` v4, comptes `3e70d9e` v4, Décorations `db01f39` v5. Terrain/scénarios d’île, sélection/vente et absence du client de comptes contrôlés. [Preuve publique](validation/publication-island-2026-10-09.json). Ce contrôle HTTP depuis Actions ne remplace pas un essai Safari physique.

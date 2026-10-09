@@ -1,9 +1,9 @@
 // Real browser touch regression. Hooks exist only in intercepted Vite sources.
 const {chromium} = require('playwright');
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const url = process.env.PRAIRIE_TEST_URL || 'http://127.0.0.1:5178/Project-L/preview/decorations/';
+const url = process.env.PRAIRIE_TEST_URL || 'http://127.0.0.1:5183/Project-L/?dev=1';
 const out = process.env.PRAIRIE_CAPTURE_DIR || '/tmp/prairie-selection';
-const key = 'prairie-lapins.preview.decorations.prairie-lapins.save.v1';
+const key = 'prairie-lapins.development.prairie-lapins.save.v1';
 const art = {
   wildflowers: [58, 77], 'flowering-bush': [60, 60], 'moss-rock': [60, 77],
   'garden-lantern': [60, 54], 'wood-bench': [60, 76], 'flower-arch': [60, 21],
@@ -19,12 +19,12 @@ async function run() {
     const page = await context.newPage(), errors = [], requests = [], selections = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('request', r => {if (/supabase/i.test(r.url())) requests.push(r.url());});
-    await context.addInitScript(() => localStorage.setItem('prairie-lapins.preview.decorations.ui', JSON.stringify({muted: true, tutorial: false, intro: true, tutorialDone: true})));
+    await context.addInitScript(() => localStorage.setItem('prairie-lapins.development.ui', JSON.stringify({muted: true, tutorial: false, intro: true, tutorialDone: true})));
     await page.route('**/src/main.ts*', async route => {
       const response = await route.fetch(), source = await response.text();
       await route.fulfill({response, body: source.replace('const game = new Phaser.Game', 'window.__scene = scene; const game = new Phaser.Game').replace('const disposePanel =', 'window.__ui = ui; const disposePanel =')});
     });
-    await page.goto(url); await page.waitForFunction(() => window.__scene?.current?.version === 5);
+    await page.goto(url); await page.waitForFunction(() => window.__scene?.current?.version === 6);
     const cdp = await context.newCDPSession(page);
     const touch = async p => {
       assert.equal(await page.evaluate(p => document.elementFromPoint(p.x, p.y)?.tagName, p), 'CANVAS', 'Touch must reach canvas: ' + JSON.stringify(p));
@@ -38,9 +38,8 @@ async function run() {
       await close();
       await page.evaluate(({base, catalogId}) => {
         const s = structuredClone(base); s.pattes = 1000; s.nextId = Math.max(s.nextId, 102);
-        const interior = ['soft-cushion', 'ball-toys', 'play-tunnel', 'small-parasol'].includes(catalogId);
         s.decorations = [
-          {id: 'decoration-100', catalogId, location: interior ? {kind: 'habitat', habitatId: s.buildings[0].id, slot: 2} : {kind: 'outside', x: 6, y: 5, rotation: 0}},
+          {id: 'decoration-100', catalogId, location: {kind: 'outside', x: 20, y: 20, rotation: 0}},
           {id: 'decoration-101', catalogId, location: {kind: 'inventory'}},
         ];
         const c = window.__scene.controller, p = c.prepareImport(JSON.stringify(s));
@@ -63,7 +62,7 @@ async function run() {
       assert.ok((await selected()).visible && (await selected()).commands > 0, 'Visible outline');
       assert.equal(await page.getByRole('button', {name: 'Déplacer', exact: true}).isVisible(), true);
       if (catalogId === 'fruit-tree') await page.screenshot({path: path.join(out, 'tree-selected.png')});
-      if (catalogId === 'soft-cushion') await page.screenshot({path: path.join(out, 'interior-selected.png')});
+      if (catalogId === 'soft-cushion') await page.screenshot({path: path.join(out, 'converted-object-selected.png')});
       await close(); await page.locator('#open-arrange').tap(); await close();
       // Closing exits arrangement; enter then clear the panel through an empty canvas tap.
       await page.locator('#open-arrange').tap();
@@ -79,7 +78,7 @@ async function run() {
     }
     // A real empty touch clears the object; photo never selects it.
     await fixture('wood-bench'); let p = await target('wood-bench'); await touch(p);
-    const empty = await page.evaluate(() => window.__scene.view.screen({x: 380, y: 360}));
+    const empty = await page.evaluate(() => ({x: 140, y: 300}));
     await touch(empty); assert.equal((await selected()).id, null); assert.equal(await page.locator('#game-panel').isVisible(), false);
     await page.locator('#open-photo').tap(); p = await target('wood-bench'); await touch(p);
     assert.equal((await selected()).id, null); assert.equal(await page.locator('#game-panel').isVisible(), false);

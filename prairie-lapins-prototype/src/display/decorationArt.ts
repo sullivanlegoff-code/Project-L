@@ -1,7 +1,6 @@
 import {DECORATIONS, type DecorationId} from '../config/decorations';
 /** Identical scale for the placed object and its ghost; tall silhouettes stay modest. */
-export function decorationScale(id: DecorationId, interior: boolean): number {
-  if (interior) return .31;
+export function decorationScale(id: DecorationId): number {
   if (id === 'fruit-tree') return .67;
   if (id === 'flower-arch') return .72;
   return Math.max(DECORATIONS[id].width, DECORATIONS[id].height) > 1 ? .79 : .43;

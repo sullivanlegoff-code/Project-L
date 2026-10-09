@@ -1,15 +1,16 @@
+import {regressionStart as createGame} from './regression-start';
 import {VISUAL} from '../src/config/visual';
 import {describe, expect, it} from 'vitest';
 import {ActionGate, Gestures, MeadowCamera, gridPoint, gridCell} from '../src/ui/gestures';
 import {buildingReason, collectionView, nurseryView, oddsView, placementReason, releaseReason, tutorialStep} from '../src/ui/models';
 import {bindMeadowInput} from '../src/display/meadowInput';
-import {act, createGame} from '../src/simulation';
+import {act} from '../src/simulation';
 import type {Command, GameState} from '../src/state/types';
 
 function readyState(): GameState {
   let state = createGame(0); state.pattes = 10_000;
   const apply = (command: Command) => { const r = act(state, command, 0, () => .9); if (!r.ok) throw new Error(r.reason); state = r.state; };
-  apply({type: 'buyBuilding', kind: 'nest', x: 1, y: 0}); apply({type: 'buyBuilding', kind: 'nursery', x: 2, y: 0});
+  apply({type: 'buyBuilding', kind: 'nest', x: 4, y: 3}); apply({type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
   apply({type: 'feed', id: 'rabbit-2'}); apply({type: 'feed', id: 'rabbit-3'});
   apply({type: 'breed', parents: ['rabbit-2', 'rabbit-3']});
   return state;
@@ -28,10 +29,10 @@ describe('touch gestures and camera', () => {
   it('pinches around the midpoint without selecting on either release', () => {
     const g = new Gestures(); g.down(1, {x: 0, y: 0}); g.down(2, {x: 100, y: 0});
     expect(g.move(2, {x: 150, y: 0})).toMatchObject({type: 'zoom', factor: 1.5, at: {x: 75, y: 0}});
-    expect(g.up(2, {x: 150, y: 0})).toBeNull(); expect(g.up(1, {x: 0, y: 0})).toBeNull();
+    expect(g.up(2, {x: 150, y: 0})).toBeNull(); expect(g.up(1, {x: 3, y: 3})).toBeNull();
   });
   it('does not select a cancelled gesture', () => {
-    const g = new Gestures(); g.down(1, {x: 0, y: 0}); g.cancel(); expect(g.up(1, {x: 0, y: 0})).toBeNull();
+    const g = new Gestures(); g.down(1, {x: 3, y: 3}); g.cancel(); expect(g.up(1, {x: 3, y: 3})).toBeNull();
   });
   it('keeps coordinates invertible across all cells before and after expansion', () => {
     const camera = new MeadowCamera(); camera.resize(844, 390);
@@ -70,9 +71,9 @@ describe('touch gestures and camera', () => {
   it('frames the starting columns at an intermediate zoom with touchable rabbits', () => {
     const c = new MeadowCamera(); c.resize(844, 390); c.recenter();
     expect(c.zoom).toBeGreaterThan(VISUAL.camera.minZoom); expect(c.zoom).toBeLessThan(VISUAL.camera.maxZoom);
-    expect(c.screen(gridPoint(0, 1)).x).toBeGreaterThan(0);
-    expect(c.screen(gridPoint(3, 1)).x).toBeLessThan(844);
-    expect(c.screen(gridPoint(1.5, 1)).y).toBeCloseTo((390 + 62) / 2);
+    expect(c.screen(gridPoint(3, 4)).x).toBeGreaterThan(0);
+    expect(c.screen(gridPoint(6, 4)).x).toBeLessThan(844);
+    expect(c.screen(gridPoint(4.5, 4.5)).y).toBeCloseTo((390 + 62) / 2);
     expect(33 * VISUAL.rabbit.scale * c.zoom).toBeGreaterThan(44);
     expect(VISUAL.rabbit.hitRadius * 2).toBeGreaterThanOrEqual(44);
   });
@@ -102,10 +103,10 @@ describe('touch gestures and camera', () => {
   });
   it('uses the same camera geometry across expansion without recentering', () => {
     const c = new MeadowCamera(); c.resize(844, 390); c.pan(-200, 0);
-    const point = c.screen(gridPoint(4.5, 1.5)), before = {x: c.x, y: c.y, zoom: c.zoom};
-    const s = createGame(0); s.pattes = 500; const result = act(s, {type: 'expand'}, 0);
+    const point = c.screen(gridPoint(7.5, 4.5)), before = {x: c.x, y: c.y, zoom: c.zoom};
+    const s = createGame(0); s.pattes = 500; const result = act(s, {type:'expand',parcelId:'east',expectedCost:500}, 0);
     expect(result.ok).toBe(true);
-    expect(gridCell(c.world(point))).toEqual({x: 4, y: 1});
+    expect(gridCell(c.world(point))).toEqual({x: 7, y: 4});
     expect({x: c.x, y: c.y, zoom: c.zoom}).toEqual(before);
   });
   it('prevents re-entrant and accidental duplicate commands', () => {
@@ -120,14 +121,14 @@ describe('UI projections preserve gameplay rules and secrets', () => {
   it('explains invalid placement, occupancy and price without spending', () => {
     const s = createGame(0), before = structuredClone(s);
     expect(placementReason(s, {kind: 'farm', cell: null})).toContain('Touchez');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 0, y: 0}})).toContain('occupée');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 3, y: 0}})).toContain('disponible');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 1, y: 0}})).toBeNull(); expect(s).toEqual(before);
+    expect(placementReason(s, {kind: 'farm', cell: {x: 3, y: 3}})).toContain('occupée');
+    expect(placementReason(s, {kind: 'farm', cell: {x: 6, y: 3}})).toContain('disponible');
+    expect(placementReason(s, {kind: 'farm', cell: {x: 4, y: 3}})).toBeNull(); expect(s).toEqual(before);
     s.pattes = 0; expect(buildingReason(s, 'farm')).toContain('pattes');
   });
   it('allows a building to stay on its own cell, and new cells only after expansion', () => {
-    const s = createGame(0); expect(placementReason(s, {kind: 'enclosure', movingId: 'building-1', cell: {x: 0, y: 0}})).toBeNull();
-    s.expanded = true; expect(placementReason(s, {kind: 'farm', cell: {x: 5, y: 1}})).toBeNull();
+    const s = createGame(0); expect(placementReason(s, {kind: 'enclosure', movingId: 'building-1', cell: {x: 3, y: 3}})).toBeNull();
+    s.acquiredParcels.push('east'); expect(placementReason(s, {kind: 'farm', cell: {x: 8, y: 4}})).toBeNull();
   });
   it('does not expose the species of a hidden birth in nursery or collection models', () => {
     let s = readyState(); const r = act(s, {type: 'collectIncome', id: 'building-1'}, 20 * 60_000); if (!r.ok) throw new Error(r.reason); s = r.state;

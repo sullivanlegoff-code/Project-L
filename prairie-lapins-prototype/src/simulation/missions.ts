@@ -2,14 +2,14 @@ import {SPECIES} from '../config/balance';
 import {DAILY_MISSIONS, DAILY_MISSION_IDS, MAIN_MISSIONS, MAIN_MISSION_IDS, MISSION_CYCLE_DURATION, type MainMissionId} from '../config/missions';
 import type {GameState, MissionState} from '../state/types';
 
-type ObservableState = Pick<GameState, 'rabbits' | 'discovered' | 'expanded'> & {buildings: Pick<GameState['buildings'][number], 'kind'>[]};
+type ObservableState = Pick<GameState, 'rabbits' | 'discovered'> & {acquiredParcels?: GameState['acquiredParcels']; expanded?: boolean} & {buildings: Pick<GameState['buildings'][number], 'kind'>[]};
 export function mainProgress(state: ObservableState, id: MainMissionId): {value: number; target: number} {
   const c = MAIN_MISSIONS[id].condition;
   switch (c.kind) {
     case 'building': return {value: Number(state.buildings.some(b => b.kind === c.building)), target: 1};
     case 'discoveries': return {value: state.discovered.length, target: c.target};
     case 'affection': return {value: Math.max(0, ...state.rabbits.map(r => r.affection)), target: c.target};
-    case 'extension': return {value: Number(state.expanded), target: 1};
+    case 'extension': return {value: Number(state.acquiredParcels ? state.acquiredParcels.length > 1 : state.expanded), target: 1};
     case 'rare': return {value: Number(state.discovered.some(id => SPECIES[id].rarity === 'rare')), target: 1};
   }
 }

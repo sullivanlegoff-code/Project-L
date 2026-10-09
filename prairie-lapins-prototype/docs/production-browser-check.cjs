@@ -38,8 +38,7 @@ async function run() {
   const save = () => page.evaluate(() => JSON.parse(localStorage.getItem('prairie-lapins.save.v1')));
   const progress = state => ({
     version: state.version, pattes: state.pattes, grass: state.grass, hearts: state.hearts,
-    rabbits: state.rabbits, discovered: state.discovered, expanded: state.expanded,
-    secondExpanded: state.secondExpanded, nextId: state.nextId, pityFailures: state.pityFailures,
+    rabbits: state.rabbits, discovered: state.discovered, acquiredParcels: state.acquiredParcels, decorations: state.decorations, nextId: state.nextId, pityFailures: state.pityFailures,
     missions: state.missions, nextHeartGiftAt: state.nextHeartGiftAt,
     buildings: state.buildings.map(({incomeUnits, ...building}) => building),
   });
@@ -69,7 +68,7 @@ async function run() {
     await download.saveAs(filename);
     assert.equal(await download.failure(), null);
     const state = JSON.parse(fs.readFileSync(filename, 'utf8'));
-    assert.equal(state.version, 5);
+    assert.equal(state.version, 6);
     assert.match(download.suggestedFilename(), /^prairie-lapins-.*\.json$/);
     report.downloads.push({path: filename, suggestedFilename: download.suggestedFilename()});
     return state;
@@ -91,11 +90,11 @@ async function run() {
     assert.equal(await page.locator('#grass').textContent(), '10');
     assert.equal(await page.locator('#hearts').textContent(), '12');
     const initial = await save();
-    assert.equal(initial.version, 5);
+    assert.equal(initial.version, 6);
     assert.equal(initial.rabbits.length, 2);
     assert.equal(initial.buildings.length, 1);
     await noDevelopment();
-    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v5.');
+    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v6.');
     await screenshot('production-initial');
 
     for (const [button, title] of [['#open-shop', /^Boutique$/], ['#open-collection', /^Collection · 2\/15$/], ['#open-missions', /^Missions$/]]) {
@@ -107,8 +106,8 @@ async function run() {
     await settings();
     await page.locator('#game-version').scrollIntoViewIfNeeded();
     report.version = await page.locator('#game-version').textContent();
-    assert.match(report.version, /^Version : Prairie de lapins · quinze espèces · v5 · build /);
-    if (expectedRevision) assert.equal(report.version, `Version : Prairie de lapins · quinze espèces · v5 · build ${expectedRevision}`);
+    assert.match(report.version, /^Version : Prairie de lapins · île à neuf parcelles · v6 · build /);
+    if (expectedRevision) assert.equal(report.version, `Version : Prairie de lapins · île à neuf parcelles · v6 · build ${expectedRevision}`);
     await noDevelopment();
     report.checks.push('Shop, collection, missions, settings and release identifier.');
     await screenshot('production-version');
@@ -116,7 +115,7 @@ async function run() {
 
     // Paille's initial body at the unchanged initial camera/zoom. Motion stays within ±3 px.
     await page.click('#recenter-view');
-    await page.mouse.click(202, 137);
+    await page.mouse.click(388, 222);
     await page.waitForFunction(() => document.getElementById('panel-title')?.textContent === 'Lapin Paille');
     await page.getByRole('button', {name: 'Nourrir · 2 herbes', exact: true}).click();
     await page.waitForFunction(() => document.getElementById('grass')?.textContent === '8');
@@ -139,7 +138,7 @@ async function run() {
     await page.click('#cancel-import');
     assert.equal(await page.locator('#import-dialog').isVisible(), false);
     assert.deepEqual(progress(await save()), beforeImport);
-    report.checks.push('Export downloads valid v5 JSON; cancelling import preserves current progression.');
+    report.checks.push('Export downloads valid v6 JSON; cancelling import preserves current progression.');
 
     await importFile(importJson);
     await page.locator('#import-dialog[open]').waitFor();

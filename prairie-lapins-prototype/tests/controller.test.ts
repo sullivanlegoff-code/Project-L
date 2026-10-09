@@ -1,8 +1,9 @@
+import {createGame} from '../src/simulation';
 import {describe, expect, it} from 'vitest';
 import {GameController} from '../src/application/GameController';
 import {bindLifecycle, type LifecycleHost} from '../src/application/lifecycle';
 import {SAVE_KEY, type SaveStorage} from '../src/persistence/storage';
-import {act, advance, createGame, decodeGame, encodeGame, pendingDiscoveries} from '../src/simulation';
+import {act, advance,  decodeGame, encodeGame, pendingDiscoveries} from '../src/simulation';
 import {HOUR, MINUTE} from '../src/config/balance';
 import type {Command, GameState} from '../src/state/types';
 
@@ -27,8 +28,8 @@ function pendingGuaranteed(): GameState {
   function apply(command: Command) {
     const result = act(s, command, 0, () => 0); if (!result.ok) throw new Error(result.reason); s = result.state;
   }
-  apply({type: 'buyBuilding', kind: 'nest', x: 1, y: 0});
-  apply({type: 'buyBuilding', kind: 'nursery', x: 2, y: 0});
+  apply({type: 'buyBuilding', kind: 'nest', x: 4, y: 3});
+  apply({type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
   apply({type: 'feed', id: 'rabbit-2'}); apply({type: 'feed', id: 'rabbit-3'});
   s.pityFailures = 9; apply({type: 'breed', parents: ['rabbit-2', 'rabbit-3']});
   return s;
@@ -53,14 +54,14 @@ describe('controller startup and normal saves', () => {
   });
   it('keeps separate time advancement after refusing an action without spending', () => {
     const {controller, store, clock} = fixture(); clock.now = HOUR;
-    const result = controller.perform({type: 'expand'});
+    const result = controller.perform({type:'expand',parcelId:'east',expectedCost:500});
     expect(result).toMatchObject({ok: false, reason: 'NOT_ENOUGH_PATTES'});
     expect(state(controller).pattes).toBe(300); expect(state(controller).buildings[0].incomeUnits).toBe(24 * HOUR);
     expect(stored(store)).toEqual(state(controller)); expect(store.writes).toBe(2);
   });
   it('does not write again when state has not evolved', () => {
     const {controller, store} = fixture(); controller.refresh(); controller.refresh();
-    controller.perform({type: 'expand'}); expect(store.writes).toBe(1);
+    controller.perform({type:'expand',parcelId:'east',expectedCost:500}); expect(store.writes).toBe(1);
   });
   it('does not double count after repeated resumes or clock reversals', () => {
     const {controller, store, clock} = fixture();

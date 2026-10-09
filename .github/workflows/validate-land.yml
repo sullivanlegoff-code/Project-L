@@ -1,0 +1,73 @@
+name: Vérifier île carrée v6
+on:
+  push:
+    branches: [feature/square-island]
+  pull_request:
+    branches: [production]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: land-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: prairie-lapins-prototype
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: prairie-lapins-prototype/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Construire les deux versions de livraison
+        env:
+          VITE_BUILD_REVISION: ${{ github.sha }}
+        run: npm run build:pages -- "$RUNNER_TEMP/site/Project-L"
+      - name: Installer Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Vérifier le terrain et les gestes tactiles
+        env:
+          PRAIRIE_CAPTURE_DIR: ${{ runner.temp }}/land-proof
+          PRAIRIE_TEST_URL: http://127.0.0.1:5183/Project-L/?dev=1
+        run: |
+          export PRAIRIE_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          npm run dev -- --port 5183 --base=/Project-L/ > "$RUNNER_TEMP/vite-land.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in {1..30}; do curl -fsS "$PRAIRIE_TEST_URL" > /dev/null && break; sleep 1; done
+          node docs/migration-v6-browser-check.cjs
+          node docs/parcels-browser-check.cjs
+          node docs/decorations-selection-check.cjs
+      - name: Vérifier les builds sans injection
+        env:
+          PRAIRIE_CAPTURE_DIR: ${{ runner.temp }}/land-proof
+          PRAIRIE_CHROMIUM: playwright
+        run: |
+          python3 -m http.server 5185 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site" > "$RUNNER_TEMP/site-land.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in {1..30}; do curl -fsS http://127.0.0.1:5185/Project-L/ > /dev/null && break; sleep 1; done
+          node docs/production-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
+          node docs/laboratory-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
+      - name: Conserver les preuves
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: land-validation-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/land-proof
+            ${{ runner.temp }}/vite-land.log
+            ${{ runner.temp }}/site-land.log
+          retention-days: 30

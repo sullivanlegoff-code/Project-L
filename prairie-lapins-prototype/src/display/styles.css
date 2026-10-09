@@ -95,3 +95,5 @@ button.mission-claim:not(:disabled) { background: #e6f2ce; color: #365331; borde
 .collection-filters {display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
 .collection-filters label {display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;}
 .collection-filters select {width:100%;padding:8px;font:inherit;border-radius:8px;border:1px solid #a6b397;background:#fffdf1;color:#354c32;}
+
+#land-conversion-notice {position:fixed;left:5%;right:5%;bottom:18%;z-index:80;padding:16px;border-radius:16px;background:#fff7d9;color:#354c32;box-shadow:0 4px 20px #0003;}

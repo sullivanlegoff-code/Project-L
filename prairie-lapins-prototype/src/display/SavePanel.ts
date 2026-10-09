@@ -6,7 +6,7 @@ import {fileExporter} from './fileExport';
 export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   INVALID_JSON: 'Ce fichier ne contient pas un JSON lisible.',
   INVALID_STATE: 'Cette sauvegarde est incohérente ou incomplète.',
-  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3, 4 ou 5.',
+  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3, 4, 5 ou 6.',
   FILE_TOO_LARGE: 'Le fichier dépasse la limite de 1 000 000 octets pour l’import.',
   READ_FAILED: 'Le navigateur ne permet pas de lire la sauvegarde. Aucun contenu existant n’a été écrasé.',
   WRITE_FAILED: 'L’écriture locale a échoué. Vérifiez l’espace disponible et les autorisations du navigateur.',
@@ -29,13 +29,13 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
   const beforeImport = get<HTMLButtonElement>('export-before-import');
   const exporter = fileExporter();
-  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, environment.decorationPreview ? 'prairie-lapins-PREVIEW-DECORATIONS-v5-MODE-TEST-' : 'prairie-lapins-MODE-TEST-') : name;
+  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, environment.decorationPreview ? 'prairie-lapins-PREVIEW-DECORATIONS-v6-MODE-TEST-' : 'prairie-lapins-MODE-TEST-') : name;
   if (environment.test) {
     exportButton.textContent = 'Exporter la partie de test';
     importButton.textContent = 'Importer dans la partie de test';
     restart.textContent = 'Recommencer la partie de test';
     get('import-warning').textContent = 'Cet import remplace seulement la partie du laboratoire. La sauvegarde normale reste intacte. Les exports MODE-TEST peuvent contenir du temps avancé et des ressources ajoutées.';
-    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v4 sont migrés en v5 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v5-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v5 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
+    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v1 à v5 sont migrés en v6 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v6-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v6 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
   }
   const abort = new AbortController();
   let importToken: number | null = null;
@@ -49,8 +49,15 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     if (dialog.open) dialog.close();
     importError.textContent = '';
   }
+  let conversionShown = false;
   const unsubscribe = controller.subscribe((snapshot: Snapshot) => {
     const {state} = snapshot;
+    if (!conversionShown && snapshot.status === 'saved' && snapshot.storedDecorations > 0) {
+      conversionShown = true;
+      const message = document.createElement('p'); message.id = 'land-conversion-notice'; message.setAttribute('role', 'status'); message.textContent = `${snapshot.storedDecorations} décoration(s) rangée(s) dans votre inventaire lors de la conversion de l’île. Tous vos exemplaires sont conservés et peuvent désormais être placés à l’extérieur des bâtiments.`;
+      document.getElementById('game')!.insertAdjacentElement('afterend', message);
+      const dismiss = document.createElement('button'); dismiss.type = 'button'; dismiss.textContent = 'Compris'; dismiss.onclick = () => message.remove(); message.append(dismiss);
+    }
     get('pattes').textContent = state ? String(state.pattes) : '—';
     get('hearts').textContent = state ? String(state.hearts) : '—';
     get('grass').textContent = state ? String(state.grass) : '—';
@@ -86,9 +93,9 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const options = {signal: abort.signal};
   get<HTMLButtonElement>('export-migration-source').addEventListener('click', () => {
     const raw = controller.migrationBackup();
-    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v5.'); return; }
+    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v6.'); return; }
     const filename = `prairie-lapins-source-avant-migration-${new Date().toISOString().slice(0, 10)}.json`;
-    // Keep the original format/name explicit, even in a v5 test environment.
+    // Keep the original format/name explicit, even in a v6 test environment.
     void exporter.export(raw, filename).then(outcome => {
       if (!alive) return;
       if (outcome === 'fallback') { pendingDownload = {json: raw, filename}; fallback.hidden = false; }

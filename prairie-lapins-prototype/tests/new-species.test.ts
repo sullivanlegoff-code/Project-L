@@ -1,7 +1,8 @@
+import {regressionStart as createGame} from './regression-start';
 import {describe, expect, it, vi} from 'vitest';
 import {GUARANTEE_SPECIES, MINUTE, SPECIES, SPECIES_IDS, growthDuration, type SpeciesId} from '../src/config/balance';
 import {breedingOdds, breedingPool, chooseBirth, recipeMatches} from '../src/simulation/breeding';
-import {act, advance, createGame, decodeGame, encodeGame, pendingDiscoveries, rabbitIncome} from '../src/simulation';
+import {act, advance,  decodeGame, encodeGame, pendingDiscoveries, rabbitIncome} from '../src/simulation';
 import {GameController} from '../src/application/GameController';
 import {SAVE_KEY} from '../src/persistence/storage';
 import {collectionView, oddsView, recipeBook, nurseryView} from '../src/ui/models';
@@ -19,7 +20,7 @@ function run(s: GameState, command: Command, now=s.lastSimulatedAt, roll=.999) {
 function couple(a: SpeciesId,b: SpeciesId,level:number) {
  let s=createGame(0);s.pattes=2000;s.grass=1000;s.rabbits[0].species=a;s.rabbits[1].species=b;
  s.rabbits.forEach(r=>r.affection=level);s.discovered=[...new Set([a,b])];
- s=run(s,{type:'buyBuilding',kind:'nest',x:1,y:0});return run(s,{type:'buyBuilding',kind:'nursery',x:2,y:0});
+ s=run(s,{type:'buyBuilding',kind:'nest',x: 4, y: 3});return run(s,{type:'buyBuilding',kind:'nursery',x: 5, y: 3});
 }
 const breed:Command={type:'breed',parents:['rabbit-2','rabbit-3']};
 describe('approved four-species rules',()=>{
