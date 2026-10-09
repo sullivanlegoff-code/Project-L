@@ -36,3 +36,5 @@ Historique v5 : [PR nº 2 fusionnée](https://github.com/sullivanlegoff-code/Pro
 Fondations techniques : [architecture, invariants, stockage et vérifications](docs/technical-foundations.md).
 
 Visuel Neige uniquement : [original, comparaison en jeu et vérifications](docs/neige-v1.md).
+
+[Paille et Terre : originaux, transparence, comparaisons et contrôles](docs/paille-terre-v1.md).

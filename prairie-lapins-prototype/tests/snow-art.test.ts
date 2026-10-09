@@ -7,7 +7,7 @@ describe('Neige original artwork', () => {
  it('shares one image without changing other species or unknown portraits', () => {
   expect(portrait('neige')).toContain(`src="${SNOW_ART.url}"`);
   expect(portrait('neige')).toContain('alt="Lapin Neige"');
-  for(const id of SPECIES_IDS.filter(id=>id!=='neige'))expect(portrait(id)).toMatch(/^<svg /);
+  for(const id of SPECIES_IDS.filter(id=>!['neige','paille','terre'].includes(id)))expect(portrait(id)).toMatch(/^<svg /);
   expect(portrait()).toContain('>?</text>');
  });
  it('admits the Snow silhouette beyond the old body circle while retaining nearest-body priority', () => {

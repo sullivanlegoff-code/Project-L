@@ -1,4 +1,4 @@
-import {SNOW_ART} from '../config/rabbitArt';
+import {RABBIT_ART, rabbitArt, type RabbitArt} from '../config/rabbitArt';
 import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
 import type {GameController} from '../application/GameController';
@@ -19,7 +19,7 @@ import {bindMeadowInput} from './meadowInput';
 
 export type MeadowSelection = {kind: 'building' | 'rabbit' | 'income' | 'grass' | 'decoration'; id: string} | {kind: 'cell' | 'fineCell'; x: number; y: number} | {kind: 'extension'; parcelId?: ParcelId} | {kind: 'empty'};
 export interface DecorationGhost {id: string; location: DecorationLocation | null}
-interface VisualRabbit {id: string; object: Phaser.GameObjects.Container; ears: Phaser.GameObjects.Ellipse[]; sprite?: Phaser.GameObjects.Image; base: Point; phase: number; fedUntil: number}
+interface VisualRabbit {id: string; object: Phaser.GameObjects.Container; ears: Phaser.GameObjects.Ellipse[]; sprite?: Phaser.GameObjects.Image; art?: RabbitArt; base: Point; phase: number; fedUntil: number}
 export class MeadowScene extends Phaser.Scene {
   private current: GameState | null = null;
   private placement: Placement | null = null;
@@ -49,7 +49,7 @@ export class MeadowScene extends Phaser.Scene {
   readonly view = new MeadowCamera();
   constructor(private controller: GameController, private select: (selection: MeadowSelection) => void, private blocked: () => boolean) { super('Meadow'); }
   preload(): void {
-    if (!this.textures.exists(SNOW_ART.texture)) this.load.image(SNOW_ART.texture, SNOW_ART.url);
+    for (const art of RABBIT_ART) if (!this.textures.exists(art.texture)) this.load.image(art.texture, art.url);
     for (const id of DECORATION_IDS) for (const rotation of (DECORATIONS[id].rotates ? [0, 1] : [0]) as (0 | 1)[]) {
       const key = decorationTexture(id, rotation);
       if (!this.textures.exists(key)) this.load.svg(key, 'data:image/svg+xml;base64,' + btoa(decorationSvg(id, rotation)), {width: 120, height: 120});
@@ -239,12 +239,13 @@ export class MeadowScene extends Phaser.Scene {
         const offset = rabbitOffset(index, residents.length);
         const base = {x: center.x + offset.x, y: center.y + offset.y};
         const object = this.add.container(base.x, base.y).setScale(VISUAL.rabbit.scale).setDepth(base.y);
-        if (rabbit.species === SNOW_ART.species) {
-          const sprite = this.add.image(0, SNOW_ART.groundY, SNOW_ART.texture).setOrigin(.5, 1);
-          sprite.setScale(SNOW_ART.worldWidth / SNOW_ART.width); // Uniform scale preserves the original proportions.
+        const art = rabbitArt(rabbit.species);
+        if (art) {
+          const sprite = this.add.image(0, art.groundY, art.texture).setOrigin(.5, 1);
+          sprite.setScale(art.worldWidth / art.width); // Uniform scale preserves the original proportions.
           object.add([this.add.ellipse(0, 10, 35, 12, 0x6b7755, .16), sprite]);
           this.animals.add(object);
-          this.rabbitViews.push({id: rabbit.id, object, ears: [], sprite, base,
+          this.rabbitViews.push({id: rabbit.id, object, ears: [], sprite, art, base,
             phase: index * 2 + Number(rabbit.id.split('-')[1]), fedUntil: 0});
           return;
         }
@@ -371,13 +372,13 @@ export class MeadowScene extends Phaser.Scene {
     }
     if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
     const closest = rabbitHit(screen, this.rabbitViews.flatMap(r => {
-      if (r.sprite) {
-        // Only Neige uses its actual alpha silhouette. No large rectangular target over adjacent residents.
+      if (r.sprite && r.art) {
+        // Reference images use their own alpha silhouette, avoiding rectangular hits on adjacent residents.
         const world = this.view.world(screen);
         const local = r.sprite.getWorldTransformMatrix().applyInverse(world.x, world.y);
-        const x = Math.floor(local.x + SNOW_ART.width / 2), y = Math.floor(local.y + SNOW_ART.height);
-        if (x < 0 || y < 0 || x >= SNOW_ART.width || y >= SNOW_ART.height ||
-            this.textures.getPixelAlpha(x, y, SNOW_ART.texture) < 32) return [];
+        const x = Math.floor(local.x + r.art.width / 2), y = Math.floor(local.y + r.art.height);
+        if (x < 0 || y < 0 || x >= r.art.width || y >= r.art.height ||
+            this.textures.getPixelAlpha(x, y, r.art.texture) < 32) return [];
       }
       return [{id: r.id, point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y,
         ...(r.sprite ? {radius: Infinity} : {})}];

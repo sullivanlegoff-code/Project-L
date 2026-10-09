@@ -1,3 +1,7 @@
+# Paille et Terre originales v1 — validation de livraison
+
+Deux visuels remplacés depuis les fichiers ajoutés par le joueur sur GitHub. Neige conservée. 586 tests / 18 fichiers, TypeScript, deux builds et contrôles Chromium locaux réussis ; 21 sélections parmi sept occupants mixtes aux trois zooms et sélection des oreilles. [Méthode, sources et comparaisons](paille-terre-v1.md). Publication après validation CI ; preuves publiques à consigner après déploiement.
+
 # Neige originale v1 — livrée
 
 Jeu normal et laboratoire : application `28eb90712608aab08517cc551d0ed8d1d508f613`, [PR nº 5 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/5). Remplacement du seul visuel `neige` depuis l’original fourni, détouré avec conservation des RGB opaques (différence maximale 0). Même asset dans l’habitat, la fiche, la boutique, la collection et les parents ; échelle uniforme, ancrage au sol, translation de l’image entière et sélection par silhouette alpha. [Original et préparation](neige-v1.md) · [Comparaison référence/jeu](validation/neige-v1/reference-vs-game.png) · [Preuve de publication](validation/neige-v1/publication.json).
