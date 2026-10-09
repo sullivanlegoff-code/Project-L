@@ -13,6 +13,8 @@ Neuf parcelles de neuf cases : centre acquis au départ, huit achats libres de 5
 | `/Project-L/preview/decorations/` | Prévisualisation v5 conservée, révision `85fe255`, stockage distinct |
 | `/Project-L/preview/accounts/` | Comptes figés v4, révision `3e70d9e`, email/Supabase/SQL en pause |
 
+Révision applicative v6 : `ecb8953ffd1b2df2e414d31bb162d60b2c9e3e79` ([PR nº 3](https://github.com/sullivanlegoff-code/Project-L/pull/3)). [Publication et preuves](docs/validation/production-v6-2026-10-09.json).
+
 La révision réellement servie est lisible dans Paramètres et `build-revision.txt`. Les quatre routes sont publiées dans un seul artefact Pages. Aucun transfert automatique des parties entre espaces ; un import volontaire remplace uniquement la destination après confirmation. Les anciens clients et Comptes v4 ne peuvent pas lire les exports v6.
 
 Validation v6 : 569 tests / 15 fichiers, TypeScript, builds normal et laboratoire ; parcours Chromium de terrain, sélection tactile des douze objets, gestes et vente ; neuf groupes du normal et sept du laboratoire, quatorze scénarios isolés. Les tests automatisés ne remplacent pas un essai sur iPhone Safari physique.

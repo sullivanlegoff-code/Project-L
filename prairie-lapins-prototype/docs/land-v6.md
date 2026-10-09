@@ -21,3 +21,9 @@ Les clés de stockage normal et laboratoire restent distinctes. Le JSON source v
 Le terrain utilise des textures statiques par parcelle, au plus 708 × 624 unités et résolution ≤ 2. Le cache conserve les textures des parcelles dont le voisinage et les bâtiments restent identiques. L’eau est un fond statique : pas de grande texture animée ni de coût permanent de recalcul du terrain. Les règles, silhouettes et animations des quinze espèces sont inchangées.
 
 Les contrôles Chromium ne remplacent pas un essai Safari physique. Sur iPhone : fermer les anciens onglets, rouvrir le jeu sans effacer les données Safari ; vérifier l’éventuel message de conversion ; ouvrir « Agrandir l’île », annuler puis acheter une diagonale ; placer et tourner le tunnel, sélectionner/déplacer/ranger un objet, annuler puis confirmer une vente ; recharger et vérifier inventaire/ressources.
+
+## Captures et mesure ciblée
+
+[Centre en paysage mobile](validation/land-v6/centre.png) · [forme partielle en L](validation/land-v6/partial.png) · [île complète](validation/land-v6/full.png). Captures Chromium des sources validées `cc4bfdf`, avec les seuls hooks de test injectés dans le serveur local. Les vues partielles/complètes utilisent une fenêtre de vue d’ensemble ; le cadrage et l’échelle du jeu mobile restent inchangés. [Sélection et caméra aux quatre diagonales](validation/land-v6/remote-parcels-report.json).
+
+La CI mesure 40,5 ms au total pour trois commandes successives (achat d’objet, construction, achat d’une parcelle détachée), rendu et sauvegarde compris. Elle confirme la conservation des textures pour l’achat d’objet et la parcelle détachée, et la reconstruction de celle modifiée par le bâtiment. Trois textures mesurées de 1416 × 1248 pixels. Cette mesure Linux/Chromium sert au contrôle ciblé du cache, pas à une estimation des images par seconde sur iPhone.
