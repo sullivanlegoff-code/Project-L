@@ -3,7 +3,7 @@ import type {SaveStorage} from '../persistence/storage';
 import {encodeGame} from '../simulation';
 import {BUILD_REVISION} from '../config/release';
 import {sessionPolicy} from '../config/runtime';
-import {SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
+import {SCENARIOS, DECORATION_SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
 import type {GameState} from '../state/types';
 
 export const TEST_PREFIX = 'prairie-lapins.development.';
@@ -79,7 +79,7 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
         for (const amount of RESOURCE_STEPS[resource]) button(`+ ${amount} ${names[resource]}`, `dev-grant-${resource}-${amount}`, () => resultMessage(grant(controller, resource, amount), 'Ressources ajoutées à la partie de test.'));
       }
       section('Scénarios préparés');
-      for (const id of (Object.keys(SCENARIOS) as ScenarioId[]).filter(id => options.decorationPreview || !['decorationDemo', 'decoratedHabitat'].includes(id))) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
+      for (const id of (Object.keys(SCENARIOS) as ScenarioId[]).filter(id => options.decorationPreview || !(DECORATION_SCENARIOS as readonly string[]).includes(id))) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
         if (!window.confirm(`Charger « ${SCENARIOS[id]} » remplace seulement la partie de test. Exportez-la pour la conserver. Continuer ?`)) return;
         const result = loadScenario(controller, id); if (result.ok) onReplacement(); resultMessage(result, 'Scénario chargé et enregistré dans la partie de test.');
       });

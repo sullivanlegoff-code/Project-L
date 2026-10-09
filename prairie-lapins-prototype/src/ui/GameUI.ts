@@ -124,6 +124,7 @@ export class GameUI {
     if (!decorationView) { this.arranging = false; this.decorationDraft = null; }
     else this.arranging = true;
     if (view.kind !== 'decorationPlacement') this.decorationDraft = null;
+    this.content.scrollTop = 0;
     this.view = view; this.syncArrangement(); this.controller.refresh(); this.render();
   }
   close(): void {
@@ -158,6 +159,7 @@ export class GameUI {
     badge.hidden = !available; badge.textContent = String(available);
     document.getElementById('open-missions')!.setAttribute('aria-label', available ? `Missions · ${available} récompense(s) disponible(s)` : 'Missions');
     const scroll = this.content.scrollTop;
+    const placedListOpen = this.content.querySelector<HTMLDetailsElement>('[data-placed-list]')?.open ?? false;
     const focusId = (document.activeElement as HTMLElement | null)?.dataset.focus;
     this.panel.hidden = !this.view;
     this.settings.hidden = this.view?.kind !== 'settings'; this.content.hidden = this.view?.kind === 'settings';
@@ -182,6 +184,8 @@ export class GameUI {
       case 'arrangeHabitat': this.renderHabitatDecorations(s, this.view.id); break;
       case 'decorationPlacement': this.renderDecorationPlacement(s); break;
     }
+    const placedList = this.content.querySelector<HTMLDetailsElement>('[data-placed-list]');
+    if (placedList) placedList.open = placedListOpen;
     this.content.scrollTop = scroll;
     if (focusId) for (const el of this.content.querySelectorAll<HTMLElement>('[data-focus]')) if (el.dataset.focus === focusId) el.focus({preventScroll: true});
     this.updateTimers();
@@ -285,7 +289,7 @@ export class GameUI {
       this.button(card, 'Placer cet exemplaire', () => this.beginDecorationPlacement(d.id)); this.content.append(card);
     }
     const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
-    const details = node('details'); details.append(node('summary', `Objets posés · ${placed.length}`));
+    const details = node('details'); details.dataset.placedList = ''; details.append(node('summary', `Objets posés · ${placed.length}`));
     for (const d of placed) this.button(details, `${DECORATIONS[d.catalogId].name} · #${d.id.split('-')[1]}`, () => this.open({kind: 'decoration', id: d.id}), null, true);
     this.content.append(details);
     this.button(this.content, 'Quitter le mode Aménagement', () => this.close(), null, true);
@@ -303,6 +307,7 @@ export class GameUI {
     const d = this.controller.getSnapshot().state?.decorations.find(d => d.id === id); if (!d) return;
     this.arranging = true; this.placement = null; this.scene.setPlacement(null);
     this.decorationDraft = {id, location: d.location.kind === 'inventory' ? null : structuredClone(d.location), rotation: d.location.kind === 'outside' ? d.location.rotation : 0};
+    this.content.scrollTop = 0;
     this.view = {kind: 'decorationPlacement'}; this.syncArrangement(); this.render();
   }
   private rotateDecoration(): void {
@@ -327,7 +332,7 @@ export class GameUI {
     const draft = this.decorationDraft, d = s.decorations.find(d => d.id === draft?.id);
     if (!draft || !d) { this.open({kind: 'arrange'}); return; }
     this.title.textContent = `Placer : ${DECORATIONS[d.catalogId].name}`;
-    this.content.append(node('p', 'Aperçu uniquement : touchez une destination puis confirmez. Glisser ou pincer ne valide jamais.', 'small'));
+    this.content.append(node('p', 'Touchez une destination, puis confirmez. Glissez ou pincez pour explorer sans poser.', 'small'));
     this.content.append(node('p', d.location.kind === 'inventory' ? 'En cas d’annulation, l’objet reste dans votre inventaire.' : 'En cas d’annulation, l’objet reste à son emplacement actuel.', 'small'));
     if (DECORATIONS[d.catalogId].area === 'habitat') {
       this.content.append(node('p', 'Choisissez un habitat et l’un de ses trois emplacements sur les bords. Les places de lapins restent libres.', 'small'));
@@ -340,16 +345,21 @@ export class GameUI {
     }
     if (DECORATIONS[d.catalogId].rotates) this.button(this.content, `Tourner de 90° · orientation ${draft.rotation ? 'verticale' : 'horizontale'}`, () => this.rotateDecoration(), null, true);
     const reason = draft.location ? decorationPlacementReason(s, d.id, draft.location) : null;
-    this.content.append(node('p', !draft.location ? 'Touchez une destination.' : reason ? `× ${REFUSALS[reason]}` : '✓ Emplacement valide · déplacement gratuit', reason ? 'placement-invalid' : 'placement-valid'));
+    const actions = node('div', '', 'decoration-placement-actions');
+    const status = node('p', !draft.location ? 'Choisissez une destination · aucun objet posé' : reason ? `× ${REFUSALS[reason]}` : '✓ Emplacement valide · pose gratuite', !draft.location ? 'placement-pending' : reason ? 'placement-invalid' : 'placement-valid');
+    status.setAttribute('role', 'status'); actions.append(status);
+    const choices = node('div', '', 'placement-choices'); actions.append(choices);
     if (reason === 'DECORATION_SLOT_OCCUPIED' && draft.location?.kind === 'habitat') {
       const loc = draft.location, blocking = s.decorations.find(other => other.location.kind === 'habitat' && other.location.habitatId === loc.habitatId && other.location.slot === loc.slot)!;
       this.button(this.content, 'Ranger l’objet de cet emplacement', () => this.confirm('Ranger cet objet ?', 'Il sera conservé dans votre inventaire. Confirmez ensuite la nouvelle pose séparément.', () => this.execute({type: 'placeDecoration', id: blocking.id, location: {kind: 'inventory'}}, 'Ancien objet rangé.')), null, true);
     }
-    this.button(this.content, 'Confirmer la pose · gratuit', () => {
+    const confirm = this.button(choices, 'Confirmer la pose · gratuit', () => {
       if (!draft.location) return;
       this.execute({type: 'placeDecoration', id: d.id, location: structuredClone(draft.location)}, 'Décoration installée.', () => this.open({kind: 'arrange'}));
-    }, !draft.location ? 'Choisissez une destination.' : reason ? REFUSALS[reason] : null);
-    this.button(this.content, 'Annuler le placement', () => this.open({kind: 'arrange'}), null, true);
+    });
+    confirm.disabled = !draft.location || !!reason;
+    this.button(choices, 'Annuler le placement', () => this.open({kind: 'arrange'}), null, true);
+    this.content.append(actions);
   }
   private renderHabitatDecorations(s: GameState, id: string): void {
     this.title.textContent = `Aménager : ${this.enclosureName(s, id)}`;

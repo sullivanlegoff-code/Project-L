@@ -16,3 +16,7 @@ Avant une future intégration :
 - Maintenir le laboratoire et toutes les prévisualisations avec services en ligne désactivés par défaut. Aucun partage de session, cache, horloge ou sauvegarde avec la partie normale.
 
 L’intégration en production nécessite également le retour visuel Safari du joueur, les vérifications de migration sur copies représentatives et un plan de récupération. Le mode Décorations reste une prévisualisation en attendant cette décision.
+
+## Reprise de finition — 9 octobre 2026
+
+Aucun fichier de la branche comptes, SQL ou réglage Supabase modifié. Le gateway v4 refuse explicitement `format !== 4` ; il ne reçoit pas d’états v5 pendant ce chantier. Les scénarios ajoutés et les nouvelles commandes visuelles n’altèrent pas le format v5 ni les prix. Avant intégration, la migration coordonnée décrite ci-dessus et les essais de synchronisation authentifiée restent nécessaires. La finition ne valide ni la connexion email ni le backend hébergé.

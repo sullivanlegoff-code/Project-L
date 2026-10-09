@@ -1,4 +1,11 @@
-import type {DecorationId} from '../config/decorations';
+import {DECORATIONS, type DecorationId} from '../config/decorations';
+/** Identical scale for the placed object and its ghost; tall silhouettes stay modest. */
+export function decorationScale(id: DecorationId, interior: boolean): number {
+  if (interior) return .31;
+  if (id === 'fruit-tree') return .67;
+  if (id === 'flower-arch') return .72;
+  return Math.max(DECORATIONS[id].width, DECORATIONS[id].height) > 1 ? .79 : .43;
+}
 /** Original illustrations shared verbatim by the shop and the cached world textures. */
 export function decorationSvg(id: DecorationId, rotation: 0 | 1 = 0): string {
   const flower = (x: number, y: number, color = '#e5a3b2', size = 1) => `<g transform="translate(${x} ${y}) scale(${size})"><path d="M0 0V20M0 13Q-11 3-10 14Q-4 21 0 19M0 9Q11 0 10 12Q5 17 0 17" stroke="#668257" fill="#94b779" stroke-width="2"/><g fill="${color}" stroke="#bc8092" stroke-width="1"><circle cx="-5" cy="0" r="5"/><circle cx="5" cy="0" r="5"/><circle cx="0" cy="-5" r="5"/><circle cx="0" cy="5" r="5"/></g><circle r="3" fill="#ffe4a4"/></g>`;
@@ -17,6 +24,6 @@ export function decorationSvg(id: DecorationId, rotation: 0 | 1 = 0): string {
     'play-tunnel': `<path d="M22 91Q22 46 56 51L93 63Q109 72 98 100Z" fill="#a5c3be"/><ellipse cx="39" cy="88" rx="20" ry="23" fill="#83a49e"/><ellipse cx="39" cy="88" rx="14" ry="17" fill="#627d74"/><path d="M60 56Q76 68 70 95M78 61Q93 75 87 98" fill="none" stroke="#d8e3cf" stroke-width="3"/><path d="M28 71Q37 61 46 70" fill="none" stroke="#d8e3cf" stroke-width="3"/>`,
     'small-parasol': `<path d="M60 63V101M50 103H72" fill="none" stroke="#a38466" stroke-width="4"/><path d="M22 66Q29 35 60 28Q91 36 99 66L80 72L60 66L40 73Z" fill="#edc59f"/><path d="M40 72Q42 47 60 28Q78 48 80 72L60 66Z" fill="#ecdcd4"/><path d="M60 28V66" fill="none" stroke="#c6a38a"/><circle cx="60" cy="28" r="4" fill="#a38466"/>`,
   };
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><ellipse cx="61" cy="104" rx="${id === 'small-pond' ? 44 : 29}" ry="7" fill="#586c48" opacity=".15"/><g stroke="#796f58" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${drawings[id]}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><ellipse cx="61" cy="104" rx="${id === 'small-pond' ? 44 : id === 'fruit-tree' ? 24 : 29}" ry="7" fill="#586c48" opacity=".15"/><g stroke="#796f58" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${drawings[id]}</g></svg>`;
 }
 export const decorationTexture = (id: DecorationId, rotation: 0 | 1 = 0) => `decoration:${id}:${rotation}`;

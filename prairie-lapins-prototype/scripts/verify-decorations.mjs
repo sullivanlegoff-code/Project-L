@@ -8,6 +8,6 @@ execFileSync('node', ['scripts/verify-production.mjs', root, base, 'laboratory']
 let scripts = '';
 function walk(dir) {for (const name of readdirSync(dir)) {const file = join(dir, name); if (statSync(file).isDirectory()) walk(file); else if (name.endsWith('.js')) scripts += readFileSync(file, 'utf8');}}
 walk(root);
-for (const marker of ['prairie-lapins.preview.decorations.', 'PRÉVISUALISATION DÉCORATIONS v5', 'decorationDemo', 'decoratedHabitat']) assert.ok(scripts.includes(marker), `Missing preview boundary/tool: ${marker}`);
+for (const marker of ['prairie-lapins.preview.decorations.', 'PRÉVISUALISATION DÉCORATIONS v5', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense']) assert.ok(scripts.includes(marker), `Missing preview boundary/tool: ${marker}`);
 for (const marker of ['supabase.co', 'signInWithOtp', 'cloud_save']) assert.ok(!scripts.includes(marker), `Unexpected account code: ${marker}`);
 console.log('Decorations v5 preview checked: dedicated prefix, prepared tools, no account client.');

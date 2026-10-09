@@ -99,7 +99,24 @@ describe('published laboratory isolation', () => {
     confirm.mockReturnValue(true);document.getElementById('dev-reset')!.click();expect(controller.getSnapshot().state!.pattes).toBe(300);
     expect(document.getElementById('dev-badge')!.hidden).toBe(false);expect(document.getElementById('dev-badge')!.textContent).toContain('MODE TEST — PARTIE SÉPARÉE');
   });
-  it.each(Object.keys(SCENARIOS) as ScenarioId[])('%s passes v4 validation, serializes and never touches normal data', id => {
+  it('exposes all four decoration scenarios only in the preview and requires confirmation', () => {
+    const base = browserStorage(), lab = setup(); dispose.push(lab.dev.mount(lab.controller));
+    const ids = ['decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'];
+    for (const id of ids) expect(document.getElementById('dev-scenario-' + id)).toBeNull();
+    dispose.pop()!();
+    const preview = developmentEnvironment(base, {decorationPreview: true});
+    const controller = new GameController(preview.storage, preview.clock); controllers.push(controller);
+    dispose.push(preview.mount(controller)); const original = normalSnapshot();
+    for (const id of ids) expect(document.getElementById('dev-scenario-' + id)).not.toBeNull();
+    const before = controller.getSnapshot().state;
+    document.getElementById('dev-scenario-decorationStart')!.click();
+    expect(controller.getSnapshot().state).toEqual(before);
+    vi.mocked(window.confirm).mockReturnValue(true);
+    document.getElementById('dev-scenario-decorationStart')!.click();
+    expect(controller.getSnapshot().state).toEqual(createGame(Date.now()));
+    expect(normalSnapshot()).toEqual(original);
+  });
+  it.each(Object.keys(SCENARIOS) as ScenarioId[])('%s passes v5 validation, serializes and never touches normal data', id => {
     const before=normalSnapshot(), fixture=scenarioState(id,Date.now());expect(decodeGame(encodeGame(fixture),Date.now())).toEqual({ok:true,state:fixture});
     const {dev,controller}=setup();expect(dev.loadScenario(controller,id).ok).toBe(true);expect(normalSnapshot()).toEqual(before);
     if(id==='habitats')for(const home of fixture.buildings)expect(fixture.rabbits.filter(r=>r.enclosureId===home.id)).toHaveLength(7);

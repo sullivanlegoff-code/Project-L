@@ -8,7 +8,7 @@ import {HOUR} from '../config/balance';
 import type {DecorationLocation, GameState} from '../state/types';
 import {DECORATIONS, DECORATION_IDS, FINE_GRID} from '../config/decorations';
 import {decorationPlacementReason, decorationsInCell, footprint} from '../simulation/decorations';
-import {decorationSvg, decorationTexture} from './decorationArt';
+import {decorationSvg, decorationTexture, decorationScale} from './decorationArt';
 import {MeadowCamera, gridCell, gridPoint, type Point} from '../ui/gestures';
 import {BUILDING_NAMES, type Placement} from '../ui/models';
 import {COATS} from '../ui/portraits';
@@ -62,7 +62,7 @@ export class MeadowScene extends Phaser.Scene {
   setPlacement(placement: Placement | null): void { this.placement = placement; if (this.grid) this.drawGrid(); }
   setArrangement(active: boolean, ghost: DecorationGhost | null = null): void {
     this.arrangement = active; this.ghost = ghost;
-    if (this.grid) { this.drawGrid(); this.drawGhost(); }
+    if (this.grid) { this.drawDecorations(); this.drawGrid(); this.drawGhost(); }
   }
   setPhoto(active: boolean): void {
     this.photo = active;
@@ -105,9 +105,9 @@ export class MeadowScene extends Phaser.Scene {
       let image = this.decorationViews.get(d.id);
       if (!image) { image = this.add.image(0, 0, decorationTexture(d.catalogId)); this.decorationsLayer.add(image); this.decorationViews.set(d.id, image); }
       image.setTexture(decorationTexture(d.catalogId, d.location.kind === 'outside' ? d.location.rotation : 0));
-      const size = footprint(d.catalogId, d.location.kind === 'outside' ? d.location.rotation : 0);
-      const scale = d.location.kind === 'habitat' ? .31 : Math.max(size.width, size.height) > 1 ? .79 : .43;
-      image.setPosition(point.x, point.y).setOrigin(.5, .87).setScale(scale).setDepth(point.y);
+      const scale = decorationScale(d.catalogId, d.location.kind === 'habitat');
+      image.setPosition(point.x, point.y).setOrigin(.5, .87).setScale(scale).setDepth(point.y)
+        .setAlpha(this.ghost?.id === d.id ? .35 : 1);
     }
     for (const [id, image] of this.decorationViews) if (!visible.has(id)) { image.destroy(); this.decorationViews.delete(id); }
     this.decorationsLayer.sort('depth');
@@ -118,9 +118,8 @@ export class MeadowScene extends Phaser.Scene {
     if (!d || !point || !this.ghost?.location) { this.ghostView?.setVisible(false); return; }
     if (!this.ghostView) this.ghostView = this.add.image(0, 0, decorationTexture(d.catalogId)).setDepth(1.5).setAlpha(.65).setOrigin(.5, .87);
     const rotation = this.ghost.location.kind === 'outside' ? this.ghost.location.rotation : 0;
-    const size = footprint(d.catalogId, rotation);
     this.ghostView.setTexture(decorationTexture(d.catalogId, rotation)).setPosition(point.x, point.y)
-      .setScale(this.ghost.location.kind === 'habitat' ? .31 : Math.max(size.width, size.height) > 1 ? .79 : .43)
+      .setScale(decorationScale(d.catalogId, this.ghost.location.kind === 'habitat'))
       .setTint(decorationPlacementReason(this.current!, d.id, this.ghost.location) ? 0xf3a6a1 : 0xe4ffb5).setVisible(!this.photo);
   }
   private drawGround(): void {

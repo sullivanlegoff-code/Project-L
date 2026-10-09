@@ -58,6 +58,17 @@ describe('decoration UI transactions (simulated DOM; Phaser verified separately)
     button('Annuler le placement').click(); expect(state(controller).decorations[0].location).toEqual({kind: 'inventory'});
     document.getElementById('close-panel')!.click(); expect(document.getElementById('arrange-banner')!.hidden).toBe(true);
   });
+  it('shows a neutral pending destination and keeps the placed list open across autosave refreshes', () => {
+    const {controller, ui, clock} = setup(); shop();
+    button('Acheter · 20 pattes', catalog('wildflowers')).click(); button('Confirmer', document.getElementById('game-dialog')!).click();
+    expect(panel().querySelector('.placement-pending')?.textContent).toContain('Choisissez une destination');
+    expect(button('Confirmer la pose · gratuit').disabled).toBe(true);
+    ui.select({kind: 'fineCell', x: 4, y: 0}); button('Confirmer la pose · gratuit').click();
+    panel().querySelector<HTMLDetailsElement>('[data-placed-list]')!.open = true;
+    clock.now = 5000; controller.refresh();
+    expect(panel().querySelector<HTMLDetailsElement>('[data-placed-list]')!.open).toBe(true);
+    expect(state(controller).decorations[0].location).toEqual({kind: 'outside', x: 4, y: 0, rotation: 0});
+  });
   it('refuses insufficient resources before confirmation and preserves every owned item', () => {
     const initial = createGame(0); initial.pattes = 19; const {controller} = setup(initial); shop();
     expect(button('Acheter · 20 pattes', catalog('wildflowers')).disabled).toBe(true); expect(catalog('wildflowers').textContent).toContain('Pas assez');

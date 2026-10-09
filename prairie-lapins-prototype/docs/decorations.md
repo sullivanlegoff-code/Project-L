@@ -1,9 +1,26 @@
 # Décorations — prévisualisation v5
 
 Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.
-Branche `feature/meadow-decoration`, depuis `production` `45323cb`. Application publiée figée sur **`5feff8dcebd9dbcea331a312e95b51f807da2975`**, par le [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37860899136) de `production` `ae31131`. Cette révision se lit dans Paramètres et dans `build-revision.txt`. [PR #2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion ; des commits documentaires/publisher plus récents dans la branche ne changent pas les sources applicatives figées.
+Branche `feature/meadow-decoration`, depuis `production` `45323cb`. Première publication figée sur **`5feff8dcebd9dbcea331a312e95b51f807da2975`**, par le [workflow initial réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37860899136) de `production` `ae31131`. Cette révision se lit dans Paramètres et dans `build-revision.txt`. [PR #2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion ; des commits documentaires/publisher plus récents dans la branche ne changent pas les sources applicatives figées.
 
 Le jeu normal reste en v4 à [l’adresse habituelle](https://sullivanlegoff-code.github.io/Project-L/), le [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/) aussi. Les [comptes expérimentaux](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/) restent sur leurs sources v4 figées `3e70d9e8cbe9228c63c73db007fff199199d6470` ; connexion email et synchronisation en pause. Cette livraison ajoute seulement une quatrième route, dans le même artefact Pages. Aucune intégration de la v5 en production avant retour visuel du joueur.
+
+## Finition reprise le 9 octobre 2026
+
+Base relue et récupérée : `c9919b2b5d98ba1fc26c60758cc138037dbae7dd` (PR #2). Les sources actives, assets, tests et configurations ont été contrôlés par empreintes Git avant modification, dans une copie séparée de l’ancien `main` local.
+
+- **Départ** : partie ordinaire, 300 pattes, deux lapins, inventaire vide ; pour achat et pose.
+- **Démonstration** : les douze références sont toutes posées, y compris le tunnel intérieur qui manquait à la démonstration précédente. Disposition extérieure aérée.
+- **Sept occupants** : sept lapins et trois objets dans l’habitat initial ; toutes les références sont également visibles sur la prairie.
+- **Prairie dense** : 512 objets possédés, 140 posés, deux extensions, sept occupants ; inventaire et rechargement vérifiés. Il s’agit d’un scénario de stress.
+
+Tous sont dans **Outils test → Scénarios préparés**, uniquement dans Décorations, après confirmation. Leur chargement ne touche aucune clé des autres routes.
+
+Pose : message neutre avant sélection, confirmation et annulation visibles pendant le défilement, emplacement précédent atténué pendant le déplacement. La liste « Objets posés » reste ouverte pendant les sauvegardes automatiques. Arbres et arches plus modestes ; textures partagées boutique/prairie et échelle identique entre objet et fantôme.
+
+Validation de cette reprise : **441 tests**, TypeScript, trois builds (preview et deux builds de contrôle), contrôles de bundles ; Chromium tactile 852 × 393 et 667 × 375, achat → pose/rotation → déplacement → rangement → rechargement/export, refus et annulations, quatre scénarios et isolation des clés. [Rapport tactile](images/decorations/finition-2026-10-09/flow-report.json), [rapport gestes/sélections](images/decorations/finition-2026-10-09/browser-report.json), [captures](images/decorations/finition-2026-10-09/).
+
+Reproduire le parcours tactile : `NODE_PATH=CHEMIN_PLAYWRIGHT PRAIRIE_CAPTURE_DIR=DOSSIER node docs/decorations-flow-check.cjs`, contre Vite en mode `decorations-preview`. Profil Chromium jetable, hooks interceptés uniquement dans le test ; aucun hook dans les builds publiés.
 
 ## Catalogue original
 
@@ -59,7 +76,7 @@ Pour tester une copie : exporter dans le jeu normal, garder le fichier source, p
 
 Les imports v5 sont stricts : catalogue, limite d’exemplaires, identifiants uniques/counter, localisation exclusive, empreintes, rotation, terrain, références et slots. Export complet **v5** avec nom `prairie-lapins-PREVIEW-DECORATIONS-v5-MODE-TEST-…json`. Ne pas l’importer dans les trois versions encore en v4 : elles ne le prennent pas en charge. Aucun déguisement en v4 ni suppression de décoration pour forcer une compatibilité.
 
-« Outils test » ouvre des commandes visibles et séparées : ajouts de ressources prédéfinis, cinq avances de temps, démonstration décorée, habitat décoré à sept occupants, anciens scénarios, export/import et nouveau départ confirmé. Reset conserve l’horloge, les préférences et les secours de cette prévisualisation ; aucune autre sauvegarde touchée.
+« Outils test » ouvre des commandes visibles et séparées : ajouts de ressources prédéfinis, cinq avances de temps, départ ordinaire, démonstration complète, habitat décoré à sept occupants, prairie dense, anciens scénarios, export/import et nouveau départ confirmé. Reset conserve l’horloge, les préférences et les secours de cette prévisualisation ; aucune autre sauvegarde touchée.
 
 Aucun SDK, compte, client cloud ou requête Supabase dans le build Décorations. La politique de session `onlineServicesAllowed: false` doit être respectée par tout futur adaptateur. [Adaptations futures des comptes pour v5](accounts-v5-compatibility.md).
 

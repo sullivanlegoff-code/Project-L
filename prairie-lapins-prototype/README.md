@@ -6,6 +6,8 @@ Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**. La branche 
 
 **[Prévisualisation Décorations](https://sullivanlegoff-code.github.io/Project-L/preview/decorations/)** : douze objets, inventaire, placement tactile, trois emplacements par habitat et mode photo. Partie/prefs/horloge/secours isolés ; aucun compte initialisé. [Guide complet](docs/decorations.md), [future compatibilité des comptes v5](docs/accounts-v5-compatibility.md), [vérifications et captures](docs/progress.md). Les sections suivantes décrivent aussi les paliers stables antérieurs ; aucune intégration v5 en production dans cette livraison.
 
+**Finition du 9 octobre 2026 : 441 tests et TypeScript réussis.** Quatre scénarios visibles : départ (300 pattes), démonstration des douze objets, habitat à sept occupants, prairie dense (512 exemplaires). Pose avec commandes visibles pendant le défilement, ancien emplacement atténué, liste des objets posés conservée lors de l’autosauvegarde et silhouettes hautes réduites. Parcours tactile Chromium réussi en 852 × 393 et 667 × 375 ; Safari physique reste à vérifier. [Captures de cette finition](docs/images/decorations/finition-2026-10-09/), [rapport du parcours](docs/images/decorations/finition-2026-10-09/flow-report.json).
+
 Développement de la preview : `npm ci`, puis `npm run dev -- --mode decorations-preview --base=/Project-L/preview/decorations/ --host 0.0.0.0 --port 5178 --strictPort`. Vérifications : `npm test`, `npm run typecheck`, `npm run build:decorations`. Les builds root/dev de cette branche sont des contrôles v5, pas les builds stables publiés.
 
 ## Publication HTTPS

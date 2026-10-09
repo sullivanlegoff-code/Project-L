@@ -42,13 +42,13 @@ async function run() {
     assert.equal(await page.evaluate(p => localStorage.getItem(p + 'clock'), lab), '300000');
     await page.locator('#dev-scenario-decoratedHabitat').click(); await assertProtected();
     assert.equal((await saved(preview + normal)).rabbits.filter(r => r.enclosureId === 'building-1').length, 7);
-    assert.equal((await saved(preview + normal)).decorations.length, 58);
+    assert.equal((await saved(preview + normal)).decorations.length, 14);
     await close(); await page.screenshot({path: path.join(out, 'published-seven.png')});
     await page.locator('#open-shop').click(); await page.getByRole('button', {name: 'Décorations', exact: true}).click();
     assert.equal(await page.locator('[data-catalog]').count(), 12);
     await page.locator('[data-catalog="wildflowers"] button').click(); await page.locator('#game-dialog').getByRole('button', {name: 'Confirmer', exact: true}).click();
     await page.getByRole('button', {name: 'Annuler le placement', exact: true}).click(); assert.equal((await saved(preview + normal)).decorations.at(-1).location.kind, 'inventory'); await close(); await assertProtected();
-    await page.reload(); await page.waitForFunction(p => JSON.parse(localStorage.getItem(p + 'prairie-lapins.save.v1')).decorations.length === 59, preview); await assertProtected();
+    await page.reload(); await page.waitForFunction(p => JSON.parse(localStorage.getItem(p + 'prairie-lapins.save.v1')).decorations.length === 15, preview); await assertProtected();
     await page.locator('#open-settings').click();
     const beforeInvalid = (await saved(preview + normal)).decorations;
     await page.locator('#import-file').setInputFiles({name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{"version":5}')});
