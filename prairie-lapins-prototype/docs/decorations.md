@@ -3,6 +3,8 @@
 Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.
 Branche `feature/meadow-decoration`, depuis `production` `45323cb`. Première publication figée sur **`5feff8dcebd9dbcea331a312e95b51f807da2975`**, par le [workflow initial réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37860899136) de `production` `ae31131`. Cette révision se lit dans Paramètres et dans `build-revision.txt`. [PR #2 en brouillon](https://github.com/sullivanlegoff-code/Project-L/pull/2), sans fusion ; des commits documentaires/publisher plus récents dans la branche ne changent pas les sources applicatives figées.
 
+**Publication vérifiée :** sources Décorations `2e17a88fbc4f1e20099ebd90497f0f10074776fa`, [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37866562358). Contrôle HTTP des quatre `build-revision.txt` et des scripts réellement servis réussi le 9 octobre 2026 à 02:49 (Paris). Jeu/laboratoire `ae31131` v4, comptes `3e70d9e` v4, Décorations `2e17a88` v5. [Preuve publique](images/decorations/finition-2026-10-09/published-revisions.json). Ce contrôle ne remplace pas un parcours Safari physique.
+
 Le jeu normal reste en v4 à [l’adresse habituelle](https://sullivanlegoff-code.github.io/Project-L/), le [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/) aussi. Les [comptes expérimentaux](https://sullivanlegoff-code.github.io/Project-L/preview/accounts/) restent sur leurs sources v4 figées `3e70d9e8cbe9228c63c73db007fff199199d6470` ; connexion email et synchronisation en pause. Cette livraison ajoute seulement une quatrième route, dans le même artefact Pages. Aucune intégration de la v5 en production avant retour visuel du joueur.
 
 ## Finition reprise le 9 octobre 2026

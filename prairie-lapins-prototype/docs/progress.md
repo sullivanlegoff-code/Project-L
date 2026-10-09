@@ -1,5 +1,7 @@
 # Finition de l’aménagement — 9 octobre 2026
 
+**Publication vérifiée :** sources Décorations `2e17a88fbc4f1e20099ebd90497f0f10074776fa`, [workflow réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37866562358). Contrôle HTTP des quatre `build-revision.txt` et des scripts réellement servis réussi le 9 octobre 2026 à 02:49 (Paris). Jeu/laboratoire `ae31131` v4, comptes `3e70d9e` v4, Décorations `2e17a88` v5. [Preuve publique](images/decorations/finition-2026-10-09/published-revisions.json). Ce contrôle ne remplace pas un parcours Safari physique.
+
 Reprise depuis PR #2, `feature/meadow-decoration` `c9919b2`, cible `production`. Aucune remarque de revue ni vérification attachée au dernier commit documentaire ; le déploiement initial `37860899136` était réussi. Copie locale ancienne préservée dans `/workspace/Project-L` (`work`, `e3e4b89`, propre). Récupération vérifiable des 100 fichiers actifs et de leurs assets/configurations par le connecteur GitHub, sans checkout approximatif ni installation nouvelle. Dépendances locales réutilisées après égalité des lockfiles. Les archives historiques restent dans l’arbre distant ; aucune suppression prévue.
 
 **Déjà livré avant cette reprise :** douze décorations et prix exacts, commandes transactionnelles, inventaire identifié, grille 4 × 4, collisions, rotations banc/arche, trois slots, modes Aménagement/photo, v5/migrations et espace séparé, PR brouillon et quatrième route. La base a été vérifiée maintenant : 436 tests et TypeScript réussis.
@@ -12,7 +14,7 @@ Captures et rapports de cette exécution : [démonstration](images/decorations/f
 
 **Limites mesurées :** pas d’iPhone physique/Safari. Stress Chromium historique reconstruit à 512 exemplaires / 254 images, textures réutilisées : moyenne 5,6 images/s, p95 333 ms dans ce cloud partagé avec vérifications concurrentes. Cette mesure n’est pas comparable à un iPhone et ne permet pas de revendiquer la fluidité du scénario extrême. Le scénario accessible est moins chargé visuellement (140 objets posés). Validation Safari, copies de migrations représentatives et plan de récupération nécessaires avant une intégration normale. Comptes et configuration email en pause, client normal/labo v4 préservé.
 
-Les accès HTTP directs du terminal restent bloqués par le proxy injoignable. Le serveur local et Chromium ont été autorisés par le sandbox ; ni proxy, politique réseau ni vérification TLS modifiés. Le publisher doit contrôler les quatre fichiers de révision et les scripts réellement servis après déploiement, depuis GitHub Actions. Les rapports HTTPS ci-dessous sont historiques, pas une nouvelle vérification de cette reprise.
+Les accès HTTP directs du terminal restent bloqués par le proxy injoignable. Le serveur local et Chromium ont été autorisés par le sandbox ; ni proxy, politique réseau ni vérification TLS modifiés. Le publisher a contrôlé avec succès les quatre fichiers de révision et les scripts réellement servis après déploiement, depuis GitHub Actions (workflow 37866562358). Aucun nouveau parcours navigateur HTTPS n’est revendiqué. Les rapports HTTPS ci-dessous sont historiques, pas une nouvelle vérification de cette reprise.
 
 ---
 
