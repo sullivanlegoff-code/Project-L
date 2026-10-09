@@ -1,3 +1,4 @@
+import {SNOW_ART} from '../config/rabbitArt';
 import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
 import type {GameController} from '../application/GameController';
@@ -18,7 +19,7 @@ import {bindMeadowInput} from './meadowInput';
 
 export type MeadowSelection = {kind: 'building' | 'rabbit' | 'income' | 'grass' | 'decoration'; id: string} | {kind: 'cell' | 'fineCell'; x: number; y: number} | {kind: 'extension'; parcelId?: ParcelId} | {kind: 'empty'};
 export interface DecorationGhost {id: string; location: DecorationLocation | null}
-interface VisualRabbit {id: string; object: Phaser.GameObjects.Container; ears: Phaser.GameObjects.Ellipse[]; base: Point; phase: number; fedUntil: number}
+interface VisualRabbit {id: string; object: Phaser.GameObjects.Container; ears: Phaser.GameObjects.Ellipse[]; sprite?: Phaser.GameObjects.Image; base: Point; phase: number; fedUntil: number}
 export class MeadowScene extends Phaser.Scene {
   private current: GameState | null = null;
   private placement: Placement | null = null;
@@ -48,6 +49,7 @@ export class MeadowScene extends Phaser.Scene {
   readonly view = new MeadowCamera();
   constructor(private controller: GameController, private select: (selection: MeadowSelection) => void, private blocked: () => boolean) { super('Meadow'); }
   preload(): void {
+    if (!this.textures.exists(SNOW_ART.texture)) this.load.image(SNOW_ART.texture, SNOW_ART.url);
     for (const id of DECORATION_IDS) for (const rotation of (DECORATIONS[id].rotates ? [0, 1] : [0]) as (0 | 1)[]) {
       const key = decorationTexture(id, rotation);
       if (!this.textures.exists(key)) this.load.svg(key, 'data:image/svg+xml;base64,' + btoa(decorationSvg(id, rotation)), {width: 120, height: 120});
@@ -237,6 +239,15 @@ export class MeadowScene extends Phaser.Scene {
         const offset = rabbitOffset(index, residents.length);
         const base = {x: center.x + offset.x, y: center.y + offset.y};
         const object = this.add.container(base.x, base.y).setScale(VISUAL.rabbit.scale).setDepth(base.y);
+        if (rabbit.species === SNOW_ART.species) {
+          const sprite = this.add.image(0, SNOW_ART.groundY, SNOW_ART.texture).setOrigin(.5, 1);
+          sprite.setScale(SNOW_ART.worldWidth / SNOW_ART.width); // Uniform scale preserves the original proportions.
+          object.add([this.add.ellipse(0, 10, 35, 12, 0x6b7755, .16), sprite]);
+          this.animals.add(object);
+          this.rabbitViews.push({id: rabbit.id, object, ears: [], sprite, base,
+            phase: index * 2 + Number(rabbit.id.split('-')[1]), fedUntil: 0});
+          return;
+        }
         const coat = COATS[rabbit.species], color = Phaser.Display.Color.HexStringToColor(coat.body).color, patch = Phaser.Display.Color.HexStringToColor(coat.patch).color;
         const ears = coat.lop ? [this.add.ellipse(-19, -6, 10, 29, color), this.add.ellipse(19, -6, 10, 29, color)] :
           [this.add.ellipse(-7, -24, 8, 26, color), this.add.ellipse(7, -25, 8, 26, coat.frost ? patch : color)];
@@ -249,7 +260,7 @@ export class MeadowScene extends Phaser.Scene {
           object.add(wings);
         }
         object.add([this.add.ellipse(0, 10, 35, 12, 0x6b7755, .16), ...ears,
-          this.add.ellipse(0, 0, rabbit.species === 'neige' ? 36 : 33, 27, color), this.add.ellipse(8, 2, 13, 18, patch),
+          this.add.ellipse(0, 0, 33, 27, color), this.add.ellipse(8, 2, 13, 18, patch),
           this.add.circle(-6, -7, 2, 0x3e332b), this.add.circle(6, -7, 2, 0x3e332b), this.add.circle(0, 0, 2, 0xbc8990), this.add.circle(17, 5, 6, color)]);
         if (rabbit.species === 'brumelin') object.add(this.add.text(9, -24, '✦', {fontSize: '17px', color: '#ffffff'}));
         if (rabbit.species === 'mottelin') object.add(this.add.ellipse(15, -17, 10, 5, 0x819559));
@@ -359,8 +370,18 @@ export class MeadowScene extends Phaser.Scene {
       this.select(home ? {kind: 'building', id: home.id} : {kind: 'empty'}); return;
     }
     if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
-    const closest = rabbitHit(screen, this.rabbitViews.map(r => ({id: r.id,
-      point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y})));
+    const closest = rabbitHit(screen, this.rabbitViews.flatMap(r => {
+      if (r.sprite) {
+        // Only Neige uses its actual alpha silhouette. No large rectangular target over adjacent residents.
+        const world = this.view.world(screen);
+        const local = r.sprite.getWorldTransformMatrix().applyInverse(world.x, world.y);
+        const x = Math.floor(local.x + SNOW_ART.width / 2), y = Math.floor(local.y + SNOW_ART.height);
+        if (x < 0 || y < 0 || x >= SNOW_ART.width || y >= SNOW_ART.height ||
+            this.textures.getPixelAlpha(x, y, SNOW_ART.texture) < 32) return [];
+      }
+      return [{id: r.id, point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y,
+        ...(r.sprite ? {radius: Infinity} : {})}];
+    }));
     if (closest) { this.select({kind: 'rabbit', id: closest.id}); return; }
     const decorationId = this.decorationAt(screen);
     if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
