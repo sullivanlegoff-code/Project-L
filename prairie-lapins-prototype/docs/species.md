@@ -1,5 +1,10 @@
 # Les quinze espèces — prévisualisation du 9 octobre 2026
 
+**Publication vérifiée — quinze espèces :** sources Décorations `85fe255ec8e7e65213cd570f91f5bb1fe66a30d7`, [workflow 37949526936 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37949526936). Quatre révisions, HTML et scripts servis contrôlés ; noms des quatre nouvelles espèces et filtres présents. Jeu/laboratoire `ae31131` v4 et comptes `3e70d9e` v4 conservés. [Preuve publique](validation/publication-species-2026-10-09.json). Aucun essai Safari physique revendiqué.
+
+
+**Validation finale réussie :** [Actions 37949391700](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37949391700), application `85fe255ec8e7e65213cd570f91f5bb1fe66a30d7`, **544 tests / 14 fichiers**, TypeScript, build et six parcours Chromium (espèces/Dragon, stabilité/récupération, île, sélection/vente, aménagement, gestes/densité). [Bilan durable](validation/species-ci-2026-10-09.json), [captures/rapports CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37949391700/artifacts/11626120641), conservés 30 jours. Aucun essai Safari physique revendiqué.
+
 | Identifiant stable | Nom | Types | Rareté | Obtention | Affection minimale des deux parents | Croissance |
 |---|---|---|---|---|---:|---:|
 | paille | Lapin Paille | paille | commun | boutique : 80 pattes, ou reproduction | 2 | 5 min |
@@ -45,3 +50,6 @@ Sauvegardes v5 inchangées : pas de nouvelle dotation ni de migration structurel
 Dans Décorations : **Outils test → Collection — quinze espèces et recettes**, après confirmation uniquement. Trois habitats niveau 3, quinze espèces affection 10, nid/nurserie libres ; ressources de test préparées, aucune garantie permanente ou naissance forcée dans le jeu. Ce scénario n’ouvre pas de partie normale et ne lui donne aucun lapin.
 
 Essai iPhone : garder un export ; charger volontairement le scénario ; combiner les filtres puis réinitialiser ; vérifier les conditions du carnet et préparer Dragon au nid (Perroquet/Feu, 2 % hors garantie) ; recharger une reproduction lancée sans nouveau tirage. Safari physique reste à vérifier.
+
+
+Captures durables : [filtre épique + vol](validation/species-2026-10-09/collection-filter.png), [recette Dragon](validation/species-2026-10-09/dragon-recipe.png), [découverte existante](validation/species-2026-10-09/dragon-discovery.png), [collection mobile 667 × 375](validation/species-2026-10-09/collection-compact.png). [Rapport tactile](validation/species-2026-10-09/species-report.json). Le futur artefact v5 quatre routes a été [préparé et vérifié sans publication](validation/species-preflight-2026-10-09.json), avec les comptes v4 figés.

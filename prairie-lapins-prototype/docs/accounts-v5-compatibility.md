@@ -28,3 +28,6 @@ Aucun fichier de la branche comptes, SQL ou réglage Supabase modifié. Le gatew
 ## Sélection et vente — 9 octobre 2026
 
 La commande locale `sellDecoration` conserve le format v5 et doit rejoindre le futur portage des commandes. Une suppression d’exemplaire et le crédit de pattes correspondant doivent rester un seul changement de payload/checkpoint ; aucun remboursement en cœurs. Ne pas rejouer une intention de vente lors d’une reprise réseau ou d’un conflit : vérifier ownership, identifiant et version/CAS, et conserver l’idempotence de la transaction. Aucun portage distant, SQL ou réglage Supabase réalisé ici ; comptes/email toujours en pause.
+
+
+Le catalogue de la preview v5 contient désormais les identifiants `bouee`, `geant`, `magicien`, `dragon` et les raretés épique/légendaire. Une future adaptation des comptes devra reconnaître ces identifiants et valider les réservations ordinaires seules. Aucun changement du lecteur de comptes v4 figé, du backend ou de Supabase n’est réalisé ici ; il refuse v5 et ne doit pas recevoir ces exports.
