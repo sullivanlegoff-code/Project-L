@@ -43,15 +43,15 @@ Paramètres : `src/config/decorations.ts`. Illustrations SVG originales : `src/d
 | `play-tunnel` | Tunnel de jeu | 60 | Emplacement d’habitat |
 | `small-parasol` | Petit parasol | 80 | Emplacement d’habitat |
 
-Objets esthétiques : aucun bonus, mission, revenu, affection ou changement des probabilités. Achats uniquement en pattes, jamais par complément en cœurs. Plusieurs exemplaires sont permis ; chaque achat possède son identifiant `decoration-N`. Pas de vente, démolition ni suppression définitive. Déplacements et rangements gratuits. Hypothèse de protection des imports/appareils modestes : 512 exemplaires possédés maximum, objets rangés compris. Un refus ne détruit aucun objet.
+Objets esthétiques : aucun bonus, mission, revenu, affection ou changement des probabilités. Achats uniquement en pattes, jamais par complément en cœurs. Plusieurs exemplaires sont permis ; chaque achat possède son identifiant `decoration-N`. Vente d’un exemplaire placé ou en réserve : 50 % du prix d’achat en pattes, arrondi à l’entier inférieur, aucun remboursement en cœurs. Le taux est centralisé dans `DECORATION_RESALE_RATE`. Les bâtiments, habitats et lapins sont exclus. Déplacements et rangements gratuits. Hypothèse de protection des imports/appareils modestes : 512 exemplaires possédés maximum, objets rangés compris. Un refus ne détruit aucun objet.
 
 ## Utilisation et gestes
 
 Boutique → Décorations → choisir un objet → confirmer l’achat. L’objet est enregistré dans l’inventaire avant de proposer sa pose. **Annuler la pose conserve l’achat.**
 
-« Aménager » ouvre l’inventaire et affiche le mode actif. Toucher un objet posé ouvre Déplacer, Tourner pour banc/arche, Ranger. Une destination est un aperçu : vert et ✓ si valide, rouge et × sinon. Confirmer la pose est toujours explicite. Annuler un déplacement conserve l’ancien placement. Fermer le panneau, quitter le mode ou ouvrir une autre section annule l’aperçu. Aucun retour arrière global.
+Toucher directement la silhouette d’un objet extérieur ou intérieur ouvre son nom et ses actions, en jeu normal comme en Aménagement. Un cadre doré l’identifie dans la prairie. Une zone vide désélectionne ; la liste « Objets posés » reste une solution complémentaire et met également l’exemplaire en évidence. « Aménager » ouvre l’inventaire et affiche le mode actif. Actions : Déplacer, Tourner pour banc/arche, Ranger, Vendre. Une destination est un aperçu : vert et ✓ si valide, rouge et × sinon. Confirmer la pose est toujours explicite. Annuler un déplacement conserve l’ancien placement. Fermer le panneau, quitter le mode ou ouvrir une autre section annule l’aperçu. Aucun retour arrière global.
 
-Glisser déplace la caméra, pincer zoome ; ces gestes n’effectuent aucune pose ni sélection. Les panneaux HTML ne commandent pas la caméra. Hors Aménagement, les objets ne participent pas aux tests de sélection : lapins, récoltes, bâtiments et bulles gardent leurs commandes habituelles. Projection, proportions des lapins, zoom 0,8–1,65 et rayon de sélection écran de 27 px conservés.
+Glisser déplace la caméra, pincer zoome ; ces gestes n’effectuent aucune pose ni sélection. Les panneaux HTML ne commandent pas la caméra. Les silhouettes sont sélectionnables au-delà de leur empreinte au sol ; les marges transparentes et ombres légères ne capturent pas les touches. En cas de chevauchement intérieur, les lapins gardent la priorité en jeu normal, les décorations en Aménagement. Les boutons/panneaux HTML et bulles de récolte gardent leur priorité dans les deux modes. Le mode photo observe la scène sans sélectionner ni ouvrir de panneau. Projection, proportions des lapins, zoom 0,8–1,65 et rayon de sélection écran de 27 px conservés.
 
 Chaque case de bâtiment contient 4 × 4 cellules fines : 12 × 8, 24 × 8 et 36 × 8 selon l’extension. Empreinte entière sur terrain débloqué, sans bâtiment ni autre décoration. Traverser deux cases libres est permis. Rotation à 90° réservée au banc et à l’arche : empreinte et texture changent ensemble. Aucun arrangement automatique.
 
@@ -60,6 +60,12 @@ Un bâtiment bloqué propose de **ranger les objets de cette case avec confirmat
 Chaque habitat a exactement trois emplacements stables sur ses bords, quel que soit son type ou niveau. Ils ne consomment aucune place de lapin. Les références `habitatId` + `slot` suivent le déplacement/amélioration de l’habitat. Un emplacement occupé refuse la nouvelle pose et propose un rangement confirmé de l’ancien objet ; aucune substitution silencieuse. Les objets sont dessinés derrière les lapins, les noms devant les objets et les bulles au-dessus.
 
 Le bouton appareil photo, près de Recentrer, masque temporairement HUD, panneaux, bulles et grille. La caméra reste utilisable ; un bouton discret permet de revenir au jeu. Aucun état de partie modifié et le cycle de sauvegarde de cinq secondes continue. Utiliser la capture système de l’iPhone.
+
+## Vente confirmée et atomique
+
+Depuis le panneau d’un objet placé ou « Actions de cet exemplaire » dans l’inventaire : **« Vendre [nom] pour [montant] pattes ? »**. Exemple : un banc acheté 80 pattes rapporte 40 pattes. Annuler conserve exactement l’objet et les ressources. La confirmation est consommée une fois ; une double pression ne vend aucun autre exemplaire.
+
+`sellDecoration` vérifie l’identifiant encore présent et le solde sûr, retire uniquement cet exemplaire, libère sa destination éventuelle et crédite le montant calculé dans la simulation. Le contrôleur écrit le résultat complet avant de l’activer. Refus d’écriture, de lecture ou conflit de sauvegarde : aucune vente activée, objet et paiement conservés, avertissement visible. Réessayer une sauvegarde ne rejoue jamais une vente. Après vente/rangement, le panneau ferme en jeu normal ou revient à l’inventaire en Aménagement ; aucune commande ne vise un exemplaire absent.
 
 ## Stockage et transfert volontaire
 
@@ -98,8 +104,8 @@ Essai iPhone, ordinateur éteint :
 
 1. Ouvrir la prévisualisation dans Safari paysage et vérifier « PRÉVISUALISATION DÉCORATIONS v5 — PARTIE SÉPARÉE ».
 2. Outils test → démonstration décorée, puis sept occupants : toucher les sept lapins, glisser et pincer.
-3. Boutique → Décorations : acheter un banc, annuler sa pose, retrouver l’exemplaire dans Aménager ; le poser, tourner, déplacer puis ranger.
-4. Poser un coussin dans un habitat, essayer son emplacement occupé, puis recharger et vérifier la conservation. Essayer aussi le Mode photo.
+3. Boutique → Décorations : acheter un banc, annuler sa pose, retrouver l’exemplaire dans Aménager ; le poser. Toucher directement son dessin en jeu normal : cadre doré, nom et actions. Déplacer/annuler, tourner, puis ranger ; ressources inchangées.
+4. Toucher un coussin intérieur puis un lapin voisin ; essayer aussi en Aménagement. Tester vide, glissement, pincement et photo : pas de sélection accidentelle. Vendre un banc : annuler puis confirmer, vérifier +40 pattes une seule fois et sa disparition ; recharger. Refaire depuis l’inventaire.
 5. Exporter le JSON v5 de test ; revenir au jeu normal et vérifier sa progression habituelle. Garder cet export séparé des exports normaux.
 
-Limites : esthétique seulement, 512 exemplaires, trois slots intérieurs fixes, pas de vente ni téléchargement photo intégré. Pas de mesure sur iPhone physique ; validation Safari et retour visuel du joueur nécessaires avant intégration. Pas de comptes ni migration serveur dans cette étape.
+Limites : esthétique seulement, 512 exemplaires, trois slots intérieurs fixes, pas de téléchargement photo intégré. Pas de mesure sur iPhone physique ; validation Safari et retour visuel du joueur nécessaires avant intégration. Pas de comptes ni migration serveur dans cette étape.

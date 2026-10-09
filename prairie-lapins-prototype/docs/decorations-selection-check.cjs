@@ -6,7 +6,7 @@ const out = process.env.PRAIRIE_CAPTURE_DIR || '/tmp/prairie-selection';
 const key = 'prairie-lapins.preview.decorations.prairie-lapins.save.v1';
 const art = {
   wildflowers: [58, 77], 'flowering-bush': [60, 60], 'moss-rock': [60, 77],
-  'garden-lantern': [60, 54], 'wood-bench': [60, 76], 'flower-arch': [60, 32],
+  'garden-lantern': [60, 54], 'wood-bench': [60, 76], 'flower-arch': [60, 21],
   'fruit-tree': [60, 35], 'small-pond': [60, 83], 'soft-cushion': [60, 87],
   'ball-toys': [49, 80], 'play-tunnel': [39, 88], 'small-parasol': [60, 50],
 };
@@ -27,7 +27,7 @@ async function run() {
     await page.goto(url); await page.waitForFunction(() => window.__scene?.current?.version === 5);
     const cdp = await context.newCDPSession(page);
     const touch = async p => {
-      assert.equal(await page.evaluate(p => document.elementFromPoint(p.x, p.y)?.tagName, p), 'CANVAS', 'Touch must reach canvas');
+      assert.equal(await page.evaluate(p => document.elementFromPoint(p.x, p.y)?.tagName, p), 'CANVAS', 'Touch must reach canvas: ' + JSON.stringify(p));
       await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [p]});
       await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
     };
@@ -79,7 +79,7 @@ async function run() {
     }
     // A real empty touch clears the object; photo never selects it.
     await fixture('wood-bench'); let p = await target('wood-bench'); await touch(p);
-    const empty = await page.evaluate(() => window.__scene.view.screen({x: 550, y: 310}));
+    const empty = await page.evaluate(() => window.__scene.view.screen({x: 380, y: 360}));
     await touch(empty); assert.equal((await selected()).id, null); assert.equal(await page.locator('#game-panel').isVisible(), false);
     await page.locator('#open-photo').tap(); p = await target('wood-bench'); await touch(p);
     assert.equal((await selected()).id, null); assert.equal(await page.locator('#game-panel').isVisible(), false);

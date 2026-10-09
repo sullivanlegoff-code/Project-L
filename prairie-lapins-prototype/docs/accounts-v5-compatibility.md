@@ -20,3 +20,7 @@ L’intégration en production nécessite également le retour visuel Safari du 
 ## Reprise de finition — 9 octobre 2026
 
 Aucun fichier de la branche comptes, SQL ou réglage Supabase modifié. Le gateway v4 refuse explicitement `format !== 4` ; il ne reçoit pas d’états v5 pendant ce chantier. Les scénarios ajoutés et les nouvelles commandes visuelles n’altèrent pas le format v5 ni les prix. Avant intégration, la migration coordonnée décrite ci-dessus et les essais de synchronisation authentifiée restent nécessaires. La finition ne valide ni la connexion email ni le backend hébergé.
+
+## Sélection et vente — 9 octobre 2026
+
+La commande locale `sellDecoration` conserve le format v5 et doit rejoindre le futur portage des commandes. Une suppression d’exemplaire et le crédit de pattes correspondant doivent rester un seul changement de payload/checkpoint ; aucun remboursement en cœurs. Ne pas rejouer une intention de vente lors d’une reprise réseau ou d’un conflit : vérifier ownership, identifiant et version/CAS, et conserver l’idempotence de la transaction. Aucun portage distant, SQL ou réglage Supabase réalisé ici ; comptes/email toujours en pause.
