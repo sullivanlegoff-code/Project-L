@@ -28,6 +28,7 @@ export class GameController {
   private disposed = false;
   private importSequence = 0;
   private pendingImport: {token: number; state: GameState; legacyJson?: string} | null = null;
+  private migrationSource: string | null = null;
   private listeners = new Set<(snapshot: Snapshot) => void>();
 
   constructor(private storage: SaveStorage, private clock: () => number = Date.now,
@@ -57,6 +58,7 @@ export class GameController {
     if (decoded && !decoded.ok) {
       this.status = 'invalid-save'; this.issue = decoded.reason; this.emit(); return;
     }
+    if (decoded?.ok && decoded.migratedFrom) this.migrationSource = raw;
     this.state = decoded?.ok ? advance(decoded.state, now) : createGame(now);
     this.dirty = true;
     this.saveCurrent(now); this.emit();
@@ -75,6 +77,8 @@ export class GameController {
       const old = raw === null ? null : decodeGame(raw, savedAt);
       const backup = legacySource ?? (old?.ok && old.migratedFrom ? raw : null);
       if (backup !== null && backup !== undefined) {
+        // Also retain the original in memory if even the backup write is denied.
+        this.migrationSource = backup;
         const source = decodeGame(backup, savedAt);
         this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : DECORATIONS_MIGRATION_BACKUP_KEY, backup);
       }
@@ -150,6 +154,17 @@ export class GameController {
     } catch { return {ok: false, reason: 'ENCODING_FAILED'}; }
   }
   unreadableBackup(): string | null { return this.status === 'invalid-save' ? this.storedRaw : null; }
+  /** Explicit recovery export, without time advance, conversion or storage writes. */
+  migrationBackup(): string | null {
+    if (this.migrationSource !== null) return this.migrationSource;
+    try {
+      for (const key of [DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
+        const raw = this.storage.getItem(key);
+        if (raw !== null) return raw;
+      }
+    } catch { /* The source may still be present, but the browser denies reading it. */ }
+    return null;
+  }
 
   prepareImport(json: string, fileSize?: number): PreparedImport {
     this.cancelImport();

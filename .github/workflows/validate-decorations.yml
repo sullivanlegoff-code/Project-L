@@ -47,6 +47,7 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid" || true' EXIT
           for attempt in {1..30}; do curl -fsS "$PRAIRIE_TEST_URL" > /dev/null && break; sleep 1; done
+          node docs/stability-browser-check.cjs
           node docs/island-browser-check.cjs
           node docs/decorations-selection-check.cjs
           node docs/decorations-flow-check.cjs

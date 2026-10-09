@@ -30,6 +30,7 @@ export class MeadowScene extends Phaser.Scene {
   private rabbitViews: VisualRabbit[] = [];
   private bubbleHits: {point: Point; selection: MeadowSelection}[] = [];
   private layoutKey = '';
+  private readonly groundTexture = 'meadow-static-ground';
   private arrangement = false;
   private ghost: DecorationGhost | null = null;
   private photo = false;
@@ -59,7 +60,7 @@ export class MeadowScene extends Phaser.Scene {
     this.unsubscribe = this.controller.subscribe(snapshot => { this.current = snapshot.state; this.renderState(); });
     this.scale.on('resize', this.resize, this);
     const disposeInput = bindMeadowInput(this.game.canvas, this.view, point => this.tap(point), this.blocked, () => this.applyCamera());
-    this.events.once('shutdown', () => { this.unsubscribe?.(); disposeInput(); this.scale.off('resize', this.resize, this); });
+    this.events.once('shutdown', () => { this.unsubscribe?.(); disposeInput(); this.scale.off('resize', this.resize, this); this.textures.remove(this.groundTexture); });
   }
   recenter(): void { if (!this.cameras?.main) return; this.view.recenter(); this.applyCamera(); }
   private resize(): void { this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
@@ -166,10 +167,20 @@ export class MeadowScene extends Phaser.Scene {
   }
   private drawGround(): void {
     this.ground.removeAll(true);
+    if (this.textures.exists(this.groundTexture)) this.textures.remove(this.groundTexture);
     this.labels.removeAll(true);
     const g = this.add.graphics(); this.ground.add(g);
     const columns = this.current ? visibleColumns(this.current) : 6;
     const width = this.current ? terrainWidth(this.current) : 3;
+    // Rasterize the original vectors once per layout, not tens of thousands of
+    // polygon commands each rendered frame. Two pixels per world unit stay crisp
+    // at maximum zoom; cap the resolution for devices with smaller GPU limits.
+    const w = VISUAL.grid.originX + columns * VISUAL.grid.width + 90;
+    const h = VISUAL.grid.originY + VISUAL.grid.rows * VISUAL.grid.depth + 100;
+    const renderer = this.game.renderer;
+    const limit = renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer ? renderer.gl.getParameter(renderer.gl.MAX_TEXTURE_SIZE) as number : 4096;
+    const resolution = Math.min(2, limit / Math.max(w, h));
+    g.scaleCanvas(resolution, resolution);
     drawIslandTerrain(g, width, columns);
     if (width < columns) {
       const p = gridPoint(width + 1.4, .8);
@@ -205,6 +216,9 @@ export class MeadowScene extends Phaser.Scene {
       labelBackground.fillStyle(0xf8f4de, .96); labelBackground.fillRoundedRect(x - label.width / 2, y + 70 - label.height / 2, label.width, label.height, 7);
       this.labels.add([labelBackground, label]);
     }
+    g.generateTexture(this.groundTexture, Math.ceil(w * resolution), Math.ceil(h * resolution));
+    this.ground.addAt(this.add.image(0, 0, this.groundTexture).setOrigin(0).setScale(1 / resolution), 0);
+    g.destroy();
   }
   private drawAnimals(): void {
     this.animals.removeAll(true); this.rabbitViews = [];

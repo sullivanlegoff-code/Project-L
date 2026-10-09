@@ -1,5 +1,7 @@
 # Décorations — prévisualisation v5
 
+**Préparation stable :** fond composé en cache pour améliorer le rendu sans modifier placements, sélection ou simulation ; source brute avant migration exportable dans Paramètres ; neuf copies v4 et treize contrôles de migration/récupération, session répétée et cinq parcours tactiles. [Mesures avant/après](performance.md), [procédure de récupération](migration-v5.md). Aucune intégration de v5 au jeu normal pendant cette tâche.
+
 **Refonte de l’île — 9 octobre 2026 :** herbe tendre et dorée dégagée, contour arrondi avec relief doux, petite côte turquoise/sable en bas à gauche, chemin courbe derrière les bâtiments et fond blanc chaud. Trois nouveaux scénarios presque vides (3 × 2, 6 × 2, 9 × 2) dans Outils test, uniquement après confirmation. Les quatre scénarios précédents restent disponibles ; projection, caméra, lapins, placements, sélection/vente et v5 conservés. [Analyse de l’image, fonctionnement, captures et essai iPhone](island.md).
 
 Prévisualisation : **https://sullivanlegoff-code.github.io/Project-L/preview/decorations/**.

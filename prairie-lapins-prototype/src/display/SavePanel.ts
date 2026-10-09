@@ -84,6 +84,17 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     } catch { if (alive) say('L’export n’a pas pu démarrer. La partie est conservée ; vous pouvez réessayer.'); }
   }
   const options = {signal: abort.signal};
+  get<HTMLButtonElement>('export-migration-source').addEventListener('click', () => {
+    const raw = controller.migrationBackup();
+    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v5.'); return; }
+    const filename = `prairie-lapins-source-avant-migration-${new Date().toISOString().slice(0, 10)}.json`;
+    // Keep the original format/name explicit, even in a v5 test environment.
+    void exporter.export(raw, filename).then(outcome => {
+      if (!alive) return;
+      if (outcome === 'fallback') { pendingDownload = {json: raw, filename}; fallback.hidden = false; }
+      say(outcome === 'cancelled' ? 'Export annulé. La copie source est conservée.' : 'Export de la source brute demandé. Vérifiez sa version et gardez ce fichier ; le restaurer abandonne les changements postérieurs à sa date.');
+    }).catch(() => { if (alive) say('L’export de la source a échoué. La copie reste conservée ; réessayez.'); });
+  }, options);
   exportButton.addEventListener('click', () => { void exportCurrent(); }, options);
   beforeImport.addEventListener('click', () => { void exportCurrent(); }, options);
   fallback.addEventListener('click', () => {

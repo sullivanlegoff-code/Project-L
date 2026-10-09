@@ -1,5 +1,7 @@
 # Comptes en pause — future prise en charge des sauvegardes v5
 
+La préparation de stabilité vérifie la migration locale v4 → v5 et produit un artefact futur à quatre routes. Les comptes sont toujours construits depuis `3e70d9e` en v4 et doivent refuser v5. Le préflight construit seulement les sources figées, sans appel au backend, email ou modification Supabase. [Procédure locale et limites](migration-v5.md). La migration du serveur/client comptes reste un chantier distinct.
+
 La refonte de l’île du 9 octobre 2026 est une présentation locale, sans nouveau champ de sauvegarde ni migration. Les sources et le build v4 des comptes restent figés ; aucun SQL, email ou réglage Supabase modifié. [Détails de l’île](island.md).
 
 La prévisualisation Décorations est locale et séparée. La branche `feature/private-cloud-saves`, sa PR en brouillon et son build publié v4 sont préservés. Aucun SQL Supabase, email, template, compte ou migration hébergée modifié dans le chantier Décorations.

@@ -1,0 +1,59 @@
+name: Préparer v5 sans publier
+on:
+  push:
+    branches: [feature/meadow-decoration]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v5-preflight
+  cancel-in-progress: true
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: prairie-lapins-prototype
+    env:
+      VITE_BUILD_REVISION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: prairie-lapins-prototype/package-lock.json
+      - run: npm ci
+      - run: npm run build:pages -- "$RUNNER_TEMP/future-v5-pages"
+      - name: Préserver la prévisualisation Décorations
+        run: |
+          npm run build:decorations -- --outDir "$RUNNER_TEMP/future-v5-pages/preview/decorations" --emptyOutDir
+          printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/future-v5-pages/preview/decorations/build-revision.txt"
+          node scripts/verify-decorations.mjs "$RUNNER_TEMP/future-v5-pages/preview/decorations"
+      - name: Lire les comptes v4 figés sans accéder au backend
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 3e70d9e8cbe9228c63c73db007fff199199d6470
+          path: accounts-v4
+          persist-credentials: false
+      - name: Construire les comptes v4 séparés
+        working-directory: accounts-v4/prairie-lapins-prototype
+        env:
+          VITE_BUILD_REVISION: 3e70d9e8cbe9228c63c73db007fff199199d6470
+          VITE_SUPABASE_URL: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          npm ci
+          npm run build:account-preview -- --outDir "$RUNNER_TEMP/future-v5-pages/preview/accounts" --emptyOutDir
+          printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/future-v5-pages/preview/accounts/build-revision.txt"
+      - name: Vérifier les quatre routes futures
+        run: node scripts/verify-v5-integration.mjs "$RUNNER_TEMP/future-v5-pages" "$VITE_BUILD_REVISION"
+      - name: Conserver l’artefact pour revue, jamais pour déploiement
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v5-integration-preflight-${{ github.sha }}
+          path: ${{ runner.temp }}/future-v5-pages
+          retention-days: 30
