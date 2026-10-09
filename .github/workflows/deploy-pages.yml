@@ -20,10 +20,13 @@ jobs:
       run:
         working-directory: prairie-lapins-prototype
     env:
-      VITE_BUILD_REVISION: ${{ github.sha }}
+      VITE_BUILD_REVISION: ae31131f8318ffbd69794f20e57c1050694afb49
     steps:
       - name: Lire la branche de livraison
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ae31131f8318ffbd69794f20e57c1050694afb49
+          persist-credentials: false
       - name: Installer Node.js 24
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -67,7 +70,7 @@ jobs:
       - name: Lire les sources figées de la prévisualisation Décorations v5
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 5feff8dcebd9dbcea331a312e95b51f807da2975
+          ref: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
           path: decorations-preview-source
           persist-credentials: false
       - name: Installer et vérifier les décorations séparées
@@ -79,7 +82,7 @@ jobs:
       - name: Construire Décorations sans client de comptes
         working-directory: decorations-preview-source/prairie-lapins-prototype
         env:
-          VITE_BUILD_REVISION: 5feff8dcebd9dbcea331a312e95b51f807da2975
+          VITE_BUILD_REVISION: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
         run: |
           npm run build:decorations -- --outDir "$RUNNER_TEMP/prairie-pages/preview/decorations" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/decorations/build-revision.txt"
@@ -108,3 +111,15 @@ jobs:
       - name: Publier le site HTTPS
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Lire le contrôle de révision public
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - name: Vérifier les quatre révisions et fonctionnalités réellement servies
+        env:
+          STABLE_REVISION: ae31131f8318ffbd69794f20e57c1050694afb49
+          ACCOUNTS_REVISION: 3e70d9e8cbe9228c63c73db007fff199199d6470
+          DECORATIONS_REVISION: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
+        run: node .github/scripts/verify-published.mjs
