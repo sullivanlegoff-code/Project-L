@@ -1,8 +1,14 @@
-# Fondations techniques v6 — livraison en validation
+# Fondations techniques v6 — livrées
 
-Corrections ciblées des crédits numériques, allocations et échéances, commandes depuis un onglet obsolète, confirmations après remplacement, nettoyage des listeners et du cache anti-double pression. Aucun contenu, équilibrage ou visuel ajouté ; format v6 et clés conservés. [Architecture, invariants et limites inter-onglets](technical-foundations.md).
+Jeu normal et laboratoire : application `49cab78a87e4b68ca7f8ec90390980e391846cb4`, [PR nº 4 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/4). Publication et contrôles des quatre routes réussis. [Preuve durable](validation/foundations-v6-2026-10-09.json) · [Architecture, invariants et limites inter-onglets](technical-foundations.md).
 
-Vérification locale : 582 tests dans 16 fichiers, TypeScript et builds normal/laboratoire réussis. Trois traces reproductibles de 180 commandes vérifient les invariants après chaque étape. La CI et les parcours Chromium doivent encore confirmer la livraison ; aucun essai Safari physique annoncé.
+Corrections des crédits numériques, allocations et échéances avant paiement ou tirage ; arrêt des commandes d’un onglet obsolète avec export de sa copie en mémoire ; confirmations liées au remplacement réel de la partie ; nettoyage des listeners et expiration du cache anti-double pression ; conservation de la source illisible exportable lors d’une notification externe. Aucun contenu, équilibrage ou visuel ajouté ; format v6, migrations, clés et cache du terrain conservés.
+
+[CI finale réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37989448529) : 582 tests / 16 fichiers, TypeScript, builds normal/laboratoire, migration et gestes tactiles. Trois traces reproductibles de 180 commandes avec vérification des invariants, sauvegardes, tirages et équivalence temporelle à chaque étape. [Captures et rapports CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37989442388/artifacts/11644646696).
+
+[Publication et essais publics réussis](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37990079926) : neuf groupes normal, sept laboratoire et trois sessions/conflits, sans injection dans les builds. Les révisions réellement servies sont vérifiées dans le JSON public et le JavaScript applicatif : normal/laboratoire `49cab78`, Décorations v5 `85fe255`, Comptes v4 `3e70d9e`. [Preuves publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37990079926/artifacts/11644393022).
+
+Chromium ne remplace pas Safari sur iPhone. Lecture/comparaison/écriture de localStorage ne constitue pas une transaction entre onglets : utiliser un seul onglet actif par partie. Le [parcours iPhone](technical-foundations.md#vérifications-reproductibles) comporte trois étapes. Comptes email et Supabase toujours en pause.
 
 ## Livraison précédente v6 — île à neuf parcelles et objets extérieurs
 
