@@ -61,6 +61,13 @@ describe('technical foundation regressions', () => {
   const saved = raw; expect(stale.retrySave().ok).toBe(false); expect(raw).toBe(saved);
   stale.dispose(); winner.dispose(); expect(callbacks.size).toBe(0);
  });
+ it('retains recovery of an unreadable source after an external storage event', () => {
+  let raw = '{bad'; let changed = () => {};
+  const storage: SaveStorage = {getItem:()=>raw,setItem:(_key,value)=>{raw=value;},onChange:(_key,listener)=>{changed=listener;return()=>{};}};
+  const c = new GameController(storage,()=>0); raw=encodeGame(createGame(0)); changed();
+  expect(c.getSnapshot().status).toBe('invalid-save'); expect(c.getSnapshot().hasUnreadableBackup).toBe(true);
+  expect(c.unreadableBackup()).toBe('{bad'); expect(c.restart(true)).toEqual({ok:false,reason:'STORAGE_CHANGED'}); c.dispose();
+ });
  it('invalidates UI generations only after successful replacement', () => {
   let raw: string | null = null, fail = false;
   const storage: SaveStorage = {getItem:()=>raw,setItem:(_key,value)=>{if(fail)throw new Error('quota');raw=value;}};

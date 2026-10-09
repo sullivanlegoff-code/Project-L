@@ -38,7 +38,7 @@ export class GameController {
     private rng: () => number = Math.random) {
     this.load();
     this.stopStorage = storage.onChange?.(SAVE_KEY, () => {
-      if (!this.disposed && this.storageChanged()) this.emit();
+      if (!this.disposed && this.state && this.storageChanged()) this.emit();
     });
   }
 

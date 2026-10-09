@@ -2,7 +2,7 @@
 
 Corrections ciblées des crédits numériques, allocations et échéances, commandes depuis un onglet obsolète, confirmations après remplacement, nettoyage des listeners et du cache anti-double pression. Aucun contenu, équilibrage ou visuel ajouté ; format v6 et clés conservés. [Architecture, invariants et limites inter-onglets](technical-foundations.md).
 
-Vérification locale : 581 tests dans 16 fichiers, TypeScript et builds normal/laboratoire réussis. Trois traces reproductibles de 180 commandes vérifient les invariants après chaque étape. La CI et les parcours Chromium doivent encore confirmer la livraison ; aucun essai Safari physique annoncé.
+Vérification locale : 582 tests dans 16 fichiers, TypeScript et builds normal/laboratoire réussis. Trois traces reproductibles de 180 commandes vérifient les invariants après chaque étape. La CI et les parcours Chromium doivent encore confirmer la livraison ; aucun essai Safari physique annoncé.
 
 ## Livraison précédente v6 — île à neuf parcelles et objets extérieurs
 
