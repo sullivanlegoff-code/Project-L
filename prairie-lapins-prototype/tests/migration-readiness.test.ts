@@ -32,7 +32,7 @@ describe('representative v4 migration and recovery readiness',()=>{
   const raw=JSON.stringify(v4(createGame(0))),st=storage(raw);new GameController(st.store,()=>0);
   const persisted=st.data.get(SAVE_KEY)!;
   expect(st.data.get(SAVE_KEY)).not.toBe(raw);expect(JSON.parse(persisted).version).toBe(6);
-  const c=new GameController(st.store,()=>0);st.data.set(SAVE_KEY,raw);expect(c.perform({type:'buyDecoration',catalogId:'wildflowers'}).ok).toBe(true);expect(c.getSnapshot().status).toBe('conflict');expect(st.data.get(SAVE_KEY)).toBe(raw);
+  const c=new GameController(st.store,()=>0);st.data.set(SAVE_KEY,raw);expect(c.perform({type:'buyDecoration',catalogId:'wildflowers'})).toEqual({ok:false,reason:'STORAGE_CHANGED'});expect(c.getSnapshot().status).toBe('conflict');expect(st.data.get(SAVE_KEY)).toBe(raw);
  });
  it('invalid data is never migrated or written, and remains exportable',()=>{const st=storage('{bad');const c=new GameController(st.store,()=>0);expect(st.writes).toEqual([]);expect(c.unreadableBackup()).toBe('{bad');expect(c.retrySave().ok).toBe(false)});
 });

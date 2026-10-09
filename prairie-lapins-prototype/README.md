@@ -32,3 +32,5 @@ npm run build:pages -- /tmp/prairie-pages
 `?dev=1` active les outils seulement en développement ; le normal publié les exclut. `npm run build:lab` produit le laboratoire distinct. Règles dans `src/simulation`, contrôleur dans `src/application`, formats/migrations dans `src/persistence`, parcelles dans `src/config/land.ts`. Visuels des espèces liés aux identifiants stables dans `src/ui/portraits.ts`.
 
 Historique v5 : [PR nº 2 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/2), [preuve de publication](docs/validation/production-v5-2026-10-09.json). Les anciens rapports documentent leur étape, pas les règles actuelles.
+
+Fondations techniques : [architecture, invariants, stockage et vérifications](docs/technical-foundations.md).

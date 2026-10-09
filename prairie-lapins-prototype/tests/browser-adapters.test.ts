@@ -5,6 +5,15 @@ import {fileExporter} from '../src/display/fileExport';
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('browser storage adapter', () => {
+  it('filters external events by save key and storage area, and releases its listener', () => {
+    const target = Object.assign(new EventTarget(), {localStorage: {}}); vi.stubGlobal('window', target);
+    const notify = vi.fn(), stop = browserStorage().onChange!('save', notify);
+    const changed = (key: string | null, area = target.localStorage) => target.dispatchEvent(Object.assign(new Event('storage'), {key, storageArea: area}));
+    changed('unrelated'); changed('save', {}); expect(notify).not.toHaveBeenCalled();
+    changed('save'); changed(null); expect(notify).toHaveBeenCalledTimes(2);
+    stop(); changed('save'); expect(notify).toHaveBeenCalledTimes(2);
+  });
+
   it('does not read the localStorage property until an operation is attempted', () => {
     const target = {}; Object.defineProperty(target, 'localStorage', {get() { throw new Error('SecurityError'); }});
     vi.stubGlobal('window', target);

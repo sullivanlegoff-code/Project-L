@@ -49,6 +49,16 @@ function place(ui: GameUI, kind: 'farm' | 'nest' | 'nursery' | 'enclosure', x: n
 }
 
 describe('decoration UI transactions (simulated DOM; Phaser verified separately)', () => {
+  it('closes stale confirmations when the controller replaces the game directly', () => {
+    const {controller} = setup(); document.getElementById('open-shop')!.click(); button('Décorations').click();
+    const card = panel().querySelector<HTMLElement>('[data-catalog="wildflowers"]')!;
+    button('Acheter · 20 pattes', card).click();
+    const stale = button('Confirmer', document.getElementById('game-dialog')!);
+    expect(controller.restart(true).ok).toBe(true);
+    expect((document.getElementById('game-dialog') as HTMLDialogElement).open).toBe(false);
+    stale.click(); expect(state(controller).pattes).toBe(300); expect(state(controller).decorations).toEqual([]);
+  });
+
   const shop = () => {document.getElementById('open-shop')!.click(); button('Décorations').click();};
   const catalog = (id: string) => panel().querySelector<HTMLElement>(`[data-catalog="${id}"]`)!;
   it('confirms one purchase under double pressure and cancellation preserves the purchased exemplar', () => {

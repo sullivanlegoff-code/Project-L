@@ -3,7 +3,7 @@ import {HABITAT_TYPES, habitatLevel, habitatPrice, type HabitatLevel} from '../c
 import {habitatEntryReason} from './habitats';
 import {DAILY_MISSIONS, DAILY_MISSION_IDS, MAIN_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {dailyCycleStart, recordMissionAction} from './missions';
-import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
+import {BALANCE, HEARTS, HOUR, growthDuration, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
 import {emptyBuilding} from '../state/initial';
 import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal} from '../state/types';
 import {chooseBirth} from './breeding';
@@ -28,7 +28,12 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
   if (!validTime(now)) return {ok: false, state, reason: 'INVALID_TIME'};
   const s = advance(state, now);
   const time = s.lastSimulatedAt;
-  const id = (prefix: string) => `${prefix}-${s.nextId++}`;
+  const allocation = () => requireRule(Number.isSafeInteger(s.nextId + 1), 'RESOURCE_LIMIT');
+  const id = (prefix: string) => { allocation(); return `${prefix}-${s.nextId++}`; };
+  const credit = (resource: 'pattes' | 'grass' | 'hearts', amount: number) => {
+    requireRule(Number.isSafeInteger(s[resource] + amount), 'RESOURCE_LIMIT');
+    s[resource] += amount;
+  };
   const pay = (cost: number) => {
     if (quoteOnly) throw new Quoted(cost); // Every non-monetary condition has already been checked.
     if (!payment) { requireRule(s.pattes >= cost, 'NOT_ENOUGH_PATTES'); s.pattes -= cost; return; }
@@ -55,8 +60,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
   };
   const busy = (rabbitId: string) => s.buildings.some(b => b.breeding && b.breeding.endsAt > time && b.breeding.parents.includes(rabbitId));
   const reward = (r: Reward) => {
-    requireRule(Number.isSafeInteger(s[r.resource] + r.amount), 'RESOURCE_LIMIT');
-    s[r.resource] += r.amount; value = r.amount;
+    credit(r.resource, r.amount); value = r.amount;
   };
   let value: string | number | undefined;
   try {
@@ -70,8 +74,8 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         const index = s.decorations.findIndex(d => d.id === command.id);
         requireRule(index >= 0, 'NOT_FOUND');
         const amount = decorationResalePrice(s.decorations[index].catalogId);
-        requireRule(Number.isSafeInteger(s.pattes + amount), 'RESOURCE_LIMIT');
-        s.decorations.splice(index, 1); s.pattes += amount; value = amount; break;
+        credit('pattes', amount);
+        s.decorations.splice(index, 1); value = amount; break;
       }
       case 'placeDecoration': {
         const reason = decorationPlacementReason(s, command.id, command.location); requireRule(!reason, reason ?? 'INVALID_CHOICE');
@@ -105,8 +109,8 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       }
       case 'claimHearts': {
         requireRule(time >= s.nextHeartGiftAt, 'NOT_READY');
-        requireRule(Number.isSafeInteger(time + HEARTS.giftInterval) && Number.isSafeInteger(s.hearts + HEARTS.gift), 'INVALID_TIME');
-        s.hearts += HEARTS.gift; s.nextHeartGiftAt = time + HEARTS.giftInterval; value = HEARTS.gift; break;
+        requireRule(Number.isSafeInteger(time + HEARTS.giftInterval), 'INVALID_TIME');
+        credit('hearts', HEARTS.gift); s.nextHeartGiftAt = time + HEARTS.giftInterval; value = HEARTS.gift; break;
       }
       case 'accelerate': {
         const quote = quoteAcceleration(s, command.id, command.stage, time);
@@ -126,7 +130,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         requireRule(config.maximum === null || s.buildings.filter(b => b.kind === command.kind).length < config.maximum, 'BUILDING_LIMIT');
         const habitatType = command.habitatType ?? 'universal';
         requireRule(HABITAT_TYPES.includes(habitatType) && (command.kind === 'enclosure' || command.habitatType === undefined), 'INVALID_CHOICE');
-        cell(command.x, command.y); pay(command.kind === 'enclosure' ? habitatPrice(habitatType) : config.price);
+        cell(command.x, command.y); allocation(); pay(command.kind === 'enclosure' ? habitatPrice(habitatType) : config.price);
         value = id('building'); s.buildings.push(emptyBuilding(value, command.kind, command.x, command.y, habitatType)); break;
       }
       case 'upgradeHabitat': {
@@ -142,7 +146,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       case 'buyRabbit': {
         requireRule(Object.hasOwn(SPECIES, command.species), 'INVALID_CHOICE');
         const price = SPECIES[command.species].price;
-        requireRule(price !== null, 'INVALID_CHOICE'); room(command.enclosureId, command.species); pay(price);
+        requireRule(price !== null, 'INVALID_CHOICE'); room(command.enclosureId, command.species); allocation(); pay(price);
         value = id('rabbit');
         s.rabbits.push({id: value, species: command.species, affection: BALANCE.minAffection, enclosureId: command.enclosureId});
         if (!s.discovered.includes(command.species)) s.discovered.push(command.species);
@@ -155,17 +159,18 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       }
       case 'collectIncome': {
         const b = building(command.id, 'enclosure'); value = Math.floor(b.incomeUnits / HOUR);
-        b.incomeUnits -= value * HOUR; s.pattes += value; break;
+        credit('pattes', value); b.incomeUnits -= value * HOUR; break;
       }
       case 'startOrder': {
         const b = building(command.id, 'farm'); requireRule(!b.order, 'BUSY');
         requireRule(Object.hasOwn(ORDERS, command.recipe), 'INVALID_CHOICE');
-        const recipe = ORDERS[command.recipe]; pay(recipe.cost);
+        const recipe = ORDERS[command.recipe];
+        requireRule(Number.isSafeInteger(time + recipe.duration), 'INVALID_TIME'); pay(recipe.cost);
         b.order = {recipe: command.recipe, startedAt: time, endsAt: time + recipe.duration}; break;
       }
       case 'collectOrder': {
         const b = building(command.id, 'farm'); requireRule(b.order && b.order.endsAt <= time, 'NOT_READY');
-        value = ORDERS[b.order.recipe].grass; s.grass += value; b.order = null; break;
+        value = ORDERS[b.order.recipe].grass; credit('grass', value); b.order = null; break;
       }
       case 'feed': {
         const rabbit = s.rabbits.find(r => r.id === command.id); requireRule(rabbit, 'NOT_FOUND');
@@ -181,6 +186,9 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         const nest = s.buildings.find(b => b.kind === 'nest');
         requireRule(nest && s.buildings.some(b => b.kind === 'nursery'), 'MISSING_BUILDING');
         requireRule(!nest.breeding, 'BUSY');
+        allocation();
+        const longestGrowth = Math.max(...(Object.keys(SPECIES) as SpeciesId[]).map(growthDuration));
+        requireRule(Number.isSafeInteger(time + BALANCE.breedingDuration + longestGrowth), 'INVALID_TIME');
         pay(BALANCE.breedingCost);
         const roll = rng(); requireRule(Number.isFinite(roll) && roll >= 0 && roll < 1, 'INVALID_RANDOM');
         const result = chooseBirth(s, parents[0].species, parents[1].species, roll, parents[0].affection, parents[1].affection);
