@@ -10,7 +10,7 @@ export type ControllerIssue = DecodeFailure | 'READ_FAILED' | 'WRITE_FAILED' | '
 export type Operation = {ok: true} | {ok: false; reason: ControllerIssue};
 export type SaveStatus = 'saved' | 'unsaved' | 'read-error' | 'write-error' | 'invalid-save' | 'conflict';
 export interface Snapshot {
-  state: GameState | null; status: SaveStatus; issue: ControllerIssue | null;
+  generation: number; state: GameState | null; status: SaveStatus; issue: ControllerIssue | null;
   lastSavedAt: number | null; dirty: boolean; hasUnreadableBackup: boolean; storedDecorations: number;
 }
 export interface ImportSummary {hearts: number; pattes: number; grass: number; rabbits: number; discovered: GameState['discovered']}
@@ -30,15 +30,22 @@ export class GameController {
   private pendingImport: {token: number; state: GameState; storedDecorations: number; legacyJson?: string} | null = null;
   private storedDecorations = 0;
   private migrationSource: string | null = null;
+  private generation = 0;
+  private stopStorage: (() => void) | undefined;
   private listeners = new Set<(snapshot: Snapshot) => void>();
 
   constructor(private storage: SaveStorage, private clock: () => number = Date.now,
-    private rng: () => number = Math.random) { this.load(); }
+    private rng: () => number = Math.random) {
+    this.load();
+    this.stopStorage = storage.onChange?.(SAVE_KEY, () => {
+      if (!this.disposed && this.state && this.storageChanged()) this.emit();
+    });
+  }
 
   get storageScope(): 'normal' | 'laboratory' { return this.storage.scope ?? 'normal'; }
 
   getSnapshot(): Snapshot {
-    return {storedDecorations: this.storedDecorations, state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
+    return {generation: this.generation, storedDecorations: this.storedDecorations, state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
       lastSavedAt: this.lastSavedAt, dirty: this.dirty,
       hasUnreadableBackup: this.status === 'invalid-save' && this.storedRaw !== null};
   }
@@ -66,6 +73,15 @@ export class GameController {
     this.saveCurrent(now); this.emit();
   }
 
+  /** Best-effort stale-tab detection. Web Storage read/write is not a transaction. */
+  private storageChanged(): boolean {
+    if (this.status === 'conflict') return true;
+    let raw: string | null;
+    try { raw = this.storage.getItem(SAVE_KEY); } catch { return false; }
+    if (!this.hasRead || raw === this.storedRaw) return false;
+    this.status = 'conflict'; this.issue = 'STORAGE_CHANGED'; this.dirty = true;
+    this.cancelImport(); return true;
+  }
   private write(candidate: GameState, savedAt: number, legacySource?: string): Operation {
     let json: string;
     try { json = encodeGame(candidate); }
@@ -110,13 +126,15 @@ export class GameController {
   }
   refresh(): void {
     if (this.disposed || !this.state) return;
+    if (this.storageChanged()) { this.emit(); return; }
     const now = this.clock();
     if (this.updateTime(now)) this.saveCurrent(now);
     this.emit();
   }
-  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED'} {
+  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'STORAGE_CHANGED'} {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};
     if (!this.state) return {ok: false, reason: 'NO_GAME'};
+    if (this.storageChanged()) { this.emit(); return {ok: false, reason: command.type === 'sellDecoration' ? 'SALE_NOT_SAVED' : 'STORAGE_CHANGED'}; }
     const now = this.clock();
     const changed = this.updateTime(now);
     const result = act(this.state!, command, now, this.rng);
@@ -191,6 +209,7 @@ export class GameController {
     // Persist first. Failure cannot replace the current game or change its save status.
     const result = this.write(candidate, now, this.pendingImport.legacyJson);
     if (!result.ok) return result;
+    this.generation++;
     this.state = candidate; this.dirty = false; this.status = 'saved'; this.issue = null;
     this.storedDecorations = this.pendingImport?.storedDecorations ?? 0; this.cancelImport(); this.emit(); return {ok: true};
   }
@@ -200,8 +219,9 @@ export class GameController {
     const now = this.clock(); const candidate = createGame(now);
     const result = this.write(candidate, now);
     if (!result.ok) return result;
+    this.generation++;
     this.state = candidate; this.dirty = false; this.status = 'saved'; this.issue = null;
-    this.cancelImport(); this.emit(); return {ok: true};
+    this.storedDecorations = 0; this.cancelImport(); this.emit(); return {ok: true};
   }
-  dispose(): void { this.disposed = true; this.cancelImport(); this.listeners.clear(); }
+  dispose(): void { this.disposed = true; this.stopStorage?.(); this.stopStorage = undefined; this.cancelImport(); this.listeners.clear(); }
 }

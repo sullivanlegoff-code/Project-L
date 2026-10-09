@@ -33,7 +33,8 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
   } catch { /* optional test clock; normal storage is never consulted */ }
   const clock = () => Date.now() + offset;
   // Prefix EVERY controller key, including migration backups. No fallback to normal.
-  const storage: SaveStorage = {scope: 'laboratory', getItem: key => base.getItem(prefix + key), setItem: (key, value) => base.setItem(prefix + key, value)};
+  const storage: SaveStorage = {scope: 'laboratory', getItem: key => base.getItem(prefix + key), setItem: (key, value) => base.setItem(prefix + key, value),
+    ...(base.onChange ? {onChange: (key: string, listener: () => void) => base.onChange!(prefix + key, listener)} : {})};
   function advanceTime(controller: GameController, minutes: number): TestResult {
     if (controller.storageScope !== 'laboratory') return {ok: false, reason: 'NOT_TEST_SESSION'};
     if (!(TIME_STEPS as readonly number[]).includes(minutes)) return {ok: false, reason: 'INVALID_TEST_VALUE'};

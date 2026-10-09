@@ -95,6 +95,8 @@ export class ActionGate {
   run(key: string, action: () => void): boolean {
     const now = this.clock();
     if (this.running || now - (this.last.get(key) ?? -Infinity) < 350) return false;
+    // Entries only matter during the double-tap window, not for the whole session.
+    for (const [previous, at] of this.last) if (now - at >= 350) this.last.delete(previous);
     this.running = true; this.last.set(key, now);
     try { action(); } finally { this.running = false; }
     return true;

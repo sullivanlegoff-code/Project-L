@@ -75,7 +75,9 @@ export class GameUI {
     document.getElementById('tutorial-toggle')!.addEventListener('click', () => { preferences.set({tutorial: !preferences.value.tutorial, tutorialDone: false}); this.renderPreferences(); this.renderTutorial(); }, options);
     this.dialog.addEventListener('cancel', () => { this.dialog.replaceChildren(); }, options);
     this.unsubscribe = controller.subscribe(snapshot => {
+      const replaced = this.snapshot && snapshot.generation !== this.snapshot.generation;
       this.snapshot = snapshot;
+      if (replaced) this.onReplacement();
       if (!snapshot.state) this.view = {kind: 'settings'};
       const warning = document.getElementById('save-warning')!;
       warning.hidden = snapshot.status === 'saved';
@@ -753,5 +755,5 @@ export class GameUI {
     });
     this.button(this.tutorial, 'Masquer', () => { this.preferences.set({tutorial: false}); this.renderPreferences(); this.renderTutorial(); }, null, true);
   }
-  dispose(): void { this.confirmationGeneration++; this.unsubscribe(); this.abort.abort(); cancelAnimationFrame(this.frame); clearTimeout(this.toastTimer); this.sounds.dispose(); }
+  dispose(): void { this.confirmationGeneration++; if (this.dialog.open) this.dialog.close(); this.dialog.replaceChildren(); this.unsubscribe(); this.abort.abort(); cancelAnimationFrame(this.frame); clearTimeout(this.toastTimer); this.sounds.dispose(); }
 }

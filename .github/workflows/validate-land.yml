@@ -1,7 +1,7 @@
-name: Vérifier île carrée v6
+name: Vérifier les fondations et le terrain v6
 on:
   push:
-    branches: [feature/square-island]
+    branches: [feature/square-island, feature/technical-foundations]
   pull_request:
     branches: [production]
   workflow_dispatch:
@@ -61,6 +61,7 @@ jobs:
           for attempt in {1..30}; do curl -fsS http://127.0.0.1:5185/Project-L/ > /dev/null && break; sleep 1; done
           node docs/production-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
           node docs/laboratory-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
+          node docs/foundations-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
