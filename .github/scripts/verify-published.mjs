@@ -31,7 +31,7 @@ async function check() {
     assert.ok(scripts.includes(`version:${format}`), `Wrong save format on ${route}`);
     for (const child of new Set([...scripts.matchAll(/["'](\.\/tools-[^"']+\.js)["']/g)].map(m => m[1]))) scripts += await read(new URL(child, scriptUrl));
     if (format === 5) {
-      for (const marker of ['decoration-placement-actions', 'decorationStart', 'decorationDense', 'sellDecoration', 'setDecorationSelection', 'SALE_NOT_SAVED', 'prairie-lapins.preview.decorations.']) assert.ok(scripts.includes(marker), `Missing decoration feature ${marker}`);
+      for (const marker of ['decoration-placement-actions', 'decorationStart', 'decorationDense', 'islandStart', 'islandExpanded', 'islandFull', 'Terrain réservé', 'sellDecoration', 'setDecorationSelection', 'SALE_NOT_SAVED', 'prairie-lapins.preview.decorations.']) assert.ok(scripts.includes(marker), `Missing decoration feature ${marker}`);
       for (const marker of ['supabase.co', 'signInWithOtp']) assert.ok(!scripts.includes(marker), `Online client in decorations: ${marker}`);
     }
     report.push({url, revision, saveFormat: format, html: 200, application: 200, featuresChecked: true});

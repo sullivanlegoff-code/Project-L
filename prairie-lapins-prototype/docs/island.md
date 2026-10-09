@@ -1,5 +1,7 @@
 # Île chaleureuse — prévisualisation Décorations
 
+**Publication vérifiée :** sources Décorations `db01f39215d2023b893fe266a68a2bbe1630b556`, [workflow 37922205251 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37922205251). Contrôle HTTP des quatre fichiers de révision et scripts réellement servis réussi le 9 octobre 2026 à 11:13 UTC. Jeu/laboratoire `ae31131` v4, comptes `3e70d9e` v4, Décorations `db01f39` v5. Terrain/scénarios d’île, sélection/vente et absence du client de comptes contrôlés. [Preuve publique](validation/publication-island-2026-10-09.json). Ce contrôle HTTP depuis Actions ne remplace pas un essai Safari physique.
+
 Chantier repris le 9 octobre 2026 depuis la branche `feature/meadow-decoration`, PR nº 2 ouverte en brouillon, tête vérifiée `a64bb0e5949efc2e8522a822b10b0c9c8b6a955c`. Application auparavant publiée : `f87f265176e9deae2215bae780ea6d22cbb0484a`. La sélection directe et la vente restent présentes. [Prévisualisation](https://sullivanlegoff-code.github.io/Project-L/preview/decorations/).
 
 ## Référence observée et adaptation
@@ -45,7 +47,7 @@ Captures durables dans [images/island-2026-10-09](images/island-2026-10-09/) : [
 
 ## Limites et essai iPhone
 
-Ces captures et interactions sont des essais Chromium réels sur Linux, pas Safari physique. La mesure du stress extrême sur ce runner ne permet pas de revendiquer une cadence iPhone. L’illustration conserve la projection du jeu et ne reproduit pas une isométrie mathématique stricte. La petite côte reste décorative, sans ressource ni outil de chemin.
+Ces captures et interactions sont des essais Chromium réels sur Linux, pas Safari physique. Stress local extrême : 512 exemplaires, 254 images posées, 180 images mesurées, moyenne 4,64 images/s et p95 267 ms dans ce cloud ; images réutilisées et 14 textures de décorations conservées. Ce scénario reste lent ici. Cette mesure ne permet pas de revendiquer une cadence iPhone ni une comparaison avec une exécution historique sur un autre runner. L’illustration conserve la projection du jeu et ne reproduit pas une isométrie mathématique stricte. La petite côte reste décorative, sans ressource ni outil de chemin.
 
 Sur iPhone en paysage : ouvrir la preview, vérifier la révision dans Paramètres ; charger volontairement une île presque vide dans Outils test, glisser vers la côte ; regarder l’extension complète ; charger la démonstration, toucher un objet, déplacer/annuler puis vendre/annuler ; vérifier les sept lapins et entrer/sortir du mode photo. Garder un export avant de remplacer sa partie de test.
 
