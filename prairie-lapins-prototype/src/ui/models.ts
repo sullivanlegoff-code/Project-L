@@ -1,11 +1,18 @@
 import {habitatPrice, type HabitatType} from '../config/habitats';
 import {terrainWidth} from '../simulation/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
-import {breedingPool} from '../simulation/breeding';
+import {breedingPool, recipeMatches} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
+import {decorationsInCell} from '../simulation/decorations';
 
 export const BUILDING_NAMES: Record<BuildingKind, string> = {enclosure: 'Enclos', farm: 'Ferme', nest: 'Nid', nursery: 'Nurserie'};
-export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED', string> = {
+export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED', string> = {
+  SALE_NOT_SAVED: 'La vente n’a pas pu être sauvegardée. Objet et pattes conservés. Réessayez après avoir résolu le problème de sauvegarde.',
+  DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
+  DECORATION_OVERLAP: 'Cette empreinte chevauche une autre décoration.',
+  DECORATION_BLOCKS_BUILDING: 'Des décorations occupent cette case. Rangez-les avant de placer le bâtiment.',
+  INVALID_DECORATION_SLOT: 'Choisissez un des trois emplacements décoratifs d’un habitat.',
+  DECORATION_SLOT_OCCUPIED: 'Cet emplacement contient déjà un objet. Rangez-le d’abord ; il restera dans votre inventaire.',
   TYPE_INCOMPATIBLE: 'Type incompatible.', MAX_HABITAT_LEVEL: 'Niveau maximal atteint.', MISSING_EXTENSION: 'Achetez d’abord la première extension.',
   ALREADY_CLAIMED: 'Cette récompense a déjà été réclamée.', CYCLE_EXPIRED: 'Ce cycle a expiré. Consultez les nouvelles missions.', RESOURCE_LIMIT: 'Le solde est trop élevé pour recevoir cette récompense.',
   NOT_ENOUGH_HEARTS: 'Pas assez de cœurs. Vous pouvez continuer en attendant ou en récoltant des pattes.',
@@ -43,6 +50,7 @@ export function placementReason(s: GameState, placement: Placement): string | nu
   const width = terrainWidth(s);
   if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y) || cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= BALANCE.height) return REFUSALS.INVALID_CELL;
   if (s.buildings.some(b => b.id !== placement.movingId && b.x === cell.x && b.y === cell.y)) return REFUSALS.CELL_OCCUPIED;
+  if (decorationsInCell(s, cell.x, cell.y).length) return REFUSALS.DECORATION_BLOCKS_BUILDING;
   if (placement.movingId) return s.buildings.some(b => b.id === placement.movingId) ? null : REFUSALS.NOT_FOUND;
   return buildingReason(s, placement.kind, false, placement.habitatType);
 }
@@ -52,15 +60,19 @@ export function nurseryView(s: GameState, now: number): {stage: 'empty'} | {stag
   if (baby.readyAt > now) return {stage: 'growing', readyAt: baby.readyAt};
   return {stage: 'ready', species: baby.birth.species, birthId: baby.birth.id};
 }
-export function collectionView(s: GameState) {
-  return SPECIES_IDS.map(id => s.discovered.includes(id) ? {known: true as const, species: id, name: SPECIES[id].name} : {known: false as const, name: '???'});
+export type CollectionFilter = {type?: RabbitType; rarity?: Rarity; discovery?: 'known' | 'unknown'};
+export function collectionView(s: GameState, filter: CollectionFilter = {}) {
+  return SPECIES_IDS.filter(id => (!filter.type || SPECIES[id].types.includes(filter.type)) &&
+    (!filter.rarity || SPECIES[id].rarity === filter.rarity) &&
+    (!filter.discovery || s.discovered.includes(id) === (filter.discovery === 'known'))).map(id => s.discovered.includes(id) ? {known: true as const, species: id, name: SPECIES[id].name} : {known: false as const, name: '???'});
 }
 export const TYPE_NAMES: Record<RabbitType, string> = {paille: 'paille', neige: 'neige', terre: 'terre', feu: 'feu', metal: 'métal', vol: 'vol', 'arc-en-ciel': 'arc-en-ciel'};
-export const RARITY_NAMES: Record<Rarity, string> = {common: 'Commun', uncommon: 'Peu commun', rare: 'Rare'};
+export const RARITY_NAMES: Record<Rarity, string> = {common: 'Commun', uncommon: 'Peu commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire'};
 export const typeNames = (types: RabbitType[]) => types.map(type => TYPE_NAMES[type]).join(' + ');
 /** A repeating decimal is shown alongside its exact fraction, never as an exact rounded percent. */
 export function probabilityLabel(weight: number, total: number): string {
   if (weight * 100 % total === 0) return `${weight * 100 / total} %`;
+  if (weight * 10000 % total === 0) return `${String(weight * 100 / total).replace('.', ',')} %`;
   const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
   const divisor = gcd(weight, total);
   return `${weight / divisor}/${total / divisor} (≈ ${(weight * 100 / total).toFixed(2).replace('.', ',')} %)`;
@@ -81,8 +93,7 @@ export function recipeBook(s: GameState, now: number) {
     const pairs = [];
     for (let i = 0; i < s.rabbits.length; i++) for (let j = i + 1; j < s.rabbits.length; j++) {
       const a = s.rabbits[i], b = s.rabbits[j];
-      const types = new Set([...SPECIES[a.species].types, ...SPECIES[b.species].types]);
-      if (!config.types.every(type => types.has(type))) continue;
+      if (!recipeMatches(species, a.species, b.species)) continue;
       const feeding = [a, b].filter(r => r.affection < minAffection).map(r => r.id);
       const busy = parentBusy(s, a.id, now) || parentBusy(s, b.id, now);
       const pool = breedingPool(s, a.species, b.species, a.affection, b.affection);

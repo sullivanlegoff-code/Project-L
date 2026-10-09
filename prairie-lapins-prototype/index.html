@@ -14,12 +14,16 @@
       </button>
       <nav aria-label="Navigation principale">
         <button id="recenter-view" type="button" class="icon secondary" aria-label="Recentrer la vue" title="Recentrer la vue">⌖</button>
+        <button id="open-photo" type="button" class="icon secondary" aria-label="Mode photo" title="Mode photo"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6L9 3H15L16 6H20Q22 6 22 8V19Q22 21 20 21H4Q2 21 2 19V8Q2 6 4 6Z"/><circle cx="12" cy="13" r="4"/><path d="M18 9H20"/></svg></button>
         <button id="open-shop" type="button">Boutique</button>
         <button id="open-collection" type="button">Collection</button>
         <button id="open-settings" type="button">Paramètres</button>
       </nav>
     </header>
     <button id="open-missions" type="button" class="secondary">Missions <span id="missions-badge" hidden aria-hidden="true"></span></button>
+    <div id="meadow-actions"><button id="open-arrange" type="button" class="secondary">Aménager</button><button id="open-preview-tools" type="button" class="secondary" hidden>Outils test</button></div>
+    <div id="arrange-banner" hidden><span>AMÉNAGEMENT · aperçu avant confirmation</span><button id="exit-arrange" class="secondary" type="button">Quitter</button></div>
+    <button id="photo-return" type="button" class="secondary" hidden>Retour au jeu · prévisualisation v5</button>
     <button id="save-warning" type="button" hidden>Vérifier la sauvegarde</button>
     <div id="toast" role="status" hidden></div>
     <span id="dev-badge" hidden>MODE TEST — PARTIE SÉPARÉE</span>
@@ -38,6 +42,7 @@
           <button id="retry-save" type="button" hidden>Réessayer la sauvegarde</button>
           <button id="restart-game" type="button" class="secondary">Recommencer avec confirmation</button>
           <button id="export-unreadable" type="button" class="secondary" hidden>Exporter le contenu protégé</button>
+          <button id="export-migration-source" type="button" class="secondary">Exporter la source avant migration</button>
           <button id="download-fallback" type="button" hidden>Télécharger le JSON</button>
         </div>
         <input id="import-file" type="file" accept=".json,application/json" hidden>

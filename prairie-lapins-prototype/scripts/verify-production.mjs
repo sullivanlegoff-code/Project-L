@@ -38,4 +38,5 @@ for (const path of files) {
   }
 }
 if (laboratory) for (const marker of ['prairie-lapins.development.', 'dev-time-', 'dev-grant-', 'dev-scenario-']) assert.ok(scripts.includes(marker), `Missing laboratory tool: ${marker}`);
+if (laboratory) for (const marker of ['islandStart', 'islandExpanded', 'islandFull', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense', 'Collection — quinze espèces et recettes']) assert.ok(scripts.includes(marker), `Missing laboratory scenario: ${marker}`);
 console.log(`${laboratory ? 'Laboratory' : 'Normal production'} checked: ${files.length} files; base ${base}; isolated tools and no local-server URLs.`);

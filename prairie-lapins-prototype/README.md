@@ -1,8 +1,16 @@
-# Prairie de lapins — consolidation visuelle des habitats
+# Livraison normale v5 — 9 octobre 2026
 
-Le dossier à utiliser est **`Project-L/prairie-lapins-prototype`**, issu des sources récentes de `prairie-lapins-habitats-v4.zip`. Il contient les six habitats spécialisés, leurs trois niveaux, la deuxième extension et les sauvegardes **v4** avec migrations v1/v2/v3. `Project-L/V1.0.4` est la livraison historique des missions : sauvegardes v3 et 230 tests. Le nom du dossier ne désigne donc pas le format de sauvegarde.
+Le jeu principal est désormais la référence : [jeu normal](https://sullivanlegoff-code.github.io/Project-L/), [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/). Intégration de la PR nº 2 dans `production` autorisée après validation iPhone par le joueur. Quinze espèces, neuf recettes, carnet et filtres, île validée, douze décorations avec sélection/déplacement/rangement/vente, Aménagement, photo et cache statique. Aucune nouvelle illustration de lapin ; règles et équilibrage inchangés.
 
-**Retour iPhone reçu le 8 octobre 2026 : « tout fonctionne bien pendant mon essai ».** Aucun détail de scénario n'a été communiqué ; ce retour est consigné sans élargir ce qui a été testé.
+Normal et laboratoire construits depuis la révision de livraison, sauvegardes v5. Aucun outil de test dans le normal. Le laboratoire propose les onze scénarios, dont « Collection — quinze espèces et recettes », dans une partie et une horloge séparées avec bandeau permanent. La prévisualisation Décorations conserve ses sources `85fe255` et son stockage distinct. Comptes figés `3e70d9e` en v4 ; branche comptes et PR nº 1 préservées, email/Supabase/SQL en pause.
+
+Les quatre routes sont publiées dans un artefact unique, chaque révision lisible dans Paramètres et `build-revision.txt`. Tests : 544 tests, TypeScript, builds contrôlés ; parcours normal/laboratoire sans injection ni sauvegarde préchargée et contrôle HTTPS après publication. La preuve finale et la révision servie sont consignées après déploiement dans `docs/validation/production-v5-2026-10-09.json`.
+
+Avant de rouvrir : exporter si souhaité la partie depuis sa version actuelle, fermer les anciens onglets, puis ouvrir le jeu normal. Migration v4→v5 sur les mêmes clés avec secours ; aucune nouvelle dotation, récompense ou remise à zéro. Aucun transfert automatique depuis une prévisualisation ou le laboratoire. Un transfert volontaire passe par export/import après export de la destination qu’il remplacera ; un fichier v5 ne doit jamais être importé dans les comptes v4. Ne pas effacer les données Safari. Voir [migration-v5.md](docs/migration-v5.md).
+
+Le retour iPhone confirme le bon fonctionnement général et valide le passage au jeu principal ; aucun détail de scénario, modèle ou version Safari supplémentaire n’est déduit. Les bilans anciens ci-dessous sont historiques.
+
+---
 
 ## Publication HTTPS
 
@@ -175,4 +183,4 @@ Les parcours HTML utilisent un **DOM simulé** : boutons, textes, confirmations 
 
 Vérifier d'abord la nouvelle disposition de cinq/sept lapins avec le [parcours visuel](docs/visual-iphone-test.md), puis les destinations compatibles, les détails des niveaux et le déplacement vers les dix-huit cases avec le [guide des habitats](docs/habitats-iphone-test.md). La caméra précédemment validée garde ses valeurs de zoom et de projection ; seules les limites latérales s'adaptent et un agencement est ajouté pour plus de trois occupants.
 
-La version visuelle est maintenant publiée sur HTTPS, sans ajout de lapin, décoration indépendante ou mini-jeu. Prochaine étape : vérifier le site dans Safari sur iPhone, avec Windows éteint et en données mobiles, puis examiner les résultats avant d'ajouter du contenu. La PWA et le fonctionnement hors connexion restent ultérieurs.
+La version stable est publiée sur HTTPS. La nouvelle personnalisation v5 se teste uniquement dans sa prévisualisation séparée ; le retour visuel Safari du joueur décidera de son intégration. Comptes/email en pause ; PWA et fonctionnement hors connexion restent ultérieurs.

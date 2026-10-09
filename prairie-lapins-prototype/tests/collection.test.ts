@@ -34,9 +34,9 @@ function memory(raw: string) {
   return {data, storage};
 }
 
-describe('eleven species and acquisition', () => {
-  it('contains six base types, six shop commons and five reproduction recipes, without rainbow', () => {
-    expect(SPECIES_IDS).toHaveLength(11); expect(SHOP_SPECIES).toHaveLength(6); expect(RECIPE_SPECIES).toHaveLength(5);
+describe('fifteen species and acquisition', () => {
+  it('contains six base types, six shop commons and nine reproduction recipes, without rainbow', () => {
+    expect(SPECIES_IDS).toHaveLength(15); expect(SHOP_SPECIES).toHaveLength(6); expect(RECIPE_SPECIES).toHaveLength(9);
     expect(new Set(SPECIES_IDS.flatMap(id => SPECIES[id].types))).toEqual(new Set(['paille', 'neige', 'terre', 'feu', 'metal', 'vol']));
     for (const id of SHOP_SPECIES) expect(SPECIES[id]).toMatchObject({price: 80, rarity: 'common'});
   });
@@ -67,7 +67,7 @@ describe('exact breeding pools', () => {
       expect(breedingOdds(a, b, 4, 20)).toEqual(breedingOdds(a, b, 2, 2));
     }
   });
-  it('checks all 66 unordered species pairs at four affection combinations for symmetry, total and admissible draws', () => {
+  it('checks all 120 unordered species pairs at four affection combinations for symmetry, total and admissible draws', () => {
     for (let i = 0; i < SPECIES_IDS.length; i++) for (let j = i; j < SPECIES_IDS.length; j++) {
       const a = SPECIES_IDS[i], b = SPECIES_IDS[j];
       for (const [levelA, levelB] of [[2, 2], [2, 4], [4, 2], [4, 4]]) {
@@ -95,11 +95,11 @@ describe('exact breeding pools', () => {
     expect(low.pityFailures).toBe(0);
   });
   it('normalizes a four-type pool while retaining eligible historical hybrids', () => {
-    expect(breedingWeights('lunettes', 'feu-glace', 4, 4)).toEqual({paille: 40, neige: 40, brumelin: 20, feu: 40, 'belier-gris': 40, lunettes: 20, 'feu-glace': 20});
+    expect(breedingWeights('lunettes', 'feu-glace', 4, 4)).toEqual({paille: 40, neige: 40, brumelin: 20, feu: 40, 'belier-gris': 40, lunettes: 20, 'feu-glace': 20, bouee: 20});
     expect(breedingWeights('lunettes', 'feu-glace', 2, 4)).toEqual({paille: 40, neige: 40, brumelin: 20, feu: 40, 'belier-gris': 40});
     const odds = oddsView(createGame(0), 'lunettes', 'feu-glace', 4, 4);
-    expect(odds.entries.filter(e => e.weight === 100 / 11)).toHaveLength(3);
-    expect(odds.entries.find(e => e.description === 'feu + neige · Rare')?.probability).toBe('1/11 (≈ 9,09 %)');
+    expect(odds.entries.filter(e => e.weight === 100 / 12)).toHaveLength(4);
+    expect(odds.entries.find(e => e.description === 'feu + neige · Rare')?.probability).toBe('1/12 (≈ 8,33 %)');
     expect(probabilityLabel(40, 180)).toBe('2/9 (≈ 22,22 %)');
   });
 });
@@ -140,13 +140,13 @@ describe('extended guarantee and persisted rare births', () => {
     expect(s.pityFailures).toBe(9); expect(s.buildings.find(b => b.breeding)!.breeding!.birth.guaranteed).toBe(false);
     expect(pendingDiscoveries(s)).toEqual([]);
   });
-  it('splits a theoretical pool of three undiscovered recipes equally after affection filtering', () => {
+  it('splits a theoretical pool of four undiscovered recipes equally after affection filtering', () => {
     const s = createGame(0); s.pityFailures = 9;
     const pool = breedingPool(s, 'lunettes', 'feu-glace', 4, 4);
-    expect(pool.weights).toEqual({brumelin: 1, lunettes: 1, 'feu-glace': 1}); expect(pool.total).toBe(3);
-    expect([1/6, 1/2, 5/6].map(roll => chooseBirth(s, 'lunettes', 'feu-glace', roll, 4, 4).species)).toEqual(['brumelin', 'lunettes', 'feu-glace']);
+    expect(pool.weights).toEqual({brumelin: 1, lunettes: 1, 'feu-glace': 1, bouee: 1}); expect(pool.total).toBe(4);
+    expect([1/8, 3/8, 5/8, 7/8].map(roll => chooseBirth(s, 'lunettes', 'feu-glace', roll, 4, 4).species)).toEqual(['brumelin', 'lunettes', 'feu-glace', 'bouee']);
     expect(breedingPool(s, 'lunettes', 'feu-glace', 4, 2).weights).toEqual({brumelin: 1});
-    expect(oddsView(s, 'lunettes', 'feu-glace', 4, 4).entries.every(e => e.probability === '1/3 (≈ 33,33 %)')).toBe(true);
+    expect(oddsView(s, 'lunettes', 'feu-glace', 4, 4).entries.every(e => e.probability === '25 %')).toBe(true);
   });
   it('starts the full rare growth only when an occupied nursery becomes available', () => {
     let s = advance(run(couple('feu', 'neige'), breed), 20 * MINUTE);
@@ -159,14 +159,14 @@ describe('extended guarantee and persisted rare births', () => {
 });
 
 describe('catalogue, notebook, visuals and compatibility', () => {
-  it('shows eleven entries and five recipes without revealing an unknown portrait or pending outcome', () => {
+  it('shows fifteen entries and nine recipes without revealing an unknown portrait or pending outcome', () => {
     const s = couple('feu', 'neige');
     const a = run(s, breed, 0, 0), b = run(s, breed, 0, .99);
     expect(a.buildings.find(x => x.breeding)!.breeding!.birth.species).not.toBe(b.buildings.find(x => x.breeding)!.breeding!.birth.species);
-    expect(collectionView(a)).toEqual(collectionView(b)); expect(collectionView(a)).toHaveLength(11);
+    expect(collectionView(a)).toEqual(collectionView(b)); expect(collectionView(a)).toHaveLength(15);
     // Equal public progression gives the same notebook whatever the secret birth.
     a.pityFailures = b.pityFailures;
-    expect(recipeBook(a, 0)).toEqual(recipeBook(b, 0)); expect(recipeBook(a, 0)).toHaveLength(5);
+    expect(recipeBook(a, 0)).toEqual(recipeBook(b, 0)); expect(recipeBook(a, 0)).toHaveLength(9);
     const growing = advance(b, 20 * MINUTE);
     expect(nurseryView(growing, 20 * MINUTE)).toEqual({stage: 'growing', readyAt: 50 * MINUTE});
     expect(nurseryView(growing, 50 * MINUTE)).toMatchObject({stage: 'ready', species: 'feu-glace'});
@@ -184,7 +184,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
     expect(recipeBook(createGame(0), 0).find(r => r.species === 'lunettes')!.pairs).toEqual([]);
   });
   it('defines distinct original portraits and the six requested visual markers', () => {
-    expect(new Set(SPECIES_IDS.map(id => portrait(id))).size).toBe(11);
+    expect(new Set(SPECIES_IDS.map(id => portrait(id))).size).toBe(15);
     expect(COATS.feu.flame).toBe(true); expect(COATS['belier-gris']).toMatchObject({lop: true, metal: true});
     expect(COATS.volant.wings).toBe(true); expect(COATS.lunettes.glasses).toBe(true);
     expect(COATS.perroquet).toMatchObject({wings: true, plumage: true}); expect(COATS['feu-glace']).toMatchObject({flame: true, frost: true});
@@ -193,26 +193,27 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   it('loads and imports an actual previous-build v2 export with its reserved birth and 7 hearts unchanged', () => {
     const raw = JSON.stringify(previous), parsed = decodeGame(raw, previous.lastSimulatedAt); expect(parsed.ok).toBe(true); if (!parsed.ok) return;
     const expected = {...withUniversalHabitats(previous), missions: createMissions(previous as GameState, previous.lastSimulatedAt)};
-    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(4);
+    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(5);
     const saved = memory(raw), rng = vi.fn(() => 0), c = new GameController(saved.storage, () => previous.lastSimulatedAt, rng);
     expect(c.getSnapshot().state).toEqual(expected); expect(rng).not.toHaveBeenCalled();
     const preview = c.prepareImport(raw); if (!preview.ok) throw Error(preview.reason);
     expect(c.confirmImport(preview.token, true)).toEqual({ok: true}); expect(c.getSnapshot().state).toEqual(expected);
     expect(pendingDiscoveries(c.getSnapshot().state!)).toEqual(['brumelin']);
-    expect(collectionView(c.getSnapshot().state!)).toHaveLength(11);
+    expect(collectionView(c.getSnapshot().state!)).toHaveLength(15);
   });
   it('keeps v1 migration available and rejects unknown identifiers', () => {
     const {hearts: _hearts, nextHeartGiftAt: _gift, ...rest} = previous;
     const migrated = decodeGame(JSON.stringify({...rest, version: 1}), previous.lastSimulatedAt);
-    expect(migrated.ok && migrated.state).toMatchObject({version: 4, hearts: 12, discovered: previous.discovered, buildings: previous.buildings});
+    expect(migrated.ok && migrated.state).toMatchObject({version: 5, hearts: 12, discovered: previous.discovered, buildings: previous.buildings});
     const invalid = structuredClone(previous); invalid.rabbits[0].species = 'arc-en-ciel';
     expect(decodeGame(JSON.stringify(invalid))).toEqual({ok: false, reason: 'INVALID_STATE'});
   });
-  it('imports and exports a full eleven-species current collection without new hearts or changed identifiers', () => {
+  it('imports and exports a full fifteen-species current collection without new hearts or changed identifiers', () => {
     const parsed = decodeGame(JSON.stringify(testSave), testSave.lastSimulatedAt); if (!parsed.ok) throw Error(parsed.reason);
     const complete = parsed.state;
     const pens = complete.buildings.filter(b => b.kind === 'enclosure');
-    complete.rabbits = SPECIES_IDS.map((species, index) => ({id: `rabbit-${complete.nextId++}`, species, affection: 1, enclosureId: pens[Math.floor(index / 3)].id}));
+    for (const pen of pens) pen.habitat!.level = 3;
+    complete.rabbits = SPECIES_IDS.map((species, index) => ({id: `rabbit-${complete.nextId++}`, species, affection: 1, enclosureId: pens[index % pens.length].id}));
     complete.discovered = [...SPECIES_IDS]; complete.hearts = 7; complete.pityFailures = 0; complete.missions = createMissions(complete, complete.lastSimulatedAt);
     const current = createGame(complete.lastSimulatedAt), saved = memory(encodeGame(current));
     const c = new GameController(saved.storage, () => complete.lastSimulatedAt);
@@ -226,7 +227,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   });
   it('accepts the documented development scenario and preserves its gift schedule on import', () => {
     const result = decodeGame(JSON.stringify(testSave), testSave.lastSimulatedAt); expect(result.ok).toBe(true); if (!result.ok) return;
-    expect(result.state.version).toBe(4); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
+    expect(result.state.version).toBe(5); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
     expect(result.state.rabbits.every(r => r.affection === 2)).toBe(true);
     const {missions, ...fields} = withoutHabitats(result.state);
     expect({...fields, version: 2}).toEqual(testSave); expect(missions.daily.referenceAt).toBe(testSave.lastSimulatedAt);

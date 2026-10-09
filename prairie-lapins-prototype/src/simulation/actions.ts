@@ -2,12 +2,14 @@ import {HABITAT_TYPES, LAND, habitatLevel, habitatPrice, type HabitatLevel} from
 import {habitatEntryReason, terrainWidth} from './habitats';
 import {DAILY_MISSIONS, DAILY_MISSION_IDS, MAIN_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {dailyCycleStart, recordMissionAction} from './missions';
-import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
+import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
 import {emptyBuilding} from '../state/initial';
 import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal} from '../state/types';
 import {chooseBirth} from './breeding';
 import {advance, validTime} from './time';
 import {complementCost, quoteAcceleration} from './hearts';
+import {DECORATIONS, decorationResalePrice} from '../config/decorations';
+import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from './decorations';
 
 class Quoted extends Error { constructor(public price: number) { super(); } }
 class Denied extends Error { constructor(public reason: Refusal) { super(reason); } }
@@ -49,6 +51,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
     requireRule(Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 &&
       x < terrainWidth(s) && y < BALANCE.height, 'INVALID_CELL');
     requireRule(!s.buildings.some(b => b.id !== exclude && b.x === x && b.y === y), 'CELL_OCCUPIED');
+    requireRule(!decorationsInCell(s, x, y).length, 'DECORATION_BLOCKS_BUILDING');
   };
   const busy = (rabbitId: string) => s.buildings.some(b => b.breeding && b.breeding.endsAt > time && b.breeding.parents.includes(rabbitId));
   const reward = (r: Reward) => {
@@ -58,6 +61,28 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
   let value: string | number | undefined;
   try {
     switch (command.type) {
+      case 'buyDecoration': {
+        const reason = purchaseDecorationReason(s, command.catalogId); requireRule(!reason, reason ?? 'INVALID_CHOICE');
+        pay(DECORATIONS[command.catalogId].price); value = id('decoration');
+        s.decorations.push({id: value, catalogId: command.catalogId, location: {kind: 'inventory'}}); break;
+      }
+      case 'sellDecoration': {
+        const index = s.decorations.findIndex(d => d.id === command.id);
+        requireRule(index >= 0, 'NOT_FOUND');
+        const amount = decorationResalePrice(s.decorations[index].catalogId);
+        requireRule(Number.isSafeInteger(s.pattes + amount), 'RESOURCE_LIMIT');
+        s.decorations.splice(index, 1); s.pattes += amount; value = amount; break;
+      }
+      case 'placeDecoration': {
+        const reason = decorationPlacementReason(s, command.id, command.location); requireRule(!reason, reason ?? 'INVALID_CHOICE');
+        s.decorations.find(d => d.id === command.id)!.location = structuredClone(command.location); break;
+      }
+      case 'storeDecorationsInCell': {
+        requireRule(Number.isInteger(command.x) && Number.isInteger(command.y) && command.x >= 0 && command.y >= 0 && command.x < terrainWidth(s) && command.y < 2, 'INVALID_CELL');
+        const blocking = decorationsInCell(s, command.x, command.y);
+        for (const d of s.decorations) if (blocking.includes(d.id)) d.location = {kind: 'inventory'};
+        value = blocking.length; break;
+      }
       case 'claimMainMission': {
         requireRule(Object.hasOwn(MAIN_MISSIONS, command.id), 'INVALID_CHOICE');
         requireRule(!s.missions.claimed.includes(command.id), 'ALREADY_CLAIMED');
@@ -172,7 +197,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         s.rabbits.push({id: birth.id, species: birth.species, affection: BALANCE.minAffection, enclosureId: command.enclosureId});
         if (!s.discovered.includes(birth.species)) {
           s.discovered.push(birth.species);
-          if (SPECIES[birth.species].recipe !== null) s.pityFailures = 0;
+          if (GUARANTEE_SPECIES.includes(birth.species)) s.pityFailures = 0;
         }
         nursery.baby = null; break;
       }

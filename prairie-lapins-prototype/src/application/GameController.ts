@@ -1,4 +1,4 @@
-import {HABITATS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
+import {HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
 import {act, advance, createGame, decodeGame, encodeGame} from '../simulation';
 import {MAX_JSON_LENGTH, type DecodeResult} from '../persistence/json';
 import {MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, SAVE_KEY, type SaveStorage} from '../persistence/storage';
@@ -28,6 +28,7 @@ export class GameController {
   private disposed = false;
   private importSequence = 0;
   private pendingImport: {token: number; state: GameState; legacyJson?: string} | null = null;
+  private migrationSource: string | null = null;
   private listeners = new Set<(snapshot: Snapshot) => void>();
 
   constructor(private storage: SaveStorage, private clock: () => number = Date.now,
@@ -57,6 +58,7 @@ export class GameController {
     if (decoded && !decoded.ok) {
       this.status = 'invalid-save'; this.issue = decoded.reason; this.emit(); return;
     }
+    if (decoded?.ok && decoded.migratedFrom) this.migrationSource = raw;
     this.state = decoded?.ok ? advance(decoded.state, now) : createGame(now);
     this.dirty = true;
     this.saveCurrent(now); this.emit();
@@ -75,8 +77,10 @@ export class GameController {
       const old = raw === null ? null : decodeGame(raw, savedAt);
       const backup = legacySource ?? (old?.ok && old.migratedFrom ? raw : null);
       if (backup !== null && backup !== undefined) {
+        // Also retain the original in memory if even the backup write is denied.
+        this.migrationSource = backup;
         const source = decodeGame(backup, savedAt);
-        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : HABITATS_MIGRATION_BACKUP_KEY, backup);
+        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : DECORATIONS_MIGRATION_BACKUP_KEY, backup);
       }
       this.storage.setItem(SAVE_KEY, json);
     }
@@ -108,12 +112,23 @@ export class GameController {
     if (this.updateTime(now)) this.saveCurrent(now);
     this.emit();
   }
-  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED'} {
+  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED'} {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};
     if (!this.state) return {ok: false, reason: 'NO_GAME'};
     const now = this.clock();
     const changed = this.updateTime(now);
     const result = act(this.state!, command, now, this.rng);
+    // A sale commits ownership and payment together, only after the complete save succeeds.
+    if (result.ok && command.type === 'sellDecoration') {
+      const saved = this.write(result.state, now);
+      if (!saved.ok) {
+        this.status = saved.reason === 'STORAGE_CHANGED' ? 'conflict' : saved.reason === 'READ_FAILED' ? 'read-error' : 'write-error';
+        this.issue = saved.reason; this.dirty = true; this.emit();
+        return {ok: false, reason: 'SALE_NOT_SAVED'};
+      }
+      this.state = result.state; this.status = 'saved'; this.issue = null; this.dirty = false;
+      this.emit(); return structuredClone(result);
+    }
     if (result.ok) { this.state = result.state; this.dirty = true; }
     if (changed || result.ok) this.saveCurrent(now);
     this.emit();
@@ -139,6 +154,17 @@ export class GameController {
     } catch { return {ok: false, reason: 'ENCODING_FAILED'}; }
   }
   unreadableBackup(): string | null { return this.status === 'invalid-save' ? this.storedRaw : null; }
+  /** Explicit recovery export, without time advance, conversion or storage writes. */
+  migrationBackup(): string | null {
+    if (this.migrationSource !== null) return this.migrationSource;
+    try {
+      for (const key of [DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
+        const raw = this.storage.getItem(key);
+        if (raw !== null) return raw;
+      }
+    } catch { /* The source may still be present, but the browser denies reading it. */ }
+    return null;
+  }
 
   prepareImport(json: string, fileSize?: number): PreparedImport {
     this.cancelImport();

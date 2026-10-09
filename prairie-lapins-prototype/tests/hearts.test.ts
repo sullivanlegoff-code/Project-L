@@ -48,7 +48,7 @@ const current = (c: GameController) => c.getSnapshot().state!;
 
 describe('hearts initialization, migration and gifts', () => {
   it('creates 12 hearts and a first gift exactly 24 hours after creation', () => {
-    expect(createGame(123)).toMatchObject({version: 4, hearts: 12, nextHeartGiftAt: 123 + DAY});
+    expect(createGame(123)).toMatchObject({version: 5, hearts: 12, nextHeartGiftAt: 123 + DAY});
   });
   it('migrates all v1 fields including guaranteed results, reservations and income fractions', () => {
     let s = prepared(); s.pityFailures = 9; s = run(s, breed, 17);
@@ -237,7 +237,7 @@ describe('v1/v2 imports and exports', () => {
     const preview = c.prepareImport(encodeGame(s)); if (!preview.ok) throw new Error(preview.reason);
     expect(preview.summary.hearts).toBe(3); expect(c.confirmImport(preview.token, true)).toEqual({ok: true});
     expect(current(c).hearts).toBe(3); const exported = c.exportGame(); if (!exported.ok) throw new Error(exported.reason);
-    expect(JSON.parse(exported.json)).toMatchObject({version: 4, hearts: 3});
+    expect(JSON.parse(exported.json)).toMatchObject({version: 5, hearts: 3});
   });
   it('migrates v1 at confirmation time, with cancellation and write failures preserving the active save', () => {
     const memory = store(); let now = 0; const c = new GameController(memory.storage, () => now);

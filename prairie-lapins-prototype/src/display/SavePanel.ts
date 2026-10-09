@@ -6,7 +6,7 @@ import {fileExporter} from './fileExport';
 export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   INVALID_JSON: 'Ce fichier ne contient pas un JSON lisible.',
   INVALID_STATE: 'Cette sauvegarde est incohérente ou incomplète.',
-  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3 ou 4.',
+  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3, 4 ou 5.',
   FILE_TOO_LARGE: 'Le fichier dépasse la limite de 1 000 000 octets pour l’import.',
   READ_FAILED: 'Le navigateur ne permet pas de lire la sauvegarde. Aucun contenu existant n’a été écrasé.',
   WRITE_FAILED: 'L’écriture locale a échoué. Vérifiez l’espace disponible et les autorisations du navigateur.',
@@ -18,7 +18,7 @@ export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   ENCODING_FAILED: 'La partie ne peut pas être encodée. Elle reste disponible en mémoire.',
 };
 
-export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}, environment: {test: boolean} = {test: false}): () => void {
+export function mountSavePanel(controller: GameController, onReplacement: () => void = () => {}, environment: {test: boolean; decorationPreview?: boolean} = {test: false}): () => void {
   const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const status = get('save-status'), savedAt = get('saved-at'), notice = get('save-notice');
   const exportButton = get<HTMLButtonElement>('export-game'), importButton = get<HTMLButtonElement>('import-game');
@@ -29,12 +29,13 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
   const beforeImport = get<HTMLButtonElement>('export-before-import');
   const exporter = fileExporter();
-  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, 'prairie-lapins-MODE-TEST-') : name;
+  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, environment.decorationPreview ? 'prairie-lapins-PREVIEW-DECORATIONS-v5-MODE-TEST-' : 'prairie-lapins-MODE-TEST-') : name;
   if (environment.test) {
     exportButton.textContent = 'Exporter la partie de test';
     importButton.textContent = 'Importer dans la partie de test';
     restart.textContent = 'Recommencer la partie de test';
     get('import-warning').textContent = 'Cet import remplace seulement la partie du laboratoire. La sauvegarde normale reste intacte. Les exports MODE-TEST peuvent contenir du temps avancé et des ressources ajoutées.';
+    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v4 sont migrés en v5 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v5-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v5 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
   }
   const abort = new AbortController();
   let importToken: number | null = null;
@@ -83,6 +84,17 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     } catch { if (alive) say('L’export n’a pas pu démarrer. La partie est conservée ; vous pouvez réessayer.'); }
   }
   const options = {signal: abort.signal};
+  get<HTMLButtonElement>('export-migration-source').addEventListener('click', () => {
+    const raw = controller.migrationBackup();
+    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v5.'); return; }
+    const filename = `prairie-lapins-source-avant-migration-${new Date().toISOString().slice(0, 10)}.json`;
+    // Keep the original format/name explicit, even in a v5 test environment.
+    void exporter.export(raw, filename).then(outcome => {
+      if (!alive) return;
+      if (outcome === 'fallback') { pendingDownload = {json: raw, filename}; fallback.hidden = false; }
+      say(outcome === 'cancelled' ? 'Export annulé. La copie source est conservée.' : 'Export de la source brute demandé. Vérifiez sa version et gardez ce fichier ; le restaurer abandonne les changements postérieurs à sa date.');
+    }).catch(() => { if (alive) say('L’export de la source a échoué. La copie reste conservée ; réessayez.'); });
+  }, options);
   exportButton.addEventListener('click', () => { void exportCurrent(); }, options);
   beforeImport.addEventListener('click', () => { void exportCurrent(); }, options);
   fallback.addEventListener('click', () => {

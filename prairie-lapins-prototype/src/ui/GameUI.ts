@@ -4,8 +4,11 @@ import {habitatStats, habitatName, habitatEntryReason, nextExtension} from '../s
 import {MAIN_MISSION_IDS, MAIN_MISSIONS, DAILY_MISSION_IDS, DAILY_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {availableMissionRewards, mainProgress, dailyCycleStart, dailyCycleEnd, cycleIndexAt} from '../simulation/missions';
 import type {GameController, Snapshot} from '../application/GameController';
-import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId} from '../config/balance';
-import type {Command, GameState, PattesCommand, TimedStage} from '../state/types';
+import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId, type RabbitType} from '../config/balance';
+import type {Command, DecorationLocation, GameState, PattesCommand, TimedStage} from '../state/types';
+import {DECORATIONS, DECORATION_IDS, decorationResalePrice, type DecorationId} from '../config/decorations';
+import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from '../simulation/decorations';
+import {decorationSvg} from '../display/decorationArt';
 import {quoteComplement} from '../simulation/actions';
 import {accelerationCost, quoteAcceleration} from '../simulation/hearts';
 import {rabbitIncome} from '../simulation/time';
@@ -13,10 +16,10 @@ import type {MeadowScene, MeadowSelection} from '../display/MeadowScene';
 import {ActionGate} from './gestures';
 import {portrait} from './portraits';
 import {PreferenceStore, Sounds} from './preferences';
-import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement} from './models';
+import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, TYPE_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement, type CollectionFilter} from './models';
 
-type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits'} | {kind: 'building' | 'rabbit' | 'moveRabbit'; id: string} |
-  {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind: 'collection' | 'settings' | 'extension' | 'placement' | 'hearts' | 'recipes'} | null;
+type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits' | 'decorations'} | {kind: 'building' | 'rabbit' | 'moveRabbit' | 'decoration' | 'arrangeHabitat'; id: string} |
+  {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind: 'collection' | 'settings' | 'extension' | 'placement' | 'hearts' | 'recipes' | 'arrange' | 'decorationPlacement'} | null;
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
 }
@@ -44,12 +47,20 @@ export class GameUI {
   private frame = 0;
   private abort = new AbortController();
   private oddsOpen = true;
+  private collectionFilter: CollectionFilter = {};
   private recipeDetails = new Set<SpeciesId>();
   private lastSecond = -1;
   private confirmationGeneration = 0;
+  private arranging = false;
+  private decorationDraft: {id: string; location: DecorationLocation | null; rotation: 0 | 1; habitatId?: string} | null = null;
+  private photo = false;
   constructor(private controller: GameController, private scene: MeadowScene, private clock: () => number, private preferences: PreferenceStore) {
     this.snapshot = controller.getSnapshot(); this.sounds = new Sounds(preferences);
     const options = {signal: this.abort.signal};
+    document.getElementById('open-arrange')!.addEventListener('click', () => this.open({kind: 'arrange'}), options);
+    document.getElementById('exit-arrange')!.addEventListener('click', () => this.close(), options);
+    document.getElementById('open-photo')!.addEventListener('click', () => this.setPhoto(true), options);
+    document.getElementById('photo-return')!.addEventListener('click', () => this.setPhoto(false), options);
     document.getElementById('open-missions')!.addEventListener('click', () => this.open({kind: 'missions', tab: 'main'}), options);
     document.getElementById('recenter-view')!.addEventListener('click', () => this.scene.recenter(), options);
     document.getElementById('open-hearts')!.addEventListener('click', () => this.open({kind: 'hearts'}), options);
@@ -110,28 +121,43 @@ export class GameUI {
   open(view: NonNullable<View>): void {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
     if (this.placement && view.kind !== 'placement') { this.placement = null; this.scene.setPlacement(null); }
-    this.view = view; this.controller.refresh(); this.render();
+    const decorationView = ['arrange', 'decorationPlacement', 'decoration', 'arrangeHabitat'].includes(view.kind);
+    if (!decorationView) { this.arranging = false; this.decorationDraft = null; }
+    else if (view.kind !== 'decoration') this.arranging = true;
+    if (view.kind !== 'decorationPlacement') this.decorationDraft = null;
+    this.content.scrollTop = 0;
+    this.view = view; this.syncArrangement(); this.controller.refresh(); this.render();
   }
   close(): void {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
-    this.view = null; this.placement = null; this.scene.setPlacement(null); this.render();
+    this.view = null; this.placement = null; this.arranging = false; this.decorationDraft = null; this.scene.setPlacement(null); this.syncArrangement(); this.render();
   }
   onReplacement(): void {
     this.confirmationGeneration++;
+    this.arranging = false; this.decorationDraft = null; this.setPhoto(false); this.syncArrangement();
     this.parents = [null, null]; this.placement = null; this.scene.setPlacement(null);
     if (this.dialog.open) this.dialog.close(); this.dialog.replaceChildren();
-    this.view = {kind: 'settings'}; this.render();
+    this.view = {kind: 'settings'}; this.syncArrangement(); this.render();
   }
   select(selection: MeadowSelection): void {
+    if (this.photo) return;
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
+    if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
+    if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
+    // A ready nursery bubble opens its ordinary actions, including during arrangement.
+    if (this.arranging && selection.kind === 'building' && this.snapshot.state?.buildings.find(b => b.id === selection.id)?.kind !== 'enclosure') {
+      this.open({kind: 'building', id: selection.id}); return;
+    }
+    if (this.arranging) { this.selectDecoration(selection); return; }
+    if (selection.kind === 'decoration') { this.open({kind: 'decoration', id: selection.id}); return; }
+    if (selection.kind === 'fineCell' || selection.kind === 'habitatSlot') return;
     if (selection.kind === 'cell') {
       if (this.placement) { this.placement.cell = {x: selection.x, y: selection.y}; this.scene.setPlacement(this.placement); this.render(); }
       return;
     }
     if (selection.kind === 'empty') { this.close(); return; }
-    if (selection.kind === 'income') { this.execute({type: 'collectIncome', id: selection.id}, value => `+ ${value} pattes`); return; }
-    if (selection.kind === 'grass') { this.execute({type: 'collectOrder', id: selection.id}, value => `+ ${value} herbes`); return; }
-    this.open(selection.kind === 'extension' ? {kind: 'extension'} : {kind: selection.kind, id: selection.id});
+    if (selection.kind === 'extension') this.open({kind: 'extension'});
+    else if (selection.kind === 'building' || selection.kind === 'rabbit') this.open({kind: selection.kind, id: selection.id});
   }
   private render(): void {
     this.renderTutorial();
@@ -140,6 +166,7 @@ export class GameUI {
     badge.hidden = !available; badge.textContent = String(available);
     document.getElementById('open-missions')!.setAttribute('aria-label', available ? `Missions · ${available} récompense(s) disponible(s)` : 'Missions');
     const scroll = this.content.scrollTop;
+    const placedListOpen = this.content.querySelector<HTMLDetailsElement>('[data-placed-list]')?.open ?? false;
     const focusId = (document.activeElement as HTMLElement | null)?.dataset.focus;
     this.panel.hidden = !this.view;
     this.settings.hidden = this.view?.kind !== 'settings'; this.content.hidden = this.view?.kind === 'settings';
@@ -159,16 +186,24 @@ export class GameUI {
       case 'species': this.renderSpecies(s, this.view.species); break;
       case 'extension': this.renderExtension(s); break;
       case 'placement': this.renderPlacement(s); break;
+      case 'arrange': this.renderInventory(s); break;
+      case 'decoration': this.renderDecoration(s, this.view.id); break;
+      case 'arrangeHabitat': this.renderHabitatDecorations(s, this.view.id); break;
+      case 'decorationPlacement': this.renderDecorationPlacement(s); break;
     }
+    const placedList = this.content.querySelector<HTMLDetailsElement>('[data-placed-list]');
+    if (placedList) placedList.open = placedListOpen;
     this.content.scrollTop = scroll;
     if (focusId) for (const el of this.content.querySelectorAll<HTMLElement>('[data-focus]')) if (el.dataset.focus === focusId) el.focus({preventScroll: true});
     this.updateTimers();
   }
-  private renderShop(s: GameState, tab: 'buildings' | 'rabbits'): void {
+  private renderShop(s: GameState, tab: 'buildings' | 'rabbits' | 'decorations'): void {
     this.title.textContent = 'Boutique';
     const tabs = node('div', '', 'tabs');
     this.button(tabs, 'Bâtiments', () => this.open({kind: 'shop', tab: 'buildings'}), null, tab !== 'buildings');
     this.button(tabs, 'Lapins', () => this.open({kind: 'shop', tab: 'rabbits'}), null, tab !== 'rabbits'); this.content.append(tabs);
+    this.button(tabs, 'Décorations', () => this.open({kind: 'shop', tab: 'decorations'}), null, tab !== 'decorations');
+    if (tab === 'decorations') { this.renderDecorationShop(s); return; }
     if (tab === 'buildings') {
       const basic = habitatLevel('universal', 1);
       const utility: Record<BuildingKind, string> = {enclosure: `${basic.capacity} places · tous les types · stocke ${basic.cap} pattes`, farm: 'Produit l’herbe · maximum 2', nest: 'Deux parents · maximum 1', nursery: 'Une place pour grandir · maximum 1'};
@@ -206,10 +241,155 @@ export class GameUI {
       const cmd: Command = p.movingId ? {type: 'moveBuilding', id: p.movingId, ...p.cell} : {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell};
       this.execute(cmd, p.movingId ? 'Bâtiment déplacé.' : `${name} construit.`, () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     }, placementReason(s, p));
+    if (p.cell && decorationsInCell(s, p.cell.x, p.cell.y).length) {
+      const cell = {...p.cell}, count = decorationsInCell(s, cell.x, cell.y).length;
+      this.button(this.content, `Ranger les ${count} décoration(s) de cette case`, () => this.confirm('Libérer cette case ?', 'Les objets seront conservés dans votre inventaire. Aucun bâtiment ne sera acheté ni déplacé ; confirmez ensuite sa pose séparément.', () => this.execute({type: 'storeDecorationsInCell', ...cell}, 'Objets rangés. Vous pouvez confirmer le bâtiment.')), null, true);
+    }
     if (!p.movingId && p.cell) this.complement(this.content, s, {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell},
       `Acheter et placer : ${name} (case ${p.cell.x + 1}, ${p.cell.y + 1})`, `${name} construit.`,
       () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     this.button(this.content, 'Annuler · aucun coût', () => this.close(), null, true);
+  }
+  private syncArrangement(): void {
+    document.getElementById('arrange-banner')!.hidden = !this.arranging;
+    document.body.classList.toggle('arranging', this.arranging);
+    this.scene.setArrangement(this.arranging, this.decorationDraft ? {id: this.decorationDraft.id, location: this.decorationDraft.location} : null);
+    this.scene.setDecorationSelection(this.view?.kind === 'decoration' ? this.view.id : this.view?.kind === 'decorationPlacement' ? this.decorationDraft?.id ?? null : null);
+  }
+  private setPhoto(active: boolean): void {
+    if (this.photo === active) return;
+    if (active && document.querySelector('dialog[open]')) return;
+    if (active) this.close();
+    this.photo = active; document.body.classList.toggle('photo-mode', active);
+    document.getElementById('photo-return')!.hidden = !active; this.scene.setPhoto(active);
+  }
+  private decorationCard(id: DecorationId, description = ''): HTMLElement {
+    const card = this.card(DECORATIONS[id].name, description), icon = node('span', '', 'decoration-icon');
+    icon.innerHTML = decorationSvg(id); card.querySelector('.card-heading')!.prepend(icon); return card;
+  }
+  private renderDecorationShop(s: GameState): void {
+    this.content.append(node('p', 'Objets esthétiques, sans bonus. Chaque achat rejoint l’inventaire ; annuler sa pose ne fait pas perdre l’objet. Paiement uniquement en pattes.', 'small'));
+    for (const area of ['outside', 'habitat'] as const) {
+      this.content.append(node('h3', area === 'outside' ? 'Dans la prairie' : 'Dans les habitats'));
+      for (const id of DECORATION_IDS.filter(id => DECORATIONS[id].area === area)) {
+        const d = DECORATIONS[id], count = s.decorations.filter(owned => owned.catalogId === id).length;
+        const card = this.decorationCard(id, `${area === 'outside' ? `${d.width} × ${d.height} emplacements${d.rotates ? ' · peut tourner' : ''}` : 'Un emplacement intérieur'} · ${count} possédé(s)`);
+        card.dataset.catalog = id;
+        const reason = purchaseDecorationReason(s, id);
+        this.button(card, `Acheter · ${d.price} pattes`, () => this.confirm(`Acheter : ${d.name} ?`, `${d.price} pattes. Cet exemplaire restera dans l’inventaire si vous annulez le placement.`, () => this.execute({type: 'buyDecoration', catalogId: id}, 'Objet acheté et conservé dans votre inventaire.', () => {
+          const owned = this.controller.getSnapshot().state!.decorations.at(-1)!;
+          this.beginDecorationPlacement(owned.id);
+        })), reason ? REFUSALS[reason] : null);
+        this.content.append(card);
+      }
+    }
+    this.button(this.content, 'Ouvrir mon inventaire', () => this.open({kind: 'arrange'}), null, true);
+  }
+  private renderInventory(s: GameState): void {
+    this.title.textContent = 'Aménager · inventaire';
+    this.content.append(node('p', 'Touchez directement un objet posé pour le déplacer, le ranger ou le vendre. Glissez pour explorer, pincez pour zoomer. Toute pose demande une validation.', 'small'));
+    this.button(this.content, 'Acheter des décorations', () => this.open({kind: 'shop', tab: 'decorations'}));
+    const inventory = s.decorations.filter(d => d.location.kind === 'inventory');
+    this.content.append(node('h3', `En réserve · ${inventory.length}`));
+    if (!inventory.length) this.content.append(node('p', 'Votre inventaire est vide. Les objets rangés réapparaissent ici.', 'small'));
+    for (const d of inventory) {
+      const card = this.decorationCard(d.catalogId, `Exemplaire ${d.id.split('-')[1]} · pose gratuite`); card.dataset.decoration = d.id;
+      this.button(card, 'Placer cet exemplaire', () => this.beginDecorationPlacement(d.id));
+      this.button(card, 'Actions de cet exemplaire', () => this.open({kind: 'decoration', id: d.id}), null, true); this.content.append(card);
+    }
+    const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
+    const details = node('details'); details.dataset.placedList = ''; details.append(node('summary', `Objets posés · ${placed.length}`));
+    for (const d of placed) this.button(details, `${DECORATIONS[d.catalogId].name} · #${d.id.split('-')[1]}`, () => this.open({kind: 'decoration', id: d.id}), null, true);
+    this.content.append(details);
+    this.button(this.content, 'Quitter le mode Aménagement', () => this.close(), null, true);
+  }
+  private renderDecoration(s: GameState, id: string): void {
+    const d = s.decorations.find(d => d.id === id); if (!d) { this.finishDecorationAction(); return; }
+    this.title.textContent = DECORATIONS[d.catalogId].name;
+    this.content.append(this.decorationCard(d.catalogId, `Exemplaire ${id.split('-')[1]} · déplacements gratuits`));
+    this.button(this.content, 'Déplacer', () => this.beginDecorationPlacement(id));
+    if (DECORATIONS[d.catalogId].rotates && d.location.kind === 'outside') this.button(this.content, 'Tourner de 90°', () => { this.beginDecorationPlacement(id); this.rotateDecoration(); }, null, true);
+    this.button(this.content, 'Ranger dans l’inventaire', () => this.execute({type: 'placeDecoration', id, location: {kind: 'inventory'}}, 'Objet rangé, toujours possédé.', () => this.finishDecorationAction()), d.location.kind === 'inventory' ? 'Cet objet est déjà dans l’inventaire.' : null, true);
+    const resale = decorationResalePrice(d.catalogId);
+    this.button(this.content, `Vendre · ${resale} pattes`, () => this.confirm(
+      `Vendre ${DECORATIONS[d.catalogId].name} pour ${resale} pattes ?`,
+      'Cet exemplaire sera retiré définitivement. Aucun remboursement en cœurs.',
+      () => this.execute({type: 'sellDecoration', id}, value => `Objet vendu · + ${value} pattes.`, () => this.finishDecorationAction())
+    ), Number.isSafeInteger(s.pattes + resale) ? null : REFUSALS.RESOURCE_LIMIT, true);
+    this.button(this.content, 'Mon inventaire', () => this.open({kind: 'arrange'}), null, true);
+  }
+  private finishDecorationAction(): void {
+    if (this.arranging) this.open({kind: 'arrange'}); else this.close();
+  }
+  private beginDecorationPlacement(id: string): void {
+    const d = this.controller.getSnapshot().state?.decorations.find(d => d.id === id); if (!d) return;
+    this.arranging = true; this.placement = null; this.scene.setPlacement(null);
+    this.decorationDraft = {id, location: d.location.kind === 'inventory' ? null : structuredClone(d.location), rotation: d.location.kind === 'outside' ? d.location.rotation : 0};
+    this.content.scrollTop = 0;
+    this.view = {kind: 'decorationPlacement'}; this.syncArrangement(); this.render();
+  }
+  private rotateDecoration(): void {
+    const draft = this.decorationDraft, d = this.snapshot.state?.decorations.find(d => d.id === draft?.id);
+    if (!draft || !d || !DECORATIONS[d.catalogId].rotates) return;
+    draft.rotation = draft.rotation === 0 ? 1 : 0;
+    if (draft.location?.kind === 'outside') draft.location.rotation = draft.rotation;
+    this.syncArrangement(); this.render();
+  }
+  private selectDecoration(selection: MeadowSelection): void {
+    const draft = this.decorationDraft;
+    if (draft) {
+      if (selection.kind === 'fineCell') draft.location = {kind: 'outside', x: selection.x, y: selection.y, rotation: draft.rotation};
+      else if (selection.kind === 'habitatSlot') draft.location = {kind: 'habitat', habitatId: selection.habitatId, slot: selection.slot};
+      else if (selection.kind === 'building') draft.habitatId = selection.id;
+      this.syncArrangement(); this.render(); return;
+    }
+    if (selection.kind === 'decoration') this.open({kind: 'decoration', id: selection.id});
+    else if (selection.kind === 'building') this.open({kind: 'arrangeHabitat', id: selection.id});
+    else if (selection.kind === 'empty') { this.view = null; this.syncArrangement(); this.render(); }
+  }
+  private renderDecorationPlacement(s: GameState): void {
+    const draft = this.decorationDraft, d = s.decorations.find(d => d.id === draft?.id);
+    if (!draft || !d) { this.open({kind: 'arrange'}); return; }
+    this.title.textContent = `Placer : ${DECORATIONS[d.catalogId].name}`;
+    this.content.append(node('p', 'Touchez une destination, puis confirmez. Glissez ou pincez pour explorer sans poser.', 'small'));
+    this.content.append(node('p', d.location.kind === 'inventory' ? 'En cas d’annulation, l’objet reste dans votre inventaire.' : 'En cas d’annulation, l’objet reste à son emplacement actuel.', 'small'));
+    if (DECORATIONS[d.catalogId].area === 'habitat') {
+      this.content.append(node('p', 'Choisissez un habitat et l’un de ses trois emplacements sur les bords. Les places de lapins restent libres.', 'small'));
+      for (const home of s.buildings.filter(b => b.kind === 'enclosure')) {
+        const card = this.card(this.enclosureName(s, home.id));
+        if (draft.habitatId && draft.habitatId !== home.id) this.button(card, 'Choisir cet habitat', () => { draft.habitatId = home.id; this.render(); }, null, true);
+        else for (const slot of [0, 1, 2] as const) this.button(card, `Aperçu · emplacement ${slot + 1}`, () => this.selectDecoration({kind: 'habitatSlot', habitatId: home.id, slot}), null, true);
+        this.content.append(card);
+      }
+    }
+    if (DECORATIONS[d.catalogId].rotates) this.button(this.content, `Tourner de 90° · orientation ${draft.rotation ? 'verticale' : 'horizontale'}`, () => this.rotateDecoration(), null, true);
+    const reason = draft.location ? decorationPlacementReason(s, d.id, draft.location) : null;
+    const actions = node('div', '', 'decoration-placement-actions');
+    const status = node('p', !draft.location ? 'Choisissez une destination · aucun objet posé' : reason ? `× ${REFUSALS[reason]}` : '✓ Emplacement valide · pose gratuite', !draft.location ? 'placement-pending' : reason ? 'placement-invalid' : 'placement-valid');
+    status.setAttribute('role', 'status'); actions.append(status);
+    const choices = node('div', '', 'placement-choices'); actions.append(choices);
+    if (reason === 'DECORATION_SLOT_OCCUPIED' && draft.location?.kind === 'habitat') {
+      const loc = draft.location, blocking = s.decorations.find(other => other.location.kind === 'habitat' && other.location.habitatId === loc.habitatId && other.location.slot === loc.slot)!;
+      this.button(this.content, 'Ranger l’objet de cet emplacement', () => this.confirm('Ranger cet objet ?', 'Il sera conservé dans votre inventaire. Confirmez ensuite la nouvelle pose séparément.', () => this.execute({type: 'placeDecoration', id: blocking.id, location: {kind: 'inventory'}}, 'Ancien objet rangé.')), null, true);
+    }
+    const confirm = this.button(choices, 'Confirmer la pose · gratuit', () => {
+      if (!draft.location) return;
+      this.execute({type: 'placeDecoration', id: d.id, location: structuredClone(draft.location)}, 'Décoration installée.', () => this.open({kind: 'arrange'}));
+    });
+    confirm.disabled = !draft.location || !!reason;
+    this.button(choices, 'Annuler le placement', () => this.open({kind: 'arrange'}), null, true);
+    this.content.append(actions);
+  }
+  private renderHabitatDecorations(s: GameState, id: string): void {
+    this.title.textContent = `Aménager : ${this.enclosureName(s, id)}`;
+    this.content.append(node('p', 'Trois emplacements indépendants des lapins. Déplacer ou améliorer cet habitat conserve les objets.', 'small'));
+    for (const slot of [0, 1, 2] as const) {
+      const d = s.decorations.find(d => d.location.kind === 'habitat' && d.location.habitatId === id && d.location.slot === slot);
+      const card = this.card(`Emplacement ${slot + 1}`, d ? DECORATIONS[d.catalogId].name : 'Libre');
+      if (d) this.button(card, 'Déplacer ou ranger cet objet', () => this.open({kind: 'decoration', id: d.id}), null, true);
+      else this.button(card, 'Choisir dans l’inventaire', () => this.open({kind: 'arrange'}), null, true);
+      this.content.append(card);
+    }
   }
   private enclosureName(s: GameState, id: string): string {
     const b = s.buildings.find(b => b.id === id)!;
@@ -306,7 +486,7 @@ export class GameUI {
     const selected = this.parents.map(id => s.rabbits.find(r => r.id === id));
     this.content.append(node('p', `Parent A : ${selected[0] ? SPECIES[selected[0].species].name : 'à choisir'} · Parent B : ${selected[1] ? SPECIES[selected[1].species].name : 'à choisir'}`));
     this.content.append(node('p', '20 pattes · 20 minutes de reproduction, puis croissance en nurserie.'));
-    this.content.append(node('p', 'Les nouvelles recettes rares exigent une affection 4 chez les deux parents. Avant ce seuil, elles sont exclues du tirage ; la reproduction reste possible dès 2.', 'small'));
+    this.content.append(node('p', 'Recettes rares : affection 4 ; épiques : 6 ; Dragon : 10 chez chacun des deux parents, avec Perroquet et Feu obligatoires. Les résultats inadmissibles sont exclus ; la reproduction ordinaire reste possible dès 2.', 'small'));
     this.button(this.content, 'Carnet de reproduction', () => this.open({kind: 'recipes'}), null, true);
     if (selected[0] && selected[1]) {
       const odds = oddsView(s, selected[0].species, selected[1].species, selected[0].affection, selected[1].affection);
@@ -316,7 +496,7 @@ export class GameUI {
       details.addEventListener('toggle', () => { if (details.isConnected) this.oddsOpen = details.open; }); this.content.append(details);
       this.content.append(node('p', odds.guaranteed ? 'Cette tentative garantit une espèce de reproduction encore inconnue, à parts égales entre les recettes admissibles.' : odds.eligible ? 'Cette paire est admissible à la garantie.' : 'Cette paire ne fait pas avancer la garantie.', 'badge'));
     }
-    this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit une espèce de reproduction inconnue admissible, à parts égales s’il y en a plusieurs. Un résultat inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
+    this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit une des six recettes ordinaires inconnues admissibles, à parts égales s’il y en a plusieurs. Un résultat ordinaire inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
     let reason: string | null = selected[0] && selected[1] ? (rabbitAvailability(s, selected[0].id, this.now()) ?? rabbitAvailability(s, selected[1].id, this.now()) ?? moneyReason(s, 20)) : 'Choisissez deux parents différents.';
     if (this.parents[0] && this.parents[0] === this.parents[1]) reason = REFUSALS.SAME_PARENT;
     this.button(this.content, 'Lancer la reproduction · 20 pattes', () => {
@@ -350,7 +530,23 @@ export class GameUI {
   private renderCollection(s: GameState): void {
     this.title.textContent = `Collection · ${s.discovered.length}/${SPECIES_IDS.length}`;
     this.button(this.content, 'Carnet de reproduction', () => this.open({kind: 'recipes'}), null, true);
-    for (const entry of collectionView(s)) {
+    const controls = node('div', '', 'collection-filters');
+    const select = (label: string, key: keyof CollectionFilter, choices: Record<string, string>) => {
+      const field = node('label', label), input = node('select'); input.setAttribute('aria-label', label); input.dataset.focus = `collection-filter-${key}`;
+      for (const [value, text] of Object.entries(choices)) { const option = node('option', text); option.value = value; input.append(option); }
+      input.value = this.collectionFilter[key] ?? '';
+      input.addEventListener('change', () => { this.collectionFilter = {...this.collectionFilter, [key]: input.value || undefined}; this.render(); });
+      field.append(input); controls.append(field);
+    };
+    select('Type', 'type', {'': 'Tous les types', ...Object.fromEntries(Object.entries(TYPE_NAMES).filter(([type]) => SPECIES_IDS.some(id => SPECIES[id].types.includes(type as RabbitType))))});
+    select('Rareté', 'rarity', {'': 'Toutes les raretés', ...RARITY_NAMES});
+    select('Découverte', 'discovery', {'': 'Toutes', known: 'Découvertes', unknown: 'À découvrir'});
+    this.content.append(controls);
+    const entries = collectionView(s, this.collectionFilter);
+    this.content.append(node('p', `${entries.length} espèce(s) affichée(s)`, 'small'));
+    if (!entries.length) this.content.append(node('p', 'Aucune espèce ne correspond à ces filtres.'));
+    if (Object.values(this.collectionFilter).some(Boolean)) this.button(this.content, 'Réinitialiser les filtres', () => { this.collectionFilter = {}; this.render(); }, null, true);
+    for (const entry of entries) {
       const card = this.card(entry.name); card.prepend(avatar(entry.known ? entry.species : undefined));
       if (entry.known) this.button(card, 'Consulter l’espèce', () => this.open({kind: 'species', species: entry.species}), null, true);
       else card.append(node('p', 'À découvrir', 'small'));
@@ -360,7 +556,7 @@ export class GameUI {
   private renderRecipes(s: GameState): void {
     this.title.textContent = 'Carnet de reproduction';
     this.content.append(node('p', 'Les types nécessaires doivent être réunis par deux individus distincts. Une recette possible reste un tirage aléatoire. Les probabilités ci-dessous incluent la garantie actuelle.'),
-      node('p', 'Une garantie choisit à parts égales parmi les espèces de reproduction inconnues admissibles. Une recette déjà découverte peut donc être temporairement exclue de ce tirage.', 'small'));
+      node('p', 'La garantie choisit à parts égales parmi les six recettes ordinaires inconnues admissibles. Géant, Magicien et Dragon en sont exclus. Une recette déjà découverte peut donc être temporairement exclue de ce tirage.', 'small'));
     this.button(this.content, 'Retour à la collection', () => this.open({kind: 'collection'}), null, true);
     const nest = s.buildings.find(b => b.kind === 'nest'), nursery = s.buildings.find(b => b.kind === 'nursery');
     const setupReason = !nest || !nursery ? 'Construisez un nid et une nurserie.' : nest.breeding ? 'Le nid est occupé.' : null;
@@ -370,10 +566,12 @@ export class GameUI {
       const card = this.card(recipe.known ? info.name : 'Espèce à découvrir', `${typeNames(recipe.types)} · ${RARITY_NAMES[info.rarity]}`);
       card.prepend(avatar(recipe.known ? recipe.species : undefined));
       card.append(node('p', `Affection ${recipe.minAffection} minimum pour chacun des deux parents. Croissance : ${growthDuration(recipe.species) / 60_000} min.`));
-      if (!recipe.pairs.length) card.append(node('p', 'Aucune paire possédée ne réunit encore ces types. Les communs sont disponibles en boutique.', 'small'));
+      if (info.recipe?.parents) card.append(node('p', `Parents requis : ${info.recipe.parents.map(id => SPECIES[id].name).join(' × ')}. Les types seuls ne suffisent pas.`));
+      card.append(node('p', info.recipe?.probability !== undefined ? `Hors garantie ordinaire : ${info.recipe.probability} %. Cette espèce ne bénéficie pas de la garantie de découverte.` : 'Cette espèce bénéficie de la garantie ordinaire si elle est encore inconnue et admissible.', 'small'));
+      if (!recipe.pairs.length) card.append(node('p', info.recipe?.parents ? 'Possédez les deux espèces requises pour préparer cette paire.' : 'Aucune paire possédée ne réunit encore ces types. Les communs sont disponibles en boutique.', 'small'));
       else {
         const details = node('details'); details.open = recipe.pairs.length <= 3 || this.recipeDetails.has(recipe.species);
-        details.append(node('summary', `${recipe.pairs.length} paire(s) possédée(s) compatible(s) par types`));
+        details.append(node('summary', `${recipe.pairs.length} paire(s) possédée(s) compatible(s) avec la recette`));
         details.addEventListener('toggle', () => { if (details.isConnected) {
           if (details.open) this.recipeDetails.add(recipe.species); else this.recipeDetails.delete(recipe.species);
         } });
@@ -549,6 +747,7 @@ export class GameUI {
     for (const progress of this.content.querySelectorAll<HTMLProgressElement>('progress[data-start][data-end]')) progress.value = this.now() >= Number(progress.dataset.end) ? 1 : Math.max(0, Math.min(1, (this.now() - Number(progress.dataset.start)) / Math.max(1, Number(progress.dataset.end) - Number(progress.dataset.start))));
   }
   private confirm(title: string, message: string, action: () => void): void {
+    if (this.dialog.open) return;
     const generation = ++this.confirmationGeneration; let used = false;
     this.dialog.replaceChildren(node('h2', title), node('p', message));
     this.button(this.dialog, 'Confirmer', () => {

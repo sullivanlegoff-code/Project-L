@@ -5,13 +5,13 @@ export const HEARTS = {
   accelerationStep: 5 * MINUTE, pattesPerHeart: 25,
 };
 export const LEGACY_SPECIES_IDS = ['paille', 'neige', 'terre', 'brumelin', 'mottelin'] as const;
-export const SPECIES_IDS = [...LEGACY_SPECIES_IDS, 'feu', 'belier-gris', 'volant', 'lunettes', 'perroquet', 'feu-glace'] as const;
+export const SPECIES_IDS = [...LEGACY_SPECIES_IDS, 'feu', 'belier-gris', 'volant', 'lunettes', 'perroquet', 'feu-glace', 'bouee', 'geant', 'magicien', 'dragon'] as const;
 export type SpeciesId = typeof SPECIES_IDS[number];
 export type RabbitType = 'paille' | 'neige' | 'terre' | 'feu' | 'metal' | 'vol' | 'arc-en-ciel';
 export type BuildingKind = 'enclosure' | 'farm' | 'nest' | 'nursery';
-export type Rarity = 'common' | 'uncommon' | 'rare';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 export const BREEDING_WEIGHTS = {common: 40, recipe: 20};
-export const SPECIES: Record<SpeciesId, {name: string; types: RabbitType[]; rarity: Rarity; price: number | null; recipe: {minAffection: number} | null}> = {
+export const SPECIES: Record<SpeciesId, {name: string; types: RabbitType[]; rarity: Rarity; price: number | null; recipe: {minAffection: number; parents?: readonly [SpeciesId, SpeciesId]; probability?: number} | null}> = {
   paille: {name: 'Lapin Paille', types: ['paille'], rarity: 'common', price: 80, recipe: null},
   neige: {name: 'Lapin Neige', types: ['neige'], rarity: 'common', price: 80, recipe: null},
   terre: {name: 'Lapin Terre', types: ['terre'], rarity: 'common', price: 80, recipe: null},
@@ -23,7 +23,12 @@ export const SPECIES: Record<SpeciesId, {name: string; types: RabbitType[]; rari
   lunettes: {name: 'Lapin à Lunettes', types: ['metal', 'paille'], rarity: 'rare', price: null, recipe: {minAffection: 4}},
   perroquet: {name: 'Lapin Perroquet', types: ['vol', 'feu'], rarity: 'rare', price: null, recipe: {minAffection: 4}},
   'feu-glace': {name: 'Lapin Feu Glacé', types: ['feu', 'neige'], rarity: 'rare', price: null, recipe: {minAffection: 4}},
+  bouee: {name: 'Lapin en Bouée', types: ['paille', 'feu'], rarity: 'rare', price: null, recipe: {minAffection: 4}},
+  geant: {name: 'Lapin Géant', types: ['terre', 'paille'], rarity: 'epic', price: null, recipe: {minAffection: 6, probability: 5}},
+  magicien: {name: 'Lapin Magicien', types: ['metal', 'vol'], rarity: 'epic', price: null, recipe: {minAffection: 6, probability: 5}},
+  dragon: {name: 'Lapin Dragon', types: ['vol', 'feu'], rarity: 'legendary', price: null, recipe: {minAffection: 10, parents: ['perroquet', 'feu'], probability: 2}},
 };
+export const GUARANTEE_SPECIES: readonly SpeciesId[] = ['brumelin', 'mottelin', 'lunettes', 'perroquet', 'feu-glace', 'bouee'];
 export const SHOP_SPECIES = SPECIES_IDS.filter(id => SPECIES[id].price !== null);
 export const RECIPE_SPECIES = SPECIES_IDS.filter(id => SPECIES[id].recipe !== null);
 export const BALANCE = {
@@ -55,5 +60,5 @@ export const BREEDING_ODDS: Record<string, Odds> = {
 };
 
 export function growthDuration(species: SpeciesId): number {
-  return {common: BALANCE.commonGrowth, uncommon: BALANCE.hybridGrowth, rare: BALANCE.rareGrowth}[SPECIES[species].rarity];
+  return {common: BALANCE.commonGrowth, uncommon: BALANCE.hybridGrowth, rare: BALANCE.rareGrowth, epic: 60 * MINUTE, legendary: 120 * MINUTE}[SPECIES[species].rarity];
 }

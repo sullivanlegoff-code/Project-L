@@ -2,8 +2,10 @@ import {HABITAT_TYPES, HABITAT_LEVELS, LAND, habitatLevel} from '../config/habit
 import {MAIN_MISSION_IDS, DAILY_MISSION_IDS, DAILY_MISSIONS, MISSION_CYCLE_DURATION} from '../config/missions';
 import {createMissions, cycleIndexAt} from '../simulation/missions';
 import {z} from 'zod';
-import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, SPECIES_IDS, growthDuration} from '../config/balance';
+import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, SPECIES_IDS, GUARANTEE_SPECIES, growthDuration} from '../config/balance';
 import type {GameState} from '../state/types';
+import {DECORATION_IDS, MAX_DECORATIONS} from '../config/decorations';
+import {decorationPlacementReason} from '../simulation/decorations';
 
 const integer = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const identity = z.string().regex(/^(building|rabbit|birth)-[1-9]\d*$/);
@@ -39,12 +41,19 @@ const v4 = v3.extend({version: z.literal(4), secondExpanded: z.boolean(),
   buildings: z.array(building.extend({incomeUnits: integer, habitat: z.object({type: z.enum(HABITAT_TYPES), level: z.union([z.literal(1), z.literal(2), z.literal(3)])}).strict().nullable()}).strict()).max(LAND[2].width * BALANCE.height),
   rabbits: base.shape.rabbits.max(LAND[2].width * BALANCE.height * HABITAT_LEVELS.universal[2].capacity),
 }).strict();
-const schema = z.discriminatedUnion('version', [v1, v2, v3, v4]).superRefine((s, context) => {
+const decoration = z.object({id: z.string().regex(/^decoration-[1-9]\d*$/), catalogId: z.enum(DECORATION_IDS),
+  location: z.discriminatedUnion('kind', [
+    z.object({kind: z.literal('inventory')}).strict(),
+    z.object({kind: z.literal('outside'), x: integer, y: integer, rotation: z.union([z.literal(0), z.literal(1)])}).strict(),
+    z.object({kind: z.literal('habitat'), habitatId: identity, slot: z.union([z.literal(0), z.literal(1), z.literal(2)])}).strict(),
+  ])}).strict();
+const v5 = v4.extend({version: z.literal(5), decorations: z.array(decoration).max(MAX_DECORATIONS)}).strict();
+const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine((s, context) => {
   const issue = (message: string) => context.addIssue({code: z.ZodIssueCode.custom, message});
   // v1 keeps its exact durations; v2/v3 also admit completed, shortened stages.
   const durationValid = (start: number, end: number, normal: number) => start <= s.lastSimulatedAt &&
     end >= start && end - start <= normal && (end - start === normal || (s.version !== 1 && end <= s.lastSimulatedAt));
-  if (s.version === 3 || s.version === 4) {
+  if ('missions' in s) {
     const m = s.missions, d = m.daily;
     if (new Set(m.completed).size !== m.completed.length || new Set(m.claimed).size !== m.claimed.length ||
       m.claimed.some(id => !m.completed.includes(id))) issue('Main mission claims');
@@ -56,8 +65,8 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4]).superRefine((s,
   }
   const ids: string[] = [];
   const cells = new Set<string>();
-  if (s.version === 4 && s.secondExpanded && !s.expanded) issue('Extension sequence');
-  const width = s.version === 4 && s.secondExpanded ? LAND[2].width : s.expanded ? BALANCE.extendedWidth : BALANCE.initialWidth;
+  if ('secondExpanded' in s && s.secondExpanded && !s.expanded) issue('Extension sequence');
+  const width = 'secondExpanded' in s && s.secondExpanded ? LAND[2].width : s.expanded ? BALANCE.extendedWidth : BALANCE.initialWidth;
   const nursery = s.buildings.find(b => b.kind === 'nursery');
   for (const b of s.buildings) {
     ids.push(b.id);
@@ -84,7 +93,7 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4]).superRefine((s,
     for (const newborn of [b.baby?.birth, b.breeding?.birth]) if (newborn) {
       ids.push(newborn.id);
       if (!newborn.id.startsWith('birth-') || (newborn.guaranteed && !newborn.reservedDiscovery) ||
-        (newborn.reservedDiscovery && SPECIES[newborn.species].recipe === null)) issue('Birth reservation');
+        (newborn.reservedDiscovery && !GUARANTEE_SPECIES.includes(newborn.species))) issue('Birth reservation');
     }
   }
   for (const kind of ['enclosure', 'farm', 'nest', 'nursery'] as const) {
@@ -96,35 +105,41 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4]).superRefine((s,
     ids.push(rabbit.id);
     if (rabbit.id.startsWith('building-') || !s.discovered.includes(rabbit.species) ||
       !s.buildings.some(b => b.kind === 'enclosure' && b.id === rabbit.enclosureId)) issue('Rabbit identity or enclosure or discovery');
-    const home = s.version === 4 ? s.buildings.find(b => b.id === rabbit.enclosureId) : undefined;
+    const home = 'secondExpanded' in s ? s.buildings.find(b => b.id === rabbit.enclosureId) : undefined;
     if (home && 'habitat' in home && home.habitat && home.habitat.type !== 'universal' && !SPECIES[rabbit.species].types.includes(home.habitat.type)) issue('Incompatible rabbit');
   }
   for (const b of s.buildings) {
     const capacity = 'habitat' in b && b.habitat ? habitatLevel(b.habitat.type, b.habitat.level).capacity : BALANCE.enclosureCapacity;
     if (s.rabbits.filter(r => r.enclosureId === b.id).length > capacity) issue('Enclosure capacity');
   }
-  if (new Set(ids).size !== ids.length || ids.some(id => Number(id.split('-')[1]) >= s.nextId)) issue('Duplicate identity or invalid nextId');
+  if (s.version === 5) for (const d of s.decorations) {
+    ids.push(d.id);
+    if (decorationPlacementReason(s, d.id, d.location)) issue('Invalid decoration placement or reference');
+  }
+  if (new Set(ids).size !== ids.length || ids.some(id => !Number.isSafeInteger(Number(id.split('-')[1])) || Number(id.split('-')[1]) >= s.nextId)) issue('Duplicate identity or invalid nextId');
 });
 
-export type DecodeResult = {ok: true; state: GameState; migratedFrom?: 1 | 2 | 3} | {ok: false; reason: 'INVALID_JSON' | 'INVALID_STATE' | 'UNSUPPORTED_VERSION' | 'FILE_TOO_LARGE'};
+export type DecodeResult = {ok: true; state: GameState; migratedFrom?: 1 | 2 | 3 | 4} | {ok: false; reason: 'INVALID_JSON' | 'INVALID_STATE' | 'UNSUPPORTED_VERSION' | 'FILE_TOO_LARGE'};
 export const MAX_JSON_LENGTH = 1_000_000;
 export function decodeGame(json: string, now: number = Date.now()): DecodeResult {
   if (json.length > MAX_JSON_LENGTH) return {ok: false, reason: 'FILE_TOO_LARGE'};
   let raw: unknown;
   try { raw = JSON.parse(json); } catch { return {ok: false, reason: 'INVALID_JSON'}; }
-  if (raw && typeof raw === 'object' && 'version' in raw && raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4) return {ok: false, reason: 'UNSUPPORTED_VERSION'};
+  if (raw && typeof raw === 'object' && 'version' in raw && raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4 && raw.version !== 5) return {ok: false, reason: 'UNSUPPORTED_VERSION'};
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return {ok: false, reason: 'INVALID_STATE'};
-  if (parsed.data.version === 4) return {ok: true, state: parsed.data};
+  if (parsed.data.version === 5) return {ok: true, state: parsed.data};
+  // v4 keeps every field, timer and claimed reward exactly as recorded.
+  if (parsed.data.version === 4) return {ok: true, migratedFrom: 4, state: {...parsed.data, version: 5, decorations: []}};
   const referenceAt = Math.max(now, parsed.data.lastSimulatedAt);
   if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(referenceAt + MISSION_CYCLE_DURATION)) return {ok: false, reason: 'INVALID_STATE'};
   const hearts = parsed.data.version === 1 ? {hearts: HEARTS.initial, nextHeartGiftAt: referenceAt + HEARTS.giftInterval} :
     {hearts: parsed.data.hearts, nextHeartGiftAt: parsed.data.nextHeartGiftAt};
-  return {ok: true, migratedFrom: parsed.data.version, state: {...parsed.data, ...hearts, version: 4, secondExpanded: false,
+  return {ok: true, migratedFrom: parsed.data.version, state: {...parsed.data, ...hearts, version: 5, decorations: [], secondExpanded: false,
     buildings: parsed.data.buildings.map(b => ({...b, habitat: b.kind === 'enclosure' ? {type: 'universal' as const, level: 1 as const} : null})),
     missions: parsed.data.version === 3 ? parsed.data.missions : createMissions(parsed.data, referenceAt)}};
 }
 export function encodeGame(state: GameState): string {
-  const parsed = schema.parse(v4.parse(state));
+  const parsed = schema.parse(v5.parse(state));
   return JSON.stringify(parsed, null, 2);
 }
