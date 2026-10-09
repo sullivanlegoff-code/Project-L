@@ -21,7 +21,7 @@ async function run() {
     errors: [], failedRequests: [], httpErrors: [], passed: false,
   };
   const browser = await chromium.launch({
-    executablePath: process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',
+    executablePath: process.env.PRAIRIE_CHROMIUM === 'playwright' ? undefined : process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',
     args: ['--no-sandbox'],
   });
   const context = await browser.newContext({viewport: {width: 852, height: 393}, acceptDownloads: true});
@@ -69,7 +69,7 @@ async function run() {
     await download.saveAs(filename);
     assert.equal(await download.failure(), null);
     const state = JSON.parse(fs.readFileSync(filename, 'utf8'));
-    assert.equal(state.version, 4);
+    assert.equal(state.version, 5);
     assert.match(download.suggestedFilename(), /^prairie-lapins-.*\.json$/);
     report.downloads.push({path: filename, suggestedFilename: download.suggestedFilename()});
     return state;
@@ -91,14 +91,14 @@ async function run() {
     assert.equal(await page.locator('#grass').textContent(), '10');
     assert.equal(await page.locator('#hearts').textContent(), '12');
     const initial = await save();
-    assert.equal(initial.version, 4);
+    assert.equal(initial.version, 5);
     assert.equal(initial.rabbits.length, 2);
     assert.equal(initial.buildings.length, 1);
     await noDevelopment();
-    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v4.');
+    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v5.');
     await screenshot('production-initial');
 
-    for (const [button, title] of [['#open-shop', /^Boutique$/], ['#open-collection', /^Collection · 2\/11$/], ['#open-missions', /^Missions$/]]) {
+    for (const [button, title] of [['#open-shop', /^Boutique$/], ['#open-collection', /^Collection · 2\/15$/], ['#open-missions', /^Missions$/]]) {
       await page.click(button);
       assert.match(await page.locator('#panel-title').textContent(), title);
       assert.equal(await page.locator('#game-panel').isVisible(), true);
@@ -107,8 +107,8 @@ async function run() {
     await settings();
     await page.locator('#game-version').scrollIntoViewIfNeeded();
     report.version = await page.locator('#game-version').textContent();
-    assert.match(report.version, /^Version : Habitats · passe visuelle · build /);
-    if (expectedRevision) assert.equal(report.version, `Version : Habitats · passe visuelle · build ${expectedRevision}`);
+    assert.match(report.version, /^Version : Prairie de lapins · quinze espèces · v5 · build /);
+    if (expectedRevision) assert.equal(report.version, `Version : Prairie de lapins · quinze espèces · v5 · build ${expectedRevision}`);
     await noDevelopment();
     report.checks.push('Shop, collection, missions, settings and release identifier.');
     await screenshot('production-version');
@@ -139,7 +139,7 @@ async function run() {
     await page.click('#cancel-import');
     assert.equal(await page.locator('#import-dialog').isVisible(), false);
     assert.deepEqual(progress(await save()), beforeImport);
-    report.checks.push('Export downloads valid v4 JSON; cancelling import preserves current progression.');
+    report.checks.push('Export downloads valid v5 JSON; cancelling import preserves current progression.');
 
     await importFile(importJson);
     await page.locator('#import-dialog[open]').waitFor();
@@ -178,6 +178,30 @@ async function run() {
     assert.equal(await page.locator('#game-version').textContent(), report.version);
     report.checks.push('Production ?dev=1 keeps normal save, hides tools/badge and creates no development storage.');
     await screenshot('production-final');
+
+    await closePanel();
+    const beforeSale = await save();
+    await page.click('#open-shop');
+    await page.getByRole('button', {name: 'Décorations', exact: true}).click();
+    await page.locator('[data-catalog="wood-bench"] button').click();
+    await page.locator('#game-dialog').getByRole('button', {name: 'Confirmer', exact: true}).click();
+    await page.getByRole('button', {name: 'Annuler le placement', exact: true}).click();
+    const bought = await save();
+    assert.equal(bought.pattes, beforeSale.pattes - 80);
+    assert.equal(bought.decorations.length, beforeSale.decorations.length + 1);
+    const copy = bought.decorations.at(-1);
+    await page.locator(`[data-decoration="${copy.id}"]`).getByRole('button', {name: 'Actions de cet exemplaire', exact: true}).click();
+    await page.getByRole('button', {name: 'Vendre · 40 pattes', exact: true}).click();
+    assert.equal(await page.locator('#game-dialog h2').textContent(), 'Vendre Banc en bois pour 40 pattes ?');
+    await page.locator('#game-dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
+    assert.equal((await save()).decorations.length, bought.decorations.length);
+    await page.getByRole('button', {name: 'Vendre · 40 pattes', exact: true}).click();
+    await page.locator('#game-dialog').getByRole('button', {name: 'Confirmer', exact: true}).evaluate(button => {button.click(); button.click();});
+    assert.equal((await save()).pattes, beforeSale.pattes - 40);
+    assert.equal((await save()).decorations.length, beforeSale.decorations.length);
+    await page.reload({waitUntil: 'networkidle'}); await ready();
+    assert.equal((await save()).pattes, beforeSale.pattes - 40);
+    report.checks.push('Real normal decoration purchase, cancelled placement, cancelled sale, double-confirmed atomic 50% sale and persisted reload.');
 
     assert.deepEqual(report.errors, [], 'No browser or console errors.');
     assert.deepEqual(report.failedRequests, [], 'No failed network requests.');

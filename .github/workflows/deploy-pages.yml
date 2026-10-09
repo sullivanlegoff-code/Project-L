@@ -20,12 +20,12 @@ jobs:
       run:
         working-directory: prairie-lapins-prototype
     env:
-      VITE_BUILD_REVISION: ae31131f8318ffbd69794f20e57c1050694afb49
+      VITE_BUILD_REVISION: ${{ github.sha }}
     steps:
       - name: Lire la branche de livraison
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ae31131f8318ffbd69794f20e57c1050694afb49
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Installer Node.js 24
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -63,7 +63,6 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PRAIRIE_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          node scripts/check-cloud-backend.mjs
           npm run build:account-preview -- --outDir "$RUNNER_TEMP/prairie-pages/preview/accounts" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/accounts/build-revision.txt"
           node scripts/verify-production.mjs "$RUNNER_TEMP/prairie-pages/preview/accounts" /Project-L/preview/accounts/
@@ -87,9 +86,8 @@ jobs:
           npm run build:decorations -- --outDir "$RUNNER_TEMP/prairie-pages/preview/decorations" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/decorations/build-revision.txt"
           node scripts/verify-decorations.mjs "$RUNNER_TEMP/prairie-pages/preview/decorations"
-      - name: Vérifier la présence des quatre routes avant publication
-        run: |
-          node -e "const fs=require('node:fs'),p=require('node:path'); for(const route of ['','dev','preview/accounts','preview/decorations']) for(const file of ['index.html','build-revision.txt']) fs.accessSync(p.join(process.argv[1],route,file)); console.log('Four complete routes in one Pages artifact');" "$RUNNER_TEMP/prairie-pages"
+      - name: Vérifier les quatre routes, formats et révisions avant publication
+        run: node scripts/verify-v5-integration.mjs "$RUNNER_TEMP/prairie-pages" "$VITE_BUILD_REVISION" 85fe255ec8e7e65213cd570f91f5bb1fe66a30d7
       - name: Préparer uniquement les fichiers du site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
@@ -115,11 +113,34 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            prairie-lapins-prototype/docs
           persist-credentials: false
       - name: Vérifier les quatre révisions et fonctionnalités réellement servies
         env:
-          STABLE_REVISION: ae31131f8318ffbd69794f20e57c1050694afb49
+          STABLE_REVISION: ${{ github.sha }}
           ACCOUNTS_REVISION: 3e70d9e8cbe9228c63c73db007fff199199d6470
           DECORATIONS_REVISION: 85fe255ec8e7e65213cd570f91f5bb1fe66a30d7
         run: node .github/scripts/verify-published.mjs
+      - name: Installer le navigateur de contrôle public
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser-check" playwright@1.56.1
+          "$RUNNER_TEMP/browser-check/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Vérifier les interactions normales et le laboratoire publiés
+        env:
+          NODE_PATH: ${{ runner.temp }}/browser-check/node_modules
+          PRAIRIE_CAPTURE_DIR: ${{ runner.temp }}/public-browser-proof
+          PRAIRIE_CHROMIUM: playwright
+        run: |
+          node prairie-lapins-prototype/docs/production-browser-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
+          node prairie-lapins-prototype/docs/laboratory-browser-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
+      - name: Conserver les preuves publiques
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-v5-validation-${{ github.sha }}
+          path: |
+            published-revisions.json
+            ${{ runner.temp }}/public-browser-proof
+          retention-days: 30

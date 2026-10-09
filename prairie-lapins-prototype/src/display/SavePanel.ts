@@ -35,7 +35,7 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
     importButton.textContent = 'Importer dans la partie de test';
     restart.textContent = 'Recommencer la partie de test';
     get('import-warning').textContent = 'Cet import remplace seulement la partie du laboratoire. La sauvegarde normale reste intacte. Les exports MODE-TEST peuvent contenir du temps avancé et des ressources ajoutées.';
-    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v4 sont migrés en v5 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v5-MODE-TEST : incompatible avec le jeu normal, le laboratoire actuel et les comptes encore en v4. Ne l’importez pas dans ces versions.';
+    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v4 sont migrés en v5 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v5-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v5 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
   }
   const abort = new AbortController();
   let importToken: number | null = null;

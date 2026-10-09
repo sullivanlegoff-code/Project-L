@@ -99,10 +99,10 @@ describe('published laboratory isolation', () => {
     confirm.mockReturnValue(true);document.getElementById('dev-reset')!.click();expect(controller.getSnapshot().state!.pattes).toBe(300);
     expect(document.getElementById('dev-badge')!.hidden).toBe(false);expect(document.getElementById('dev-badge')!.textContent).toContain('MODE TEST — PARTIE SÉPARÉE');
   });
-  it('exposes all seven decoration/island scenarios only in the preview and requires confirmation', () => {
+  it('exposes all seven decoration/island scenarios in the laboratory and preview and requires confirmation', () => {
     const base = browserStorage(), lab = setup(); dispose.push(lab.dev.mount(lab.controller));
     const ids = ['islandStart', 'islandExpanded', 'islandFull', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'];
-    for (const id of ids) expect(document.getElementById('dev-scenario-' + id)).toBeNull();
+    for (const id of ids) expect(document.getElementById('dev-scenario-' + id)).not.toBeNull();
     dispose.pop()!();
     const preview = developmentEnvironment(base, {decorationPreview: true});
     const controller = new GameController(preview.storage, preview.clock); controllers.push(controller);

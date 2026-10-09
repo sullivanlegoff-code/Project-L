@@ -3,7 +3,7 @@ import type {SaveStorage} from '../persistence/storage';
 import {encodeGame} from '../simulation';
 import {BUILD_REVISION} from '../config/release';
 import {sessionPolicy} from '../config/runtime';
-import {SCENARIOS, DECORATION_SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
+import {SCENARIOS, scenarioState, type ScenarioId} from './scenarios';
 import type {GameState} from '../state/types';
 
 export const TEST_PREFIX = 'prairie-lapins.development.';
@@ -64,7 +64,7 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
       intro.textContent = 'Laboratoire public : partie, préférences, horloge et sauvegardes de secours séparées. Aucun compte ni service en ligne. Importez volontairement un export normal pour tester une copie. Les fichiers MODE-TEST peuvent contenir des ressources ajoutées et du temps avancé.';
       if (options.decorationPreview) intro.textContent = 'Prévisualisation expérimentale v5 : partie, préférences, horloge et secours distincts des trois autres versions. Aucun compte ni synchronisation. Import v4 volontaire uniquement ; les exports v5 de cette prévisualisation ne sont pas compatibles avec les versions v4.';
       host.append(intro);
-      const version = document.createElement('p'); version.textContent = options.decorationPreview ? `Version expérimentale v5 · build ${BUILD_REVISION.slice(0, 7)}. Jeu normal conservé en v4.` : `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
+      const version = document.createElement('p'); version.textContent = options.decorationPreview ? `Version expérimentale v5 · build ${BUILD_REVISION.slice(0, 7)}. Jeu normal et laboratoire en v5 ; comptes figés en v4.` : `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
       const status = document.createElement('p'); status.setAttribute('role', 'status'); status.id = 'dev-status';
       const resultMessage = (result: TestResult, message: string) => { status.textContent = result.ok ? message : result.reason === 'NOT_CONFIRMED' ? 'Opération annulée. La partie de test est conservée.' : 'Opération de test refusée. Vérifiez la sauvegarde et l’espace disponible ; la partie normale est conservée.'; };
       const section = (title: string) => { const h = document.createElement('h3'); h.textContent = title; host.append(h); };
@@ -79,7 +79,7 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
         for (const amount of RESOURCE_STEPS[resource]) button(`+ ${amount} ${names[resource]}`, `dev-grant-${resource}-${amount}`, () => resultMessage(grant(controller, resource, amount), 'Ressources ajoutées à la partie de test.'));
       }
       section('Scénarios préparés');
-      for (const id of (Object.keys(SCENARIOS) as ScenarioId[]).filter(id => options.decorationPreview || !(DECORATION_SCENARIOS as readonly string[]).includes(id))) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
+      for (const id of (Object.keys(SCENARIOS) as ScenarioId[])) button(SCENARIOS[id], `dev-scenario-${id}`, () => {
         if (!window.confirm(`Charger « ${SCENARIOS[id]} » remplace seulement la partie de test. Exportez-la pour la conserver. Continuer ?`)) return;
         const result = loadScenario(controller, id); if (result.ok) onReplacement(); resultMessage(result, 'Scénario chargé et enregistré dans la partie de test.');
       });

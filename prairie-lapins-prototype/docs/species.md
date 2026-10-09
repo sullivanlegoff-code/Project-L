@@ -1,3 +1,17 @@
+# Livraison normale v5 — 9 octobre 2026
+
+Le jeu principal est désormais la référence : [jeu normal](https://sullivanlegoff-code.github.io/Project-L/), [laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/). Intégration de la PR nº 2 dans `production` autorisée après validation iPhone par le joueur. Quinze espèces, neuf recettes, carnet et filtres, île validée, douze décorations avec sélection/déplacement/rangement/vente, Aménagement, photo et cache statique. Aucune nouvelle illustration de lapin ; règles et équilibrage inchangés.
+
+Normal et laboratoire construits depuis la révision de livraison, sauvegardes v5. Aucun outil de test dans le normal. Le laboratoire propose les onze scénarios, dont « Collection — quinze espèces et recettes », dans une partie et une horloge séparées avec bandeau permanent. La prévisualisation Décorations conserve ses sources `85fe255` et son stockage distinct. Comptes figés `3e70d9e` en v4 ; branche comptes et PR nº 1 préservées, email/Supabase/SQL en pause.
+
+Les quatre routes sont publiées dans un artefact unique, chaque révision lisible dans Paramètres et `build-revision.txt`. Tests : 544 tests, TypeScript, builds contrôlés ; parcours normal/laboratoire sans injection ni sauvegarde préchargée et contrôle HTTPS après publication. La preuve finale et la révision servie sont consignées après déploiement dans `docs/validation/production-v5-2026-10-09.json`.
+
+Avant de rouvrir : exporter si souhaité la partie depuis sa version actuelle, fermer les anciens onglets, puis ouvrir le jeu normal. Migration v4→v5 sur les mêmes clés avec secours ; aucune nouvelle dotation, récompense ou remise à zéro. Aucun transfert automatique depuis une prévisualisation ou le laboratoire. Un transfert volontaire passe par export/import après export de la destination qu’il remplacera ; un fichier v5 ne doit jamais être importé dans les comptes v4. Ne pas effacer les données Safari. Voir [migration-v5.md](migration-v5.md).
+
+Le retour iPhone confirme le bon fonctionnement général et valide le passage au jeu principal ; aucun détail de scénario, modèle ou version Safari supplémentaire n’est déduit. Les bilans anciens ci-dessous sont historiques.
+
+---
+
 # Les quinze espèces — prévisualisation du 9 octobre 2026
 
 **Publication vérifiée — quinze espèces :** sources Décorations `85fe255ec8e7e65213cd570f91f5bb1fe66a30d7`, [workflow 37949526936 réussi](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37949526936). Quatre révisions, HTML et scripts servis contrôlés ; noms des quatre nouvelles espèces et filtres présents. Jeu/laboratoire `ae31131` v4 et comptes `3e70d9e` v4 conservés. [Preuve publique](validation/publication-species-2026-10-09.json). Aucun essai Safari physique revendiqué.
