@@ -1,8 +1,12 @@
-# Neige originale v1 — en validation
+# Neige originale v1 — livrée
 
-Remplacement visuel du seul identifiant `neige`, depuis l’image fournie, détourée avec conservation des RGB opaques. Même asset dans la scène et les portraits ; proportions uniformes, ancrage au sol, animation de l’image entière et sélection par silhouette alpha. [Comparaison et documentation](neige-v1.md).
+Jeu normal et laboratoire : application `28eb90712608aab08517cc551d0ed8d1d508f613`, [PR nº 5 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/5). Remplacement du seul visuel `neige` depuis l’original fourni, détouré avec conservation des RGB opaques (différence maximale 0). Même asset dans l’habitat, la fiche, la boutique, la collection et les parents ; échelle uniforme, ancrage au sol, translation de l’image entière et sélection par silhouette alpha. [Original et préparation](neige-v1.md) · [Comparaison référence/jeu](validation/neige-v1/reference-vs-game.png) · [Preuve de publication](validation/neige-v1/publication.json).
 
-TypeScript et builds normal/laboratoire réussis. Deux régressions de présentation ajoutées ; la suite historique reste réussie. Vingt-et-une sélections vérifiées parmi sept occupants mixtes aux trois zooms, puis fiche, boutique, collection, parents et portrait. Les deux builds servent le PNG attendu, avec contrôle SHA-256, transparence et pelage. CI et publication encore à confirmer ; aucun essai Safari physique annoncé.
+[CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37994018115) : **584 tests / 17 fichiers**, TypeScript, builds normal/laboratoire et parcours existants. Vingt-et-une sélections individuelles parmi sept occupants mixtes aux zooms 0,8 / 1,05 / 1,65 ; fiche, boutique, collection, choix des parents et orientation portrait. Les sources de la branche, de la fusion testée et de la livraison ont exactement le même arbre Git. [Captures et rapports CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37994018115/artifacts/11645989160).
+
+[Publication et essais publics réussis](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37994696234) : quatre révisions vérifiées et quatre parcours Chromium réussis. Normal et laboratoire servent le PNG SHA-256 `b85337b3d3b3079644fb3df3e7f13f50e4226a0389a5b1a1c95fabf3f348276a`, avec dimensions 518 × 473, transparence et pixel du pelage confirmés. Aucun hook ni injection de sauvegarde dans ce contrôle des builds. [Captures et preuves publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/37994696234/artifacts/11646487897).
+
+Autres lapins, règles, sauvegardes v6, caméra, île et décorations conservés. Décorations reste en v5 `85fe255`, Comptes en v4 `3e70d9e` ; Supabase/email restent en pause. Aucun travail engagé sur le prochain lapin. Chromium avec émulation tactile ; Safari sur iPhone physique reste à vérifier selon le [parcours court](neige-v1.md).
 
 ## Fondations techniques v6 — livrées
 
