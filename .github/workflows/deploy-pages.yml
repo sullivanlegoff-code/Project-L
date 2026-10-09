@@ -70,7 +70,7 @@ jobs:
       - name: Lire les sources figées de la prévisualisation Décorations v5
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
+          ref: f87f265176e9deae2215bae780ea6d22cbb0484a
           path: decorations-preview-source
           persist-credentials: false
       - name: Installer et vérifier les décorations séparées
@@ -82,7 +82,7 @@ jobs:
       - name: Construire Décorations sans client de comptes
         working-directory: decorations-preview-source/prairie-lapins-prototype
         env:
-          VITE_BUILD_REVISION: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
+          VITE_BUILD_REVISION: f87f265176e9deae2215bae780ea6d22cbb0484a
         run: |
           npm run build:decorations -- --outDir "$RUNNER_TEMP/prairie-pages/preview/decorations" --emptyOutDir
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/decorations/build-revision.txt"
@@ -121,5 +121,5 @@ jobs:
         env:
           STABLE_REVISION: ae31131f8318ffbd69794f20e57c1050694afb49
           ACCOUNTS_REVISION: 3e70d9e8cbe9228c63c73db007fff199199d6470
-          DECORATIONS_REVISION: 2e17a88fbc4f1e20099ebd90497f0f10074776fa
+          DECORATIONS_REVISION: f87f265176e9deae2215bae780ea6d22cbb0484a
         run: node .github/scripts/verify-published.mjs
