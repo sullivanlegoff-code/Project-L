@@ -1,3 +1,5 @@
+> Bilan historique v5. La livraison actuelle v6 utilise neuf parcelles et douze objets extérieurs : voir [règles et migration v6](land-v6.md). Les commandes intérieures et les deux extensions en bandes décrites ici ont été remplacées.
+
 # Préparer la migration v4 → v5 et récupérer une partie
 
 La route normale et le laboratoire publiés sont encore en v4. Les essais ci-dessous utilisent **des copies** dans la prévisualisation Décorations, jamais les clés de la partie réelle. Les comptes restent sur le client v4 figé `3e70d9e`, sans modification du backend ou de Supabase : ils refusent les exports v5 et ne doivent pas les recevoir.

@@ -87,7 +87,7 @@ jobs:
           printf '%s\n' "$VITE_BUILD_REVISION" > "$RUNNER_TEMP/prairie-pages/preview/decorations/build-revision.txt"
           node scripts/verify-decorations.mjs "$RUNNER_TEMP/prairie-pages/preview/decorations"
       - name: Vérifier les quatre routes, formats et révisions avant publication
-        run: node scripts/verify-v5-integration.mjs "$RUNNER_TEMP/prairie-pages" "$VITE_BUILD_REVISION" 85fe255ec8e7e65213cd570f91f5bb1fe66a30d7
+        run: node scripts/verify-land-integration.mjs "$RUNNER_TEMP/prairie-pages" "$VITE_BUILD_REVISION" 85fe255ec8e7e65213cd570f91f5bb1fe66a30d7
       - name: Préparer uniquement les fichiers du site
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
@@ -139,7 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: public-v5-validation-${{ github.sha }}
+          name: public-v6-validation-${{ github.sha }}
           path: |
             published-revisions.json
             ${{ runner.temp }}/public-browser-proof

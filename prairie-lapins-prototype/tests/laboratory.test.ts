@@ -1,3 +1,4 @@
+import {createGame} from '../src/simulation';
 // @vitest-environment happy-dom
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {GameController} from '../src/application/GameController';
@@ -6,7 +7,7 @@ import {SCENARIOS, scenarioState, type ScenarioId} from '../src/dev/scenarios';
 import {sessionPolicy} from '../src/config/runtime';
 import {browserStorage} from '../src/persistence/browserStorage';
 import {SAVE_KEY, MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY} from '../src/persistence/storage';
-import {createGame, decodeGame, encodeGame} from '../src/simulation';
+import { decodeGame, encodeGame} from '../src/simulation';
 import {PreferenceStore} from '../src/ui/preferences';
 import previous from './fixtures/before-habitats-v3.json';
 import html from '../index.html?raw';

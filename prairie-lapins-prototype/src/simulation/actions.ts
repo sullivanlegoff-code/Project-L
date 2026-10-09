@@ -1,5 +1,6 @@
-import {HABITAT_TYPES, LAND, habitatLevel, habitatPrice, type HabitatLevel} from '../config/habitats';
-import {habitatEntryReason, terrainWidth} from './habitats';
+import {acquiredCell, PARCEL_IDS, extensionPrice} from '../config/land';
+import {HABITAT_TYPES, habitatLevel, habitatPrice, type HabitatLevel} from '../config/habitats';
+import {habitatEntryReason} from './habitats';
 import {DAILY_MISSIONS, DAILY_MISSION_IDS, MAIN_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {dailyCycleStart, recordMissionAction} from './missions';
 import {BALANCE, HEARTS, HOUR, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
@@ -48,8 +49,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
     return b;
   };
   const cell = (x: number, y: number, exclude?: string) => {
-    requireRule(Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 &&
-      x < terrainWidth(s) && y < BALANCE.height, 'INVALID_CELL');
+    requireRule(acquiredCell(s, x, y), 'INVALID_CELL');
     requireRule(!s.buildings.some(b => b.id !== exclude && b.x === x && b.y === y), 'CELL_OCCUPIED');
     requireRule(!decorationsInCell(s, x, y).length, 'DECORATION_BLOCKS_BUILDING');
   };
@@ -78,7 +78,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         s.decorations.find(d => d.id === command.id)!.location = structuredClone(command.location); break;
       }
       case 'storeDecorationsInCell': {
-        requireRule(Number.isInteger(command.x) && Number.isInteger(command.y) && command.x >= 0 && command.y >= 0 && command.x < terrainWidth(s) && command.y < 2, 'INVALID_CELL');
+        requireRule(acquiredCell(s, command.x, command.y), 'INVALID_CELL');
         const blocking = decorationsInCell(s, command.x, command.y);
         for (const d of s.decorations) if (blocking.includes(d.id)) d.location = {kind: 'inventory'};
         value = blocking.length; break;
@@ -202,11 +202,10 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         nursery.baby = null; break;
       }
       case 'expand': {
-        const stage = command.stage ?? 1;
-        requireRule(stage === 1 || stage === 2, 'INVALID_CHOICE');
-        requireRule(stage === 1 ? !s.expanded : !s.secondExpanded, 'ALREADY_EXPANDED');
-        requireRule(stage === 1 || s.expanded, 'MISSING_EXTENSION');
-        pay(LAND[stage].cost); if (stage === 1) s.expanded = true; else s.secondExpanded = true; break;
+        requireRule(PARCEL_IDS.includes(command.parcelId), 'INVALID_CHOICE');
+        requireRule(!s.acquiredParcels.includes(command.parcelId), 'ALREADY_EXPANDED');
+        requireRule(command.expectedCost === extensionPrice(s), 'PRICE_CHANGED');
+        pay(extensionPrice(s)); s.acquiredParcels.push(command.parcelId); break;
       }
       case 'release': {
         const rabbit = s.rabbits.find(r => r.id === command.id); requireRule(rabbit, 'NOT_FOUND');

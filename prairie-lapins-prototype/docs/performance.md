@@ -1,3 +1,5 @@
+> Bilan historique v5. La livraison actuelle v6 utilise neuf parcelles et douze objets extérieurs : voir [règles et migration v6](land-v6.md). Les commandes intérieures et les deux extensions en bandes décrites ici ont été remplacées.
+
 # Fluidité et préparation v5 — 9 octobre 2026
 
 Reprise vérifiée de la branche PR nº 2 à `d7fe786fa4859ee5c8db24ac856e4baaf4045c11`, application publiée auparavant `db01f39`. Aucun changement plus récent trouvé. Le jeu normal/laboratoire restent figés à `ae31131` v4 ; comptes `3e70d9e` v4 et leur branche inchangés. [Prévisualisation Décorations](https://sullivanlegoff-code.github.io/Project-L/preview/decorations/).

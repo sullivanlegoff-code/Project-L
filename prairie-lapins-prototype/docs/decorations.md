@@ -1,3 +1,5 @@
+> Bilan historique v5. La livraison actuelle v6 utilise neuf parcelles et douze objets extérieurs : voir [règles et migration v6](land-v6.md). Les commandes intérieures et les deux extensions en bandes décrites ici ont été remplacées.
+
 # Décorations — prévisualisation v5
 
 **Catalogue de lapins étendu :** quinze espèces, carnet à neuf recettes, filtres de collection ; quatre nouveaux lapins en couleur simple, sans accessoire ou animation nouvelle. Les douze objets, l’île, les habitats et leurs interactions sont conservés. [Règles et essai](species.md).

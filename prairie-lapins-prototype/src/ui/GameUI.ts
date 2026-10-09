@@ -1,6 +1,7 @@
+import {PARCELS, PARCEL_IDS, extensionPrice, type ParcelId} from '../config/land';
 import type {Building} from '../state/types';
 import {HABITATS, HABITAT_TYPES, habitatLevel, habitatPrice, type HabitatType, type HabitatLevel} from '../config/habitats';
-import {habitatStats, habitatName, habitatEntryReason, nextExtension} from '../simulation/habitats';
+import {habitatStats, habitatName, habitatEntryReason} from '../simulation/habitats';
 import {MAIN_MISSION_IDS, MAIN_MISSIONS, DAILY_MISSION_IDS, DAILY_MISSIONS, DAILY_BONUS, type Reward} from '../config/missions';
 import {availableMissionRewards, mainProgress, dailyCycleStart, dailyCycleEnd, cycleIndexAt} from '../simulation/missions';
 import type {GameController, Snapshot} from '../application/GameController';
@@ -18,8 +19,8 @@ import {portrait} from './portraits';
 import {PreferenceStore, Sounds} from './preferences';
 import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, TYPE_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement, type CollectionFilter} from './models';
 
-type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits' | 'decorations'} | {kind: 'building' | 'rabbit' | 'moveRabbit' | 'decoration' | 'arrangeHabitat'; id: string} |
-  {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind: 'collection' | 'settings' | 'extension' | 'placement' | 'hearts' | 'recipes' | 'arrange' | 'decorationPlacement'} | null;
+type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits' | 'decorations'} | {kind: 'building' | 'rabbit' | 'moveRabbit' | 'decoration'; id: string} |
+  {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind:'extension';parcelId?:ParcelId} | {kind: 'collection' | 'settings' | 'placement' | 'hearts' | 'recipes' | 'arrange' | 'decorationPlacement'} | null;
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
 }
@@ -52,11 +53,12 @@ export class GameUI {
   private lastSecond = -1;
   private confirmationGeneration = 0;
   private arranging = false;
-  private decorationDraft: {id: string; location: DecorationLocation | null; rotation: 0 | 1; habitatId?: string} | null = null;
+  private decorationDraft: {id: string; location: DecorationLocation | null; rotation: 0 | 1;} | null = null;
   private photo = false;
   constructor(private controller: GameController, private scene: MeadowScene, private clock: () => number, private preferences: PreferenceStore) {
     this.snapshot = controller.getSnapshot(); this.sounds = new Sounds(preferences);
     const options = {signal: this.abort.signal};
+    document.getElementById('open-expand')!.addEventListener('click', () => this.open({kind:'extension'}), options);
     document.getElementById('open-arrange')!.addEventListener('click', () => this.open({kind: 'arrange'}), options);
     document.getElementById('exit-arrange')!.addEventListener('click', () => this.close(), options);
     document.getElementById('open-photo')!.addEventListener('click', () => this.setPhoto(true), options);
@@ -121,18 +123,19 @@ export class GameUI {
   open(view: NonNullable<View>): void {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
     if (this.placement && view.kind !== 'placement') { this.placement = null; this.scene.setPlacement(null); }
-    const decorationView = ['arrange', 'decorationPlacement', 'decoration', 'arrangeHabitat'].includes(view.kind);
+    const decorationView = ['arrange', 'decorationPlacement', 'decoration'].includes(view.kind);
     if (!decorationView) { this.arranging = false; this.decorationDraft = null; }
     else if (view.kind !== 'decoration') this.arranging = true;
     if (view.kind !== 'decorationPlacement') this.decorationDraft = null;
     this.content.scrollTop = 0;
-    this.view = view; this.syncArrangement(); this.controller.refresh(); this.render();
+    this.view = view; this.scene.setExpansion(view.kind==='extension',view.kind==='extension'?view.parcelId:undefined); this.syncArrangement(); this.controller.refresh(); this.render();
   }
   close(): void {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;
-    this.view = null; this.placement = null; this.arranging = false; this.decorationDraft = null; this.scene.setPlacement(null); this.syncArrangement(); this.render();
+    this.scene.setExpansion(false); this.view = null; this.placement = null; this.arranging = false; this.decorationDraft = null; this.scene.setPlacement(null); this.syncArrangement(); this.render();
   }
   onReplacement(): void {
+    this.scene.setExpansion(false);
     this.confirmationGeneration++;
     this.arranging = false; this.decorationDraft = null; this.setPhoto(false); this.syncArrangement();
     this.parents = [null, null]; this.placement = null; this.scene.setPlacement(null);
@@ -150,13 +153,13 @@ export class GameUI {
     }
     if (this.arranging) { this.selectDecoration(selection); return; }
     if (selection.kind === 'decoration') { this.open({kind: 'decoration', id: selection.id}); return; }
-    if (selection.kind === 'fineCell' || selection.kind === 'habitatSlot') return;
+    if (selection.kind === 'fineCell') return;
     if (selection.kind === 'cell') {
       if (this.placement) { this.placement.cell = {x: selection.x, y: selection.y}; this.scene.setPlacement(this.placement); this.render(); }
       return;
     }
     if (selection.kind === 'empty') { this.close(); return; }
-    if (selection.kind === 'extension') this.open({kind: 'extension'});
+    if (selection.kind === 'extension') this.open({kind: 'extension',parcelId:selection.parcelId});
     else if (selection.kind === 'building' || selection.kind === 'rabbit') this.open({kind: selection.kind, id: selection.id});
   }
   private render(): void {
@@ -188,7 +191,6 @@ export class GameUI {
       case 'placement': this.renderPlacement(s); break;
       case 'arrange': this.renderInventory(s); break;
       case 'decoration': this.renderDecoration(s, this.view.id); break;
-      case 'arrangeHabitat': this.renderHabitatDecorations(s, this.view.id); break;
       case 'decorationPlacement': this.renderDecorationPlacement(s); break;
     }
     const placedList = this.content.querySelector<HTMLDetailsElement>('[data-placed-list]');
@@ -269,11 +271,10 @@ export class GameUI {
   }
   private renderDecorationShop(s: GameState): void {
     this.content.append(node('p', 'Objets esthétiques, sans bonus. Chaque achat rejoint l’inventaire ; annuler sa pose ne fait pas perdre l’objet. Paiement uniquement en pattes.', 'small'));
-    for (const area of ['outside', 'habitat'] as const) {
-      this.content.append(node('h3', area === 'outside' ? 'Dans la prairie' : 'Dans les habitats'));
-      for (const id of DECORATION_IDS.filter(id => DECORATIONS[id].area === area)) {
+    this.content.append(node('h3', 'Décorations extérieures'));
+      for (const id of DECORATION_IDS) {
         const d = DECORATIONS[id], count = s.decorations.filter(owned => owned.catalogId === id).length;
-        const card = this.decorationCard(id, `${area === 'outside' ? `${d.width} × ${d.height} emplacements${d.rotates ? ' · peut tourner' : ''}` : 'Un emplacement intérieur'} · ${count} possédé(s)`);
+        const card = this.decorationCard(id, `${d.width} × ${d.height} cases fines${d.rotates ? ' · peut tourner' : ''} · ${count} possédé(s)`);
         card.dataset.catalog = id;
         const reason = purchaseDecorationReason(s, id);
         this.button(card, `Acheter · ${d.price} pattes`, () => this.confirm(`Acheter : ${d.name} ?`, `${d.price} pattes. Cet exemplaire restera dans l’inventaire si vous annulez le placement.`, () => this.execute({type: 'buyDecoration', catalogId: id}, 'Objet acheté et conservé dans votre inventaire.', () => {
@@ -282,7 +283,6 @@ export class GameUI {
         })), reason ? REFUSALS[reason] : null);
         this.content.append(card);
       }
-    }
     this.button(this.content, 'Ouvrir mon inventaire', () => this.open({kind: 'arrange'}), null, true);
   }
   private renderInventory(s: GameState): void {
@@ -299,7 +299,7 @@ export class GameUI {
     }
     const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
     const details = node('details'); details.dataset.placedList = ''; details.append(node('summary', `Objets posés · ${placed.length}`));
-    for (const d of placed) this.button(details, `${DECORATIONS[d.catalogId].name} · #${d.id.split('-')[1]}`, () => this.open({kind: 'decoration', id: d.id}), null, true);
+    for (const d of placed) this.button(details, `${DECORATIONS[d.catalogId].name} · #${d.id.split('-')[1]}`, () => {this.scene.focusDecoration(d.id);this.open({kind: 'decoration', id: d.id});}, null, true);
     this.content.append(details);
     this.button(this.content, 'Quitter le mode Aménagement', () => this.close(), null, true);
   }
@@ -339,12 +339,10 @@ export class GameUI {
     const draft = this.decorationDraft;
     if (draft) {
       if (selection.kind === 'fineCell') draft.location = {kind: 'outside', x: selection.x, y: selection.y, rotation: draft.rotation};
-      else if (selection.kind === 'habitatSlot') draft.location = {kind: 'habitat', habitatId: selection.habitatId, slot: selection.slot};
-      else if (selection.kind === 'building') draft.habitatId = selection.id;
       this.syncArrangement(); this.render(); return;
     }
     if (selection.kind === 'decoration') this.open({kind: 'decoration', id: selection.id});
-    else if (selection.kind === 'building') this.open({kind: 'arrangeHabitat', id: selection.id});
+    else if (selection.kind === 'building') this.open({kind: 'building', id: selection.id});
     else if (selection.kind === 'empty') { this.view = null; this.syncArrangement(); this.render(); }
   }
   private renderDecorationPlacement(s: GameState): void {
@@ -353,25 +351,12 @@ export class GameUI {
     this.title.textContent = `Placer : ${DECORATIONS[d.catalogId].name}`;
     this.content.append(node('p', 'Touchez une destination, puis confirmez. Glissez ou pincez pour explorer sans poser.', 'small'));
     this.content.append(node('p', d.location.kind === 'inventory' ? 'En cas d’annulation, l’objet reste dans votre inventaire.' : 'En cas d’annulation, l’objet reste à son emplacement actuel.', 'small'));
-    if (DECORATIONS[d.catalogId].area === 'habitat') {
-      this.content.append(node('p', 'Choisissez un habitat et l’un de ses trois emplacements sur les bords. Les places de lapins restent libres.', 'small'));
-      for (const home of s.buildings.filter(b => b.kind === 'enclosure')) {
-        const card = this.card(this.enclosureName(s, home.id));
-        if (draft.habitatId && draft.habitatId !== home.id) this.button(card, 'Choisir cet habitat', () => { draft.habitatId = home.id; this.render(); }, null, true);
-        else for (const slot of [0, 1, 2] as const) this.button(card, `Aperçu · emplacement ${slot + 1}`, () => this.selectDecoration({kind: 'habitatSlot', habitatId: home.id, slot}), null, true);
-        this.content.append(card);
-      }
-    }
     if (DECORATIONS[d.catalogId].rotates) this.button(this.content, `Tourner de 90° · orientation ${draft.rotation ? 'verticale' : 'horizontale'}`, () => this.rotateDecoration(), null, true);
     const reason = draft.location ? decorationPlacementReason(s, d.id, draft.location) : null;
     const actions = node('div', '', 'decoration-placement-actions');
     const status = node('p', !draft.location ? 'Choisissez une destination · aucun objet posé' : reason ? `× ${REFUSALS[reason]}` : '✓ Emplacement valide · pose gratuite', !draft.location ? 'placement-pending' : reason ? 'placement-invalid' : 'placement-valid');
     status.setAttribute('role', 'status'); actions.append(status);
     const choices = node('div', '', 'placement-choices'); actions.append(choices);
-    if (reason === 'DECORATION_SLOT_OCCUPIED' && draft.location?.kind === 'habitat') {
-      const loc = draft.location, blocking = s.decorations.find(other => other.location.kind === 'habitat' && other.location.habitatId === loc.habitatId && other.location.slot === loc.slot)!;
-      this.button(this.content, 'Ranger l’objet de cet emplacement', () => this.confirm('Ranger cet objet ?', 'Il sera conservé dans votre inventaire. Confirmez ensuite la nouvelle pose séparément.', () => this.execute({type: 'placeDecoration', id: blocking.id, location: {kind: 'inventory'}}, 'Ancien objet rangé.')), null, true);
-    }
     const confirm = this.button(choices, 'Confirmer la pose · gratuit', () => {
       if (!draft.location) return;
       this.execute({type: 'placeDecoration', id: d.id, location: structuredClone(draft.location)}, 'Décoration installée.', () => this.open({kind: 'arrange'}));
@@ -379,17 +364,6 @@ export class GameUI {
     confirm.disabled = !draft.location || !!reason;
     this.button(choices, 'Annuler le placement', () => this.open({kind: 'arrange'}), null, true);
     this.content.append(actions);
-  }
-  private renderHabitatDecorations(s: GameState, id: string): void {
-    this.title.textContent = `Aménager : ${this.enclosureName(s, id)}`;
-    this.content.append(node('p', 'Trois emplacements indépendants des lapins. Déplacer ou améliorer cet habitat conserve les objets.', 'small'));
-    for (const slot of [0, 1, 2] as const) {
-      const d = s.decorations.find(d => d.location.kind === 'habitat' && d.location.habitatId === id && d.location.slot === slot);
-      const card = this.card(`Emplacement ${slot + 1}`, d ? DECORATIONS[d.catalogId].name : 'Libre');
-      if (d) this.button(card, 'Déplacer ou ranger cet objet', () => this.open({kind: 'decoration', id: d.id}), null, true);
-      else this.button(card, 'Choisir dans l’inventaire', () => this.open({kind: 'arrange'}), null, true);
-      this.content.append(card);
-    }
   }
   private enclosureName(s: GameState, id: string): string {
     const b = s.buildings.find(b => b.id === id)!;
@@ -609,14 +583,17 @@ export class GameUI {
     this.button(this.content, 'Retour à la collection', () => this.open({kind: 'collection'}), null, true);
   }
   private renderExtension(s: GameState): void {
-    this.title.textContent = 'Une prairie plus grande';
-    const next = nextExtension(s);
-    if (!next) { this.content.append(node('p', 'Les deux extensions sont achetées. Terrain : 9 × 2 cases.')); return; }
-    const command: PattesCommand = {type: 'expand', stage: next.stage};
-    const description = `Extension ${next.stage} : terrain ${next.width} × 2. Six nouvelles cases ; bâtiments et lapins restent à leur place.`;
-    this.content.append(node('p', description));
-    this.button(this.content, `Acheter l’extension · ${next.cost} pattes`, () => this.confirm('Agrandir la prairie ?', `${description} Paiement : ${next.cost} pattes.`, () => this.execute(command, 'La prairie s’agrandit !', () => { this.view = null; })), moneyReason(s, next.cost));
-    this.complement(this.content, s, command, `Acheter l’extension ${next.stage}`, 'La prairie s’agrandit !', () => { this.view = null; });
+    this.title.textContent='Agrandir l’île';
+    if(s.acquiredParcels.length===9){this.content.append(node('p','L’île est entièrement agrandie : 81 cases.'));return;}
+    const cost=extensionPrice(s),selected=this.view?.kind==='extension'?this.view.parcelId:undefined;
+    this.content.append(node('p','Choisissez librement une parcelle sur l’eau ou dans la liste. Chaque achat ajoute neuf cases sans déplacer vos objets.'));
+    for(const id of PARCEL_IDS.filter(id=>!s.acquiredParcels.includes(id)))this.button(this.content,`Voir ${PARCELS[id].name}`,()=>this.open({kind:'extension',parcelId:id}),null,true);
+    if(!selected||s.acquiredParcels.includes(selected))return;
+    const command:PattesCommand={type:'expand',parcelId:selected,expectedCost:cost},description=`${PARCELS[selected].name} · + 9 cases · ${cost} pattes.`;
+    this.content.append(node('p',description,'parcel-preview'));
+    this.button(this.content,`Acheter ${PARCELS[selected].name} · ${cost} pattes`,()=>this.confirm(`Acheter la parcelle ${PARCELS[selected].name} ?`,description,()=>this.execute(command,'Parcelle acquise.',()=>this.close())),moneyReason(s,cost));
+    this.complement(this.content,s,command,`Acheter ${PARCELS[selected].name}`,'Parcelle acquise.',()=>this.close());
+    this.button(this.content,'Annuler l’agrandissement',()=>this.close(),null,true);
   }
   private renderMissions(s: GameState, tab: 'main' | 'daily'): void {
     this.title.textContent = 'Missions';

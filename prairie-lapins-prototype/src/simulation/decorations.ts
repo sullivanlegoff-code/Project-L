@@ -1,6 +1,6 @@
 import {DECORATIONS, FINE_GRID, MAX_DECORATIONS, type DecorationId} from '../config/decorations';
 import type {DecorationLocation, GameState, Refusal} from '../state/types';
-import {terrainWidth} from './habitats';
+import {acquiredFootprint} from '../config/land';
 
 export function footprint(catalogId: DecorationId, rotation: 0 | 1 = 0) {
   const d = DECORATIONS[catalogId];
@@ -24,14 +24,10 @@ export function decorationPlacementReason(s: GameState, id: string, location: De
   if (!owned) return 'NOT_FOUND';
   const definition = DECORATIONS[owned.catalogId];
   if (location.kind === 'inventory') return null;
-  if (location.kind === 'habitat') {
-    if (definition.area !== 'habitat' || !Number.isInteger(location.slot) || location.slot < 0 || location.slot > 2) return 'INVALID_DECORATION_SLOT';
-    if (!s.buildings.some(b => b.id === location.habitatId && b.kind === 'enclosure')) return 'NOT_FOUND';
-    return s.decorations.some(d => d.id !== id && d.location.kind === 'habitat' && d.location.habitatId === location.habitatId && d.location.slot === location.slot) ? 'DECORATION_SLOT_OCCUPIED' : null;
-  }
+  if (location.kind !== 'outside') return 'INVALID_CHOICE';
   if (definition.area !== 'outside' || (location.rotation !== 0 && location.rotation !== 1) || (location.rotation && !definition.rotates)) return 'INVALID_CHOICE';
   const rect = {...location, ...footprint(owned.catalogId, location.rotation)};
-  if (!Number.isInteger(rect.x) || !Number.isInteger(rect.y) || rect.x < 0 || rect.y < 0 || rect.x + rect.width > terrainWidth(s) * FINE_GRID || rect.y + rect.height > 2 * FINE_GRID) return 'INVALID_CELL';
+  if (!acquiredFootprint(s, rect.x, rect.y, rect.width, rect.height)) return 'INVALID_CELL';
   if (s.buildings.some(b => overlaps(rect, {x: b.x * FINE_GRID, y: b.y * FINE_GRID, width: FINE_GRID, height: FINE_GRID}))) return 'CELL_OCCUPIED';
   if (s.decorations.some(d => d.id !== id && d.location.kind === 'outside' && overlaps(rect, {...d.location, ...footprint(d.catalogId, d.location.rotation)}))) return 'DECORATION_OVERLAP';
   return null;

@@ -1,10 +1,10 @@
+import type {ParcelId} from '../config/land';
 import type {HabitatType, HabitatLevel} from '../config/habitats';
 import type {MainMissionId, DailyMissionId} from '../config/missions';
 import type {BuildingKind, OrderId, SpeciesId} from '../config/balance';
 import type {DecorationId} from '../config/decorations';
 
-export type DecorationLocation = {kind: 'inventory'} | {kind: 'outside'; x: number; y: number; rotation: 0 | 1} |
-  {kind: 'habitat'; habitatId: string; slot: 0 | 1 | 2};
+export type DecorationLocation = {kind: 'inventory'} | {kind: 'outside'; x: number; y: number; rotation: 0 | 1};
 export interface OwnedDecoration {id: string; catalogId: DecorationId; location: DecorationLocation}
 
 export interface Birth {
@@ -28,18 +28,18 @@ export interface MissionState {
   daily: {referenceAt: number; cycleIndex: number; progress: Record<DailyMissionId, number>; claimed: DailyMissionId[]; bonusClaimed: boolean};
 }
 export interface GameState {
-  version: 5; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
+  version: 6; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
   hearts: number; nextHeartGiftAt: number;
-  pattes: number; grass: number; expanded: boolean; secondExpanded: boolean;
+  pattes: number; grass: number; acquiredParcels: ParcelId[];
   buildings: Building[]; rabbits: Rabbit[]; discovered: SpeciesId[];
   pityFailures: number;
 }
-export type Refusal = 'DECORATION_LIMIT' | 'DECORATION_OVERLAP' | 'DECORATION_BLOCKS_BUILDING' | 'INVALID_DECORATION_SLOT' | 'DECORATION_SLOT_OCCUPIED' | 'INVALID_TIME' | 'INVALID_RANDOM' | 'INVALID_CHOICE' | 'NOT_FOUND' |
+export type Refusal = 'DECORATION_LIMIT' | 'DECORATION_OVERLAP' | 'DECORATION_BLOCKS_BUILDING' | 'INVALID_TIME' | 'INVALID_RANDOM' | 'INVALID_CHOICE' | 'NOT_FOUND' |
   'NOT_ENOUGH_PATTES' | 'NOT_ENOUGH_GRASS' | 'INVALID_CELL' | 'CELL_OCCUPIED' |
   'BUILDING_LIMIT' | 'CAPACITY_FULL' | 'BUSY' | 'NOT_READY' | 'MAX_AFFECTION' |
   'SAME_PARENT' | 'AFFECTION_TOO_LOW' | 'MISSING_BUILDING' | 'ALREADY_EXPANDED' |
   'LAST_OF_SPECIES' | 'PARENT_BUSY' | 'NOT_ENOUGH_HEARTS' | 'ACTION_FINISHED' |
-  'STALE_ACTION' | 'PRICE_CHANGED' | 'NO_MISSING_PATTES' | 'ALREADY_CLAIMED' | 'CYCLE_EXPIRED' | 'RESOURCE_LIMIT' | 'TYPE_INCOMPATIBLE' | 'MAX_HABITAT_LEVEL' | 'MISSING_EXTENSION';
+  'STALE_ACTION' | 'PRICE_CHANGED' | 'NO_MISSING_PATTES' | 'ALREADY_CLAIMED' | 'CYCLE_EXPIRED' | 'RESOURCE_LIMIT' | 'TYPE_INCOMPATIBLE' | 'MAX_HABITAT_LEVEL';
 export type ActionResult = {ok: true; state: GameState; value?: string | number} |
   {ok: false; state: GameState; reason: Refusal};
 export type BaseCommand =
@@ -54,7 +54,7 @@ export type BaseCommand =
   | {type: 'breed'; parents: [string, string]}
   | {type: 'welcome'; enclosureId: string}
   | {type: 'upgradeHabitat'; id: string; fromLevel: HabitatLevel}
-  | {type: 'expand'; stage?: 1 | 2}
+  | {type: 'expand'; parcelId: ParcelId; expectedCost: number}
   | {type: 'release'; id: string};
 export type PattesCommand = Extract<BaseCommand, {type: 'buyBuilding' | 'buyRabbit' | 'expand' | 'startOrder' | 'breed' | 'upgradeHabitat'}>;
 export type TimedStage = 'order' | 'breeding' | 'growth';

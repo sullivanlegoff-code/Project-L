@@ -1,9 +1,3 @@
 import type {GameState} from '../src/state/types';
-/** Reconstruct the old format for migration tests; never used by the game. */
-export function withoutHabitats(s: GameState) {
-  const {decorations: _decorations, secondExpanded: _second, buildings, ...fields} = s;
-  return {...fields, buildings: buildings.map(({habitat: _habitat, ...b}) => b)};
-}
-export function withUniversalHabitats<T extends {buildings: {kind: string}[]}>(s: T) {
-  return {...s, version: 5, decorations: [], secondExpanded: false, buildings: s.buildings.map(b => ({...b, habitat: b.kind === 'enclosure' ? {type: 'universal', level: 1} : null}))};
-}
+export function withoutHabitats(s:GameState){const {decorations:_d,acquiredParcels,buildings,...fields}=s;return {...fields,expanded:acquiredParcels.length>1,buildings:buildings.map(({habitat:_h,...b})=>({...b,x:b.x<3?b.x+6:b.x-3,y:b.y-3}))};}
+export function withUniversalHabitats<T extends {expanded:boolean;buildings:{kind:string;x:number;y:number}[]}>(s:T){const {expanded,...fields}=s;return {...fields,version:6,decorations:[],acquiredParcels:expanded?['center','east']:['center'],buildings:s.buildings.map(b=>({...b,x:b.x+3,y:b.y+3,habitat:b.kind==='enclosure'?{type:'universal',level:1}:null}))};}

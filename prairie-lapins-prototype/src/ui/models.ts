@@ -1,5 +1,5 @@
+import {acquiredCell} from '../config/land';
 import {habitatPrice, type HabitatType} from '../config/habitats';
-import {terrainWidth} from '../simulation/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
 import {breedingPool, recipeMatches} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
@@ -11,9 +11,7 @@ export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED
   DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
   DECORATION_OVERLAP: 'Cette empreinte chevauche une autre décoration.',
   DECORATION_BLOCKS_BUILDING: 'Des décorations occupent cette case. Rangez-les avant de placer le bâtiment.',
-  INVALID_DECORATION_SLOT: 'Choisissez un des trois emplacements décoratifs d’un habitat.',
-  DECORATION_SLOT_OCCUPIED: 'Cet emplacement contient déjà un objet. Rangez-le d’abord ; il restera dans votre inventaire.',
-  TYPE_INCOMPATIBLE: 'Type incompatible.', MAX_HABITAT_LEVEL: 'Niveau maximal atteint.', MISSING_EXTENSION: 'Achetez d’abord la première extension.',
+  TYPE_INCOMPATIBLE: 'Type incompatible.', MAX_HABITAT_LEVEL: 'Niveau maximal atteint.',
   ALREADY_CLAIMED: 'Cette récompense a déjà été réclamée.', CYCLE_EXPIRED: 'Ce cycle a expiré. Consultez les nouvelles missions.', RESOURCE_LIMIT: 'Le solde est trop élevé pour recevoir cette récompense.',
   NOT_ENOUGH_HEARTS: 'Pas assez de cœurs. Vous pouvez continuer en attendant ou en récoltant des pattes.',
   ACTION_FINISHED: 'Cette étape est déjà terminée : aucun cœur dépensé.', STALE_ACTION: 'Cette action a changé. Ouvrez à nouveau son panneau.',
@@ -40,15 +38,14 @@ export function releaseReason(s: GameState, id: string, now: number): string | n
 export function buildingReason(s: GameState, kind: BuildingKind, ignorePrice = false, habitatType: HabitatType = 'universal'): string | null {
   const config = BALANCE.buildings[kind];
   if (config.maximum !== null && s.buildings.filter(b => b.kind === kind).length >= config.maximum) return REFUSALS.BUILDING_LIMIT;
-  if (s.buildings.length >= terrainWidth(s) * BALANCE.height) return 'Aucune case libre. Agrandissez la prairie.';
+  if (s.buildings.length >= s.acquiredParcels.length * 9) return 'Aucune case libre. Agrandissez la prairie.';
   return ignorePrice ? null : moneyReason(s, kind === 'enclosure' ? habitatPrice(habitatType) : config.price);
 }
 export type Placement = {kind: BuildingKind; movingId?: string; habitatType?: HabitatType; cell: {x: number; y: number} | null};
 export function placementReason(s: GameState, placement: Placement): string | null {
   const cell = placement.cell;
   if (!cell) return 'Touchez une case de la prairie.';
-  const width = terrainWidth(s);
-  if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y) || cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= BALANCE.height) return REFUSALS.INVALID_CELL;
+  if (!acquiredCell(s, cell.x, cell.y)) return REFUSALS.INVALID_CELL;
   if (s.buildings.some(b => b.id !== placement.movingId && b.x === cell.x && b.y === cell.y)) return REFUSALS.CELL_OCCUPIED;
   if (decorationsInCell(s, cell.x, cell.y).length) return REFUSALS.DECORATION_BLOCKS_BUILDING;
   if (placement.movingId) return s.buildings.some(b => b.id === placement.movingId) ? null : REFUSALS.NOT_FOUND;

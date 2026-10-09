@@ -42,7 +42,7 @@ describe('crowded rabbit display and selection', () => {
       bases.forEach((base, selected) => {
         for (const extreme of extremes) {
           const position = {x: base.x + extreme.x, y: base.y + extreme.y};
-          for (const aim of [{x: 0, y: 0}, {x: 0, y: -7 * VISUAL.rabbit.scale},
+          for (const aim of [{x: 3, y: 3}, {x: 0, y: -7 * VISUAL.rabbit.scale},
             {x: -6 * VISUAL.rabbit.scale, y: -7 * VISUAL.rabbit.scale}, {x: 6 * VISUAL.rabbit.scale, y: -7 * VISUAL.rabbit.scale}]) {
             const tap = {x: position.x + aim.x, y: position.y + aim.y};
             const positions = bases.map((other, index) => {
@@ -74,11 +74,11 @@ describe('crowded rabbit display and selection', () => {
   });
 
   it('uses the frontmost rabbit for an equal-distance touch without stealing a closer body', () => {
-    const back = {id: 'back', point: {x: 0, y: 0}, depth: 0};
+    const back = {id: 'back', point: {x: 3, y: 3}, depth: 0};
     const front = {id: 'front', point: {x: 10, y: 0}, depth: 30};
     for (const order of [[back, front], [front, back]]) {
-      expect(rabbitHit({x: 5, y: 0}, order)?.id).toBe('front');
-      expect(rabbitHit({x: 1, y: 0}, order)?.id).toBe('back');
+      expect(rabbitHit({x: 8, y: 3}, order)?.id).toBe('front');
+      expect(rabbitHit({x: 4, y: 3}, order)?.id).toBe('back');
     }
   });
 

@@ -4,8 +4,8 @@ import {writeFileSync} from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
 const origin = process.env.PRAIRIE_ORIGIN || 'https://sullivanlegoff-code.github.io';
 const routes = [
-  ['', process.env.STABLE_REVISION, 5, 'Prairie de lapins · quinze espèces · v5'],
-  ['dev/', process.env.STABLE_REVISION, 5, 'Prairie de lapins · quinze espèces · v5'],
+  ['', process.env.STABLE_REVISION, 6, 'Prairie de lapins · île à neuf parcelles · v6'],
+  ['dev/', process.env.STABLE_REVISION, 6, 'Prairie de lapins · île à neuf parcelles · v6'],
   ['preview/accounts/', process.env.ACCOUNTS_REVISION, 4, 'Habitats · passe visuelle'],
   ['preview/decorations/', process.env.DECORATIONS_REVISION, 5, 'Aménagement · prévisualisation v5'],
 ];
@@ -30,12 +30,13 @@ async function check() {
     assert.ok(scripts.includes(label), `Wrong release label on ${route}`);
     assert.ok(scripts.includes(`version:${format}`), `Wrong save format on ${route}`);
     for (const child of new Set([...scripts.matchAll(/["'](\.\/tools-[^"']+\.js)["']/g)].map(m => m[1]))) scripts += await read(new URL(child, scriptUrl));
-    if (format === 5) {
-      for (const marker of ['Lapin en Bouée', 'Lapin Géant', 'Lapin Magicien', 'Lapin Dragon', 'collection-filters', 'Légendaire', 'meadow-static-ground', 'export-migration-source', 'migrationBackup', 'decoration-placement-actions', 'Terrain réservé', 'sellDecoration', 'setDecorationSelection', 'SALE_NOT_SAVED']) assert.ok(scripts.includes(marker), `Missing decoration feature ${marker}`);
+    if (format >= 5) {
+      for (const marker of ['Lapin en Bouée', 'Lapin Géant', 'Lapin Magicien', 'Lapin Dragon', 'collection-filters', 'Légendaire', 'meadow-static-ground', 'export-migration-source', 'migrationBackup', 'decoration-placement-actions', 'sellDecoration', 'setDecorationSelection', 'SALE_NOT_SAVED']) assert.ok(scripts.includes(marker), `Missing decoration feature ${marker}`);
       if (route === '') for (const marker of ['dev-time-', 'dev-grant-', 'dev-scenario-', 'prairie-lapins.development.']) assert.ok(!scripts.includes(marker), `Development tools in normal game: ${marker}`);
       if (route === 'dev/' || route === 'preview/decorations/') for (const marker of ['decorationStart', 'decorationDense', 'islandStart', 'islandExpanded', 'islandFull', 'Collection — quinze espèces et recettes', route === 'dev/' ? 'prairie-lapins.development.' : 'prairie-lapins.preview.decorations.']) assert.ok(scripts.includes(marker), `Missing scenario/storage isolation: ${marker}`);
       for (const marker of ['supabase.co', 'signInWithOtp']) assert.ok(!scripts.includes(marker), `Online client in decorations: ${marker}`);
     }
+    if(format===6)for(const marker of ['acquiredParcels','Agrandir l’île','parcel-preview'])assert.ok((scripts+html).includes(marker),marker);
     report.push({url, revision, saveFormat: format, html: 200, application: 200, featuresChecked: true});
   }
   return report;

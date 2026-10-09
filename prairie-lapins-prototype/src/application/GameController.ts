@@ -1,4 +1,4 @@
-import {HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
+import {LAND_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
 import {act, advance, createGame, decodeGame, encodeGame} from '../simulation';
 import {MAX_JSON_LENGTH, type DecodeResult} from '../persistence/json';
 import {MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, SAVE_KEY, type SaveStorage} from '../persistence/storage';
@@ -11,7 +11,7 @@ export type Operation = {ok: true} | {ok: false; reason: ControllerIssue};
 export type SaveStatus = 'saved' | 'unsaved' | 'read-error' | 'write-error' | 'invalid-save' | 'conflict';
 export interface Snapshot {
   state: GameState | null; status: SaveStatus; issue: ControllerIssue | null;
-  lastSavedAt: number | null; dirty: boolean; hasUnreadableBackup: boolean;
+  lastSavedAt: number | null; dirty: boolean; hasUnreadableBackup: boolean; storedDecorations: number;
 }
 export interface ImportSummary {hearts: number; pattes: number; grass: number; rabbits: number; discovered: GameState['discovered']}
 export type PreparedImport = {ok: true; token: number; summary: ImportSummary} | {ok: false; reason: ControllerIssue};
@@ -27,7 +27,8 @@ export class GameController {
   private hasRead = false;
   private disposed = false;
   private importSequence = 0;
-  private pendingImport: {token: number; state: GameState; legacyJson?: string} | null = null;
+  private pendingImport: {token: number; state: GameState; storedDecorations: number; legacyJson?: string} | null = null;
+  private storedDecorations = 0;
   private migrationSource: string | null = null;
   private listeners = new Set<(snapshot: Snapshot) => void>();
 
@@ -37,7 +38,7 @@ export class GameController {
   get storageScope(): 'normal' | 'laboratory' { return this.storage.scope ?? 'normal'; }
 
   getSnapshot(): Snapshot {
-    return {state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
+    return {storedDecorations: this.storedDecorations, state: this.state ? structuredClone(this.state) : null, status: this.status, issue: this.issue,
       lastSavedAt: this.lastSavedAt, dirty: this.dirty,
       hasUnreadableBackup: this.status === 'invalid-save' && this.storedRaw !== null};
   }
@@ -59,6 +60,7 @@ export class GameController {
       this.status = 'invalid-save'; this.issue = decoded.reason; this.emit(); return;
     }
     if (decoded?.ok && decoded.migratedFrom) this.migrationSource = raw;
+    this.storedDecorations = decoded?.ok ? decoded.storedDecorations ?? 0 : 0;
     this.state = decoded?.ok ? advance(decoded.state, now) : createGame(now);
     this.dirty = true;
     this.saveCurrent(now); this.emit();
@@ -80,7 +82,7 @@ export class GameController {
         // Also retain the original in memory if even the backup write is denied.
         this.migrationSource = backup;
         const source = decodeGame(backup, savedAt);
-        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : DECORATIONS_MIGRATION_BACKUP_KEY, backup);
+        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 4 ? DECORATIONS_MIGRATION_BACKUP_KEY : LAND_MIGRATION_BACKUP_KEY, backup);
       }
       this.storage.setItem(SAVE_KEY, json);
     }
@@ -158,7 +160,7 @@ export class GameController {
   migrationBackup(): string | null {
     if (this.migrationSource !== null) return this.migrationSource;
     try {
-      for (const key of [DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
+      for (const key of [LAND_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
         const raw = this.storage.getItem(key);
         if (raw !== null) return raw;
       }
@@ -173,7 +175,7 @@ export class GameController {
     const decoded = decodeGame(json, this.clock());
     if (!decoded.ok) return decoded;
     const token = ++this.importSequence;
-    this.pendingImport = {token, state: decoded.state, ...(decoded.migratedFrom ? {legacyJson: json} : {})};
+    this.pendingImport = {token, state: decoded.state, storedDecorations: decoded.storedDecorations ?? 0, ...(decoded.migratedFrom ? {legacyJson: json} : {})};
     return {ok: true, token, summary: {hearts: decoded.state.hearts, pattes: decoded.state.pattes, grass: decoded.state.grass,
       rabbits: decoded.state.rabbits.length, discovered: [...decoded.state.discovered]}};
   }
@@ -190,7 +192,7 @@ export class GameController {
     const result = this.write(candidate, now, this.pendingImport.legacyJson);
     if (!result.ok) return result;
     this.state = candidate; this.dirty = false; this.status = 'saved'; this.issue = null;
-    this.cancelImport(); this.emit(); return {ok: true};
+    this.storedDecorations = this.pendingImport?.storedDecorations ?? 0; this.cancelImport(); this.emit(); return {ok: true};
   }
   restart(confirmed: boolean): Operation {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};

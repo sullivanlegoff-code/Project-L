@@ -1,4 +1,6 @@
-import {HABITAT_TYPES, HABITAT_LEVELS, LAND, habitatLevel} from '../config/habitats';
+import {PARCEL_IDS, acquiredCell, type ParcelId} from '../config/land';
+import {footprint} from '../simulation/decorations';
+import {type HabitatType, HABITAT_TYPES, HABITAT_LEVELS, LAND, habitatLevel} from '../config/habitats';
 import {MAIN_MISSION_IDS, DAILY_MISSION_IDS, DAILY_MISSIONS, MISSION_CYCLE_DURATION} from '../config/missions';
 import {createMissions, cycleIndexAt} from '../simulation/missions';
 import {z} from 'zod';
@@ -48,7 +50,9 @@ const decoration = z.object({id: z.string().regex(/^decoration-[1-9]\d*$/), cata
     z.object({kind: z.literal('habitat'), habitatId: identity, slot: z.union([z.literal(0), z.literal(1), z.literal(2)])}).strict(),
   ])}).strict();
 const v5 = v4.extend({version: z.literal(5), decorations: z.array(decoration).max(MAX_DECORATIONS)}).strict();
-const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine((s, context) => {
+const currentDecoration = decoration.extend({location: z.discriminatedUnion('kind', [decoration.shape.location.options[0], decoration.shape.location.options[1]])}).strict();
+const v6 = v5.omit({expanded: true, secondExpanded: true, decorations: true}).extend({version: z.literal(6), acquiredParcels: z.array(z.enum(PARCEL_IDS)).min(1).max(9), decorations: z.array(currentDecoration).max(MAX_DECORATIONS), buildings: v4.shape.buildings.max(81), rabbits: v4.shape.rabbits.max(567)}).strict();
+const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5, v6]).superRefine((s, context) => {
   const issue = (message: string) => context.addIssue({code: z.ZodIssueCode.custom, message});
   // v1 keeps its exact durations; v2/v3 also admit completed, shortened stages.
   const durationValid = (start: number, end: number, normal: number) => start <= s.lastSimulatedAt &&
@@ -66,7 +70,8 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine
   const ids: string[] = [];
   const cells = new Set<string>();
   if ('secondExpanded' in s && s.secondExpanded && !s.expanded) issue('Extension sequence');
-  const width = 'secondExpanded' in s && s.secondExpanded ? LAND[2].width : s.expanded ? BALANCE.extendedWidth : BALANCE.initialWidth;
+  const width = s.version === 6 ? 9 : 'secondExpanded' in s && s.secondExpanded ? LAND[2].width : s.expanded ? BALANCE.extendedWidth : BALANCE.initialWidth;
+  if (s.version === 6 && (!s.acquiredParcels.includes('center') || new Set(s.acquiredParcels).size !== s.acquiredParcels.length)) issue('Invalid acquired parcels');
   const nursery = s.buildings.find(b => b.kind === 'nursery');
   for (const b of s.buildings) {
     ids.push(b.id);
@@ -75,7 +80,7 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine
       if (b.habitat && b.incomeUnits > habitatLevel(b.habitat.type, b.habitat.level).cap * HOUR) issue('Habitat storage');
     }
     if (!b.id.startsWith('building-')) issue('Building identity');
-    if (b.x >= width || b.y >= BALANCE.height || cells.has(`${b.x},${b.y}`)) issue('Invalid or occupied cell');
+    if ((s.version === 6 ? !acquiredCell(s,b.x,b.y) : b.x >= width || b.y >= BALANCE.height) || cells.has(`${b.x},${b.y}`)) issue('Invalid or occupied cell');
     cells.add(`${b.x},${b.y}`);
     if ((b.kind !== 'enclosure' && b.incomeUnits !== 0) || (b.kind !== 'farm' && b.order) ||
       (b.kind !== 'nest' && b.breeding) || (b.kind !== 'nursery' && b.baby)) issue('Building payload mismatch');
@@ -105,41 +110,68 @@ const schema = z.discriminatedUnion('version', [v1, v2, v3, v4, v5]).superRefine
     ids.push(rabbit.id);
     if (rabbit.id.startsWith('building-') || !s.discovered.includes(rabbit.species) ||
       !s.buildings.some(b => b.kind === 'enclosure' && b.id === rabbit.enclosureId)) issue('Rabbit identity or enclosure or discovery');
-    const home = 'secondExpanded' in s ? s.buildings.find(b => b.id === rabbit.enclosureId) : undefined;
-    if (home && 'habitat' in home && home.habitat && home.habitat.type !== 'universal' && !SPECIES[rabbit.species].types.includes(home.habitat.type)) issue('Incompatible rabbit');
+    const home = s.buildings.find(b => b.id === rabbit.enclosureId);
+    if (home && 'habitat' in home && home.habitat) { const type=(home.habitat as {type:HabitatType}).type; if(type !== 'universal' && !SPECIES[rabbit.species].types.includes(type))issue('Incompatible rabbit'); }
   }
   for (const b of s.buildings) {
     const capacity = 'habitat' in b && b.habitat ? habitatLevel(b.habitat.type, b.habitat.level).capacity : BALANCE.enclosureCapacity;
     if (s.rabbits.filter(r => r.enclosureId === b.id).length > capacity) issue('Enclosure capacity');
   }
-  if (s.version === 5) for (const d of s.decorations) {
+  if (s.version === 5 || s.version === 6) for (const d of s.decorations) {
     ids.push(d.id);
-    if (decorationPlacementReason(s, d.id, d.location)) issue('Invalid decoration placement or reference');
+    if (s.version === 6) {if (decorationPlacementReason(s, d.id, d.location as GameState['decorations'][number]['location'])) issue('Invalid decoration placement or reference');}
+    else if (d.location.kind === 'habitat') {
+      const loc=d.location;
+      if (!['soft-cushion','ball-toys','play-tunnel','small-parasol'].includes(d.catalogId) || !s.buildings.some(b=>b.kind==='enclosure'&&b.id===loc.habitatId) || s.decorations.some(other=>other.id!==d.id&&other.location.kind==='habitat'&&other.location.habitatId===loc.habitatId&&other.location.slot===loc.slot)) issue('Invalid old habitat decoration');
+    } else if (d.location.kind === 'outside') {
+      const loc=d.location, rect={...loc,...footprint(d.catalogId,loc.rotation)};
+      const overlaps=(x:number,y:number,w:number,h:number)=>rect.x<x+w&&rect.x+rect.width>x&&rect.y<y+h&&rect.y+rect.height>y;
+      if (['soft-cushion','ball-toys','play-tunnel','small-parasol'].includes(d.catalogId) || (loc.rotation && !['wood-bench','flower-arch'].includes(d.catalogId)) || rect.x+rect.width>width*4 || rect.y+rect.height>8 || s.buildings.some(b=>overlaps(b.x*4,b.y*4,4,4)) || s.decorations.some(other=>{if(other.id===d.id||other.location.kind!=='outside')return false;const size=footprint(other.catalogId,other.location.rotation);return overlaps(other.location.x,other.location.y,size.width,size.height)})) issue('Invalid old exterior decoration');
+    }
   }
   if (new Set(ids).size !== ids.length || ids.some(id => !Number.isSafeInteger(Number(id.split('-')[1])) || Number(id.split('-')[1]) >= s.nextId)) issue('Duplicate identity or invalid nextId');
 });
 
-export type DecodeResult = {ok: true; state: GameState; migratedFrom?: 1 | 2 | 3 | 4} | {ok: false; reason: 'INVALID_JSON' | 'INVALID_STATE' | 'UNSUPPORTED_VERSION' | 'FILE_TOO_LARGE'};
+export type DecodeResult = {ok: true; state: GameState; migratedFrom?: 1 | 2 | 3 | 4 | 5; storedDecorations?: number} | {ok: false; reason: 'INVALID_JSON' | 'INVALID_STATE' | 'UNSUPPORTED_VERSION' | 'FILE_TOO_LARGE'};
 export const MAX_JSON_LENGTH = 1_000_000;
 export function decodeGame(json: string, now: number = Date.now()): DecodeResult {
   if (json.length > MAX_JSON_LENGTH) return {ok: false, reason: 'FILE_TOO_LARGE'};
   let raw: unknown;
   try { raw = JSON.parse(json); } catch { return {ok: false, reason: 'INVALID_JSON'}; }
-  if (raw && typeof raw === 'object' && 'version' in raw && raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4 && raw.version !== 5) return {ok: false, reason: 'UNSUPPORTED_VERSION'};
+  if (raw && typeof raw === 'object' && 'version' in raw && raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4 && raw.version !== 5 && raw.version !== 6) return {ok: false, reason: 'UNSUPPORTED_VERSION'};
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return {ok: false, reason: 'INVALID_STATE'};
-  if (parsed.data.version === 5) return {ok: true, state: parsed.data};
+  if (parsed.data.version === 6) return {ok: true, state: parsed.data};
+  if (parsed.data.version === 5) return convertLand(parsed.data, 5);
   // v4 keeps every field, timer and claimed reward exactly as recorded.
-  if (parsed.data.version === 4) return {ok: true, migratedFrom: 4, state: {...parsed.data, version: 5, decorations: []}};
+  if (parsed.data.version === 4) return convertLand({...parsed.data, version: 5, decorations: []}, 4);
   const referenceAt = Math.max(now, parsed.data.lastSimulatedAt);
   if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(referenceAt + MISSION_CYCLE_DURATION)) return {ok: false, reason: 'INVALID_STATE'};
   const hearts = parsed.data.version === 1 ? {hearts: HEARTS.initial, nextHeartGiftAt: referenceAt + HEARTS.giftInterval} :
     {hearts: parsed.data.hearts, nextHeartGiftAt: parsed.data.nextHeartGiftAt};
-  return {ok: true, migratedFrom: parsed.data.version, state: {...parsed.data, ...hearts, version: 5, decorations: [], secondExpanded: false,
+  return convertLand({...parsed.data, ...hearts, version: 5, decorations: [], secondExpanded: false,
     buildings: parsed.data.buildings.map(b => ({...b, habitat: b.kind === 'enclosure' ? {type: 'universal' as const, level: 1 as const} : null})),
-    missions: parsed.data.version === 3 ? parsed.data.missions : createMissions(parsed.data, referenceAt)}};
+    missions: parsed.data.version === 3 ? parsed.data.missions : createMissions(parsed.data, referenceAt)}, parsed.data.version);
+}
+/** Single deterministic migration: no simulation advance, purchases or resource changes. */
+function convertLand(old: z.infer<typeof v5>, migratedFrom: 1|2|3|4|5): DecodeResult {
+  const {expanded,secondExpanded,...rest}=old;
+  const column=(x:number)=>x<6?x+3:x-6;
+  const acquiredParcels:ParcelId[]=['center',...(expanded?['east' as const]:[]),...(secondExpanded?['west' as const]:[])];
+  let storedDecorations=0;
+  const state:GameState={...rest,version:6,acquiredParcels,buildings:old.buildings.map(b=>({...b,x:column(b.x),y:b.y+3})),decorations:old.decorations.map(d=>{
+    if(d.location.kind==='inventory')return {...d,location:{kind:'inventory'}};
+    if(d.location.kind==='habitat'){storedDecorations++;return {...d,location:{kind:'inventory'}};}
+    const loc=d.location,size=footprint(d.catalogId,loc.rotation),segment=Math.floor(loc.x/12);
+    // The Centre/Est join is continuous; Est/Ouest is no longer adjacent.
+    if(segment===1&&loc.x+size.width>24){storedDecorations++;return {...d,location:{kind:'inventory'}};}
+    return {...d,location:{...loc,x:segment<2?loc.x+12:loc.x-24,y:loc.y+12}};
+  })};
+  for(const d of state.decorations)if(d.location.kind==='outside'&&decorationPlacementReason(state,d.id,d.location)){d.location={kind:'inventory'};storedDecorations++;}
+  const checked=schema.safeParse(state);
+  return checked.success?{ok:true,state:checked.data as GameState,migratedFrom,...(storedDecorations?{storedDecorations}:{})}:{ok:false,reason:'INVALID_STATE'};
 }
 export function encodeGame(state: GameState): string {
-  const parsed = schema.parse(v5.parse(state));
+  const parsed = schema.parse(v6.parse(state));
   return JSON.stringify(parsed, null, 2);
 }
