@@ -19,7 +19,7 @@ Bâtiments de 4 × 4 petits carrés, déplaçables d’un petit carré et à tra
 | `/Project-L/preview/decorations/` | Prévisualisation v5 conservée, révision `85fe255`, stockage distinct |
 | `/Project-L/preview/accounts/` | Comptes figés v4, révision `3e70d9e`, email/Supabase/SQL en pause |
 
-Révision applicative v7 : `c37966c10756dfe45bbfefae9e4ce63c446f599f` ([PR nº 9 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/9)). [Cadrage et captures avant/après](docs/camera-overview.md) · [Publication et preuves](docs/validation/camera-overview/publication.json). 627 tests, TypeScript, deux builds, huit suites et 31 contrôles sur les builds réels puis sur le site public réussis.
+Révision applicative v8 : `fc882e3ee4654d5b23a4f3e14318d9ff1147e9b8` ([PR nº 10 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/10)). [Reproduction, captures et essai iPhone](docs/manual-breeding-v8.md) · [Validation CI](docs/validation/manual-breeding/ci.json) · [Publication vérifiée](docs/validation/manual-breeding/publication.json). 645 tests, TypeScript, deux builds, neuf suites et 33 contrôles sur les builds réels. Les neuf suites et leurs 33 contrôles réussissent aussi sur le site public ; les quatre révisions servies sont vérifiées. Le zoom et les six illustrations validés sont inchangés.
 
 Dernière publication historique de l’île v6 : `ecb8953ffd1b2df2e414d31bb162d60b2c9e3e79` ([PR nº 3](https://github.com/sullivanlegoff-code/Project-L/pull/3)). [Publication et preuves](docs/validation/production-v6-2026-10-09.json).
 

@@ -1,5 +1,7 @@
 # Reproduction manuelle v8
 
+Révision applicative : `fc882e3ee4654d5b23a4f3e14318d9ff1147e9b8` · [PR nº 10](https://github.com/sullivanlegoff-code/Project-L/pull/10).
+
 Cette livraison repart de `production` (`64173ef`, documentation de la livraison applicative `c37966c`). Les six illustrations, leur registre et leurs zones alpha, la caméra validée, les empreintes fines, les prix et les règles de production sont conservés. Supabase et Comptes restent en pause. Les prévisualisations Comptes v4 et Décorations v5 restent construites depuis leurs révisions figées.
 
 - Lancement gratuit : aucune patte ni aucun cœur requis. Le tirage, les probabilités et les réservations de découverte conservent leur calcul commun.
@@ -17,7 +19,7 @@ Même scène et mêmes illustrations : [avant reproduction](validation/manual-br
 
 ## Vérifications
 
-TypeScript, tests de simulation/contrôleur/migrations/UI, builds normal et laboratoire. Les parcours Chromium vérifient le lancement gratuit, le verrouillage après délai, la nurserie occupée, l’accélération, le rechargement, la double pression, les sept occupants après retour, les textures et l’absence de doublons. Les suites existantes vérifient aussi les illustrations aux trois zooms, le placement fin, les collisions, les gestes, la sélection des décorations, le cadrage, les exports/imports et l’isolation des routes. Les preuves de CI et de publication sont enregistrées après validation.
+TypeScript, tests de simulation/contrôleur/migrations/UI, builds normal et laboratoire. Les parcours Chromium vérifient le lancement gratuit, le verrouillage après délai, la nurserie occupée, l’accélération, le rechargement, la double pression, les sept occupants après retour, les textures et l’absence de doublons. Les suites existantes vérifient aussi les illustrations aux trois zooms, le placement fin, les collisions, les gestes, la sélection des décorations, le cadrage, les exports/imports et l’isolation des routes. 645 tests dans 21 fichiers, TypeScript et les deux builds passent. Neuf suites sur sources et neuf suites sur builds (33 contrôles) sont réussies dans [la CI](validation/manual-breeding/ci.json). La [publication](validation/manual-breeding/publication.json) est vérifiée : quatre routes HTTP 200 aux révisions prévues, neuf suites et 33 contrôles publics réussis, sans erreur. [Parcours de reproduction publié](validation/manual-breeding/published-browser.json). [Identité des illustrations et de la caméra](validation/manual-breeding/preserved-art-camera.json).
 
 Limite : Chromium avec gestes tactiles simulés ; aucun iPhone physique accessible pendant cette livraison.
 

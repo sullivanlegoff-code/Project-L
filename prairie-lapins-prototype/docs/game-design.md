@@ -22,19 +22,19 @@ Application web Phaser + TypeScript, utilisation tactile sur iPhone Safari. Le j
 
 Prévisualisation Décorations : quinze espèces, collection, carnet de reproduction, missions principales et quotidiennes, enclos, ferme, nid, nurserie, achats, placement, déplacement, récolte, nourriture, reproduction, accueil, deux extensions, habitats spécialisés et améliorations, et sauvegarde. Les espèces ont des types fixes et une rareté distincte. Les six types de base sont paille, neige, terre, feu, métal et vol. Arc-en-ciel reste réservé à une étape future.
 
-Le chantier Aménagement ajoute douze décorations esthétiques, achetées uniquement en pattes. Inventaire d’exemplaires uniques, grille fine 4 × 4 par case de bâtiment, rotations du banc et de l’arche, trois slots intérieurs indépendants des lapins, déplacements/rangement gratuits et mode photo. Aucun bonus ni modification des règles de reproduction. À la demande du joueur du 9 octobre 2026, les décorations seules deviennent revendables : 50 % du prix d’achat en pattes, arrondi inférieur, aucun cœur remboursé, confirmation explicite par exemplaire et écriture atomique avant activation. La sélection directe suit le dessin visible, avec priorité lapins en jeu normal et décorations en Aménagement ; photo sans panneau d’objet. Catalogue, collisions, propriété, migrations et prix : [decorations.md](decorations.md).
+Le chantier Aménagement ajoute douze décorations esthétiques, achetées uniquement en pattes. Inventaire d’exemplaires uniques, grille fine 4 × 4 par case de bâtiment, rotations des objets compatibles, douze références exclusivement extérieures, déplacements/rangement gratuits et mode photo. Aucun bonus ni modification des règles de reproduction. À la demande du joueur du 9 octobre 2026, les décorations seules deviennent revendables : 50 % du prix d’achat en pattes, arrondi inférieur, aucun cœur remboursé, confirmation explicite par exemplaire et écriture atomique avant activation. La sélection directe suit le dessin visible, avec priorité lapins en jeu normal et décorations en Aménagement ; photo sans panneau d’objet. Catalogue, collisions, propriété, migrations et prix : [decorations.md](decorations.md).
 
 Reportés : mini-jeux, énergie, vêtements, événements, catalogue complet et nouveaux visuels des lapins. Dragon introduit une recette à espèces précises.
 
 ## Partie initiale et terrain
 
-Dans la prévisualisation Décorations seulement, le fond est une île arrondie vert-doré avec relief léger, chemin périphérique et petite côte turquoise décorative. Cela ne change ni les cases, ni les collisions, ni les ressources. Projection et caméra conservées ; format v5 inchangé. [Conception et validation visuelle](island.md).
+Le jeu normal et le laboratoire utilisent l’île à neuf parcelles, ses bâtiments sur grille fine et le zoom validé. Illustrations, projection, caméra et ressources initiales sont conservées ; le format courant est v8. Les prévisualisations historiques restent figées. [Conception visuelle historique](island.md), [terrain](land-v6.md) et [reproduction courante](manual-breeding-v8.md).
 
 - 300 pattes, 10 herbes et 12 cœurs.
-- Un enclos en case `(0, 0)`, un Lapin Paille et un Lapin Neige d'affection 1.
-- Prairie initiale de 3 colonnes × 2 lignes : six cases constructibles.
-- Première extension vers 6 × 2 pour 500 pattes ; deuxième vers 9 × 2 pour 1 000 pattes, après la première. Six cases supplémentaires à chaque étape.
-- Chaque bâtiment occupe une case libre. Placement à l'achat et déplacement gratuit.
+- Un enclos universel en coordonnées fines `(16,16)`, un nid `(12,12)`, une nurserie `(20,12)`, un Lapin Paille et un Lapin Neige d’affection 1. Nid et nurserie sont offerts et ne s’achètent pas.
+- Parcelle centrale de 12 × 12 petits carrés acquise au départ, au sein d’une île potentielle de neuf parcelles.
+- Huit parcelles supplémentaires indépendantes, achetées au choix pour 500, 1 000, …, 4 000 pattes selon le nombre déjà acquis.
+- Chaque bâtiment occupe 4 × 4 petits carrés libres, avec placement et déplacement par pas d’un petit carré. Les décorations restent exclusivement extérieures.
 - Construction immédiate ; pas de démolition dans le prototype.
 - Enclos universel initial de niveau 1 : trois places, sans contrainte de type. Tous les habitats peuvent atteindre les niveaux 2 et 3, avec cinq puis sept places.
 - Deux fermes au maximum ; un nid et une nurserie au maximum.
@@ -165,7 +165,7 @@ Les variantes provisoires conservent la silhouette de lapin : orange/flamme, gri
 
 ## Cœurs — équilibrage validé le 6 octobre 2026
 
-Monnaie facultative pour terminer un délai ou compléter les pattes manquantes d’un achat ou d’une production. Le lancement d’une reproduction est gratuit et exclu du complément en cœurs. Aucun achat réel, publicité, paiement automatique ou besoin de cœurs pour progresser. Les tarifs sont centralisés dans `HEARTS`, dans `src/config/balance.ts`. Aucune règle existante de collection, revenus, affection ou reproduction n'est modifiée.
+Monnaie facultative pour terminer un délai ou compléter les pattes manquantes d’un achat ou d’une production. Le lancement d’une reproduction est gratuit et exclu du complément en cœurs. Aucun achat réel, publicité, paiement automatique ou besoin de cœurs pour progresser. Les tarifs sont centralisés dans `HEARTS`, dans `src/config/balance.ts`. Les recettes, probabilités, revenus et seuils d’affection restent identiques ; la reproduction v8 est gratuite et son transfert est manuel.
 
 | Paramètre | Valeur validée |
 |---|---:|
@@ -190,7 +190,7 @@ Une reproduction toujours en cours peut donc être accélérée malgré une nurs
 
 ### Complément
 
-Actions : achats de bâtiments/habitats/lapins communs, améliorations d'habitat, première ou deuxième extension, commande de ferme, lancement d'une reproduction. Les autres conditions (case, capacité, disponibilité, affection, limites) sont vérifiées avant toute proposition ou dépense. L'herbe n'est jamais substituable.
+Actions : achats de fermes/habitats/lapins communs, améliorations d’habitat, extensions de parcelles et commandes de ferme. Nid, nurserie et lancement d’une reproduction sont gratuits et exclus du complément. Les autres conditions (case, capacité, disponibilité, affection, limites) sont vérifiées avant toute proposition ou dépense. L'herbe n'est jamais substituable.
 
 Pour coût C et pattes P insuffisantes : manque `C − P`, prix `ceil((C − P) / 25)` cœurs. La réussite consomme P pattes et ce nombre de cœurs, sans crédit supplémentaire. Exemple : un lapin à 80 pattes, solde 30 → 30 pattes + 2 cœurs ; après achat, 0 patte, sans monnaie rendue sur l'arrondi.
 
