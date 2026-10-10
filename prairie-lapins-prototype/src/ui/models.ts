@@ -1,9 +1,8 @@
-import {acquiredCell} from '../config/land';
+import {buildingPlacementReason} from '../simulation/placement';
 import {habitatPrice, type HabitatType} from '../config/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
 import {breedingPool, recipeMatches} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
-import {decorationsInCell} from '../simulation/decorations';
 
 export const BUILDING_NAMES: Record<BuildingKind, string> = {enclosure: 'Enclos', farm: 'Ferme', nest: 'Nid', nursery: 'Nurserie'};
 export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'STORAGE_CHANGED', string> = {
@@ -11,7 +10,7 @@ export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED
   SALE_NOT_SAVED: 'La vente n’a pas pu être sauvegardée. Objet et pattes conservés. Réessayez après avoir résolu le problème de sauvegarde.',
   DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
   DECORATION_OVERLAP: 'Cette empreinte chevauche une autre décoration.',
-  DECORATION_BLOCKS_BUILDING: 'Des décorations occupent cette case. Rangez-les avant de placer le bâtiment.',
+  DECORATION_BLOCKS_BUILDING: 'Cette empreinte chevauche une décoration. Déplacez ou rangez cet objet avant de poser le bâtiment.',
   TYPE_INCOMPATIBLE: 'Type incompatible.', MAX_HABITAT_LEVEL: 'Niveau maximal atteint.',
   ALREADY_CLAIMED: 'Cette récompense a déjà été réclamée.', CYCLE_EXPIRED: 'Ce cycle a expiré. Consultez les nouvelles missions.', RESOURCE_LIMIT: 'Le solde est trop élevé pour recevoir cette récompense.',
   NOT_ENOUGH_HEARTS: 'Pas assez de cœurs. Vous pouvez continuer en attendant ou en récoltant des pattes.',
@@ -45,11 +44,10 @@ export function buildingReason(s: GameState, kind: BuildingKind, ignorePrice = f
 export type Placement = {kind: BuildingKind; movingId?: string; habitatType?: HabitatType; cell: {x: number; y: number} | null};
 export function placementReason(s: GameState, placement: Placement): string | null {
   const cell = placement.cell;
-  if (!cell) return 'Touchez une case de la prairie.';
-  if (!acquiredCell(s, cell.x, cell.y)) return REFUSALS.INVALID_CELL;
-  if (s.buildings.some(b => b.id !== placement.movingId && b.x === cell.x && b.y === cell.y)) return REFUSALS.CELL_OCCUPIED;
-  if (decorationsInCell(s, cell.x, cell.y).length) return REFUSALS.DECORATION_BLOCKS_BUILDING;
-  if (placement.movingId) return s.buildings.some(b => b.id === placement.movingId) ? null : REFUSALS.NOT_FOUND;
+  if (!cell) return 'Touchez un petit carré de la prairie.';
+  const reason = buildingPlacementReason(s, cell.x, cell.y, placement.movingId);
+  if (reason) return REFUSALS[reason];
+  if (placement.movingId) return null;
   return buildingReason(s, placement.kind, false, placement.habitatType);
 }
 export function nurseryView(s: GameState, now: number): {stage: 'empty'} | {stage: 'growing'; readyAt: number} | {stage: 'ready'; species: SpeciesId; birthId: string} {

@@ -74,21 +74,21 @@ describe('decoration ownership and atomic commands', () => {
   });
   it('blocks both buying and moving buildings before payment and stores blockers only on an explicit command', () => {
     let s = pose(buy(rich(), 'wood-bench'), outside(7, 2));
-    refused(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 3}, 'DECORATION_BLOCKS_BUILDING');
-    refused(s, {type: 'moveBuilding', id: 'building-1', x: 5, y: 3}, 'DECORATION_BLOCKS_BUILDING');
+    refused(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 12}, 'DECORATION_BLOCKS_BUILDING');
+    refused(s, {type: 'moveBuilding', id: 'building-1', x: 20, y: 12}, 'DECORATION_BLOCKS_BUILDING');
     const original = structuredClone(s); s = run(s, {type: 'storeDecorationsInCell', x: 5, y: 3});
     expect(s.pattes).toBe(original.pattes); expect(s.buildings).toEqual(original.buildings); expect(s.decorations[0].location).toEqual({kind: 'inventory'});
-    expect(run(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 3}).buildings).toHaveLength(2);
+    expect(run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 12}).buildings).toHaveLength(2);
   });
   it('unlocks 12×8, 24×8 and 36×8 while keeping building coordinates unchanged', () => {
     let s = buy(rich()); refused(s, {type: 'placeDecoration', id: 'decoration-4', location: outside(12, 0)}, 'INVALID_CELL');
     s = run(s, {type:'expand',parcelId:'east',expectedCost:500}); s = pose(s, outside(23, 7));
     refused(s, {type: 'placeDecoration', id: 'decoration-4', location: outside(24, 0)}, 'INVALID_CELL');
-    s = run(s, {type:'expand',parcelId:'west',expectedCost:1000}); s = pose(s, outside(35, 7)); expect(s.buildings[0]).toMatchObject({x: 3, y: 3});
+    s = run(s, {type:'expand',parcelId:'west',expectedCost:1000}); s = pose(s, outside(35, 7)); expect(s.buildings[0]).toMatchObject({x: 12, y: 12});
   });
   it('leaves income, affection, gifts, missions and birth RNG behavior unchanged', () => {
     let plain = rich(); plain.grass = 100; plain = run(plain, {type: 'feed', id: 'rabbit-2'}); plain = run(plain, {type: 'feed', id: 'rabbit-3'});
-    plain = run(plain, {type: 'buyBuilding', kind: 'nest', x: 4, y: 3}); plain = run(plain, {type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
+    plain = run(plain, {type: 'buyBuilding', kind: 'nest', x: 16, y: 12}); plain = run(plain, {type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
     const decorated = pose(buy(plain), outside(1, 6));
     expect(advance(decorated, HOUR).buildings).toEqual(advance(plain, HOUR).buildings); expect(decorated.missions).toEqual(plain.missions);
     const a = vi.fn(() => .57), b = vi.fn(() => .57), command: Command = {type: 'breed', parents: ['rabbit-2', 'rabbit-3']};
@@ -110,7 +110,7 @@ describe('v5 saves, migrations and four-route boundaries', () => {
   it.each([DECORATIONS_MIGRATION_BACKUP_KEY, SAVE_KEY])('keeps the original v4 save when the migration write fails at %s', key => {
     const raw = JSON.stringify(v4), m = memory(raw); m.fail.key = key;
     const c = new GameController(m.storage, () => v4.lastSimulatedAt); expect(m.values.get(SAVE_KEY)).toBe(raw); expect(c.getSnapshot().status).toBe('write-error');
-    m.fail.key = ''; expect(c.retrySave()).toEqual({ok: true}); expect(JSON.parse(m.values.get(SAVE_KEY)!).version).toBe(6);
+    m.fail.key = ''; expect(c.retrySave()).toEqual({ok: true}); expect(JSON.parse(m.values.get(SAVE_KEY)!).version).toBe(7);
   });
   it.each(['decorationDemo', 'decoratedHabitat', 'decorationDense'] as const)('validates and restores the prepared %s scenario', id => {
     const s = scenarioState(id, 0); const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
@@ -119,7 +119,7 @@ describe('v5 saves, migrations and four-route boundaries', () => {
     expect(decodeGame(encodeGame(s), 0)).toEqual({ok: true, state: s});
     if (id === 'decoratedHabitat' || id === 'decorationDense') expect(s.rabbits.filter(r => r.enclosureId === 'building-1')).toHaveLength(7);
     const m = memory(encodeGame(s)), c = new GameController(m.storage, () => 0), exported = c.exportGame();
-    if (!exported.ok) throw Error(exported.reason); expect(JSON.parse(exported.json).version).toBe(6);
+    if (!exported.ok) throw Error(exported.reason); expect(JSON.parse(exported.json).version).toBe(7);
     expect(c.restart(true).ok).toBe(true); const p = c.prepareImport(exported.json); if (!p.ok) throw Error(p.reason);
     expect(c.confirmImport(p.token, true).ok).toBe(true); expect(new GameController(m.storage, () => 0).getSnapshot().state).toEqual(s);
   });

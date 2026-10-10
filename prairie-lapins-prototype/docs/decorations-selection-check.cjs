@@ -24,7 +24,7 @@ async function run() {
       const response = await route.fetch(), source = await response.text();
       await route.fulfill({response, body: source.replace('const game = new Phaser.Game', 'window.__scene = scene; const game = new Phaser.Game').replace('const disposePanel =', 'window.__ui = ui; const disposePanel =')});
     });
-    await page.goto(url); await page.waitForFunction(() => window.__scene?.current?.version === 6);
+    await page.goto(url); await page.waitForFunction(() => window.__scene?.current?.version === 7);
     const cdp = await context.newCDPSession(page);
     const touch = async p => {
       assert.equal(await page.evaluate(p => document.elementFromPoint(p.x, p.y)?.tagName, p), 'CANVAS', 'Touch must reach canvas: ' + JSON.stringify(p));

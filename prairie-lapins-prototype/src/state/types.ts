@@ -13,6 +13,7 @@ export interface Birth {
   guaranteed: boolean;
   reservedDiscovery: boolean;
 }
+/** x/y: integer fine-grid top-left; footprint 4 × 4. */
 export interface Building {
   id: string; kind: BuildingKind; x: number; y: number;
   /** Exact numerator: one patte = HOUR units. Never round each update. */
@@ -28,7 +29,7 @@ export interface MissionState {
   daily: {referenceAt: number; cycleIndex: number; progress: Record<DailyMissionId, number>; claimed: DailyMissionId[]; bonusClaimed: boolean};
 }
 export interface GameState {
-  version: 6; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
+  version: 7; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
   hearts: number; nextHeartGiftAt: number;
   pattes: number; grass: number; acquiredParcels: ParcelId[];
   buildings: Building[]; rabbits: Rabbit[]; discovered: SpeciesId[];

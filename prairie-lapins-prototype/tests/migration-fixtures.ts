@@ -6,7 +6,7 @@ import {BALANCE,HOUR} from '../src/config/balance';
 import type {Command,GameState} from '../src/state/types';
 const run=(s:GameState,c:Command,t=s.lastSimulatedAt)=>{const r=act(s,c,t,()=>.99);if(!r.ok)throw Error(r.reason);return r.state};
 export const v4=(s:GameState)=>{const {decorations:_decorations,acquiredParcels,buildings,...rest}=s;return {...rest,version:4,expanded:acquiredParcels.length>1,secondExpanded:acquiredParcels.length>2,buildings:buildings.map((b,i)=>({...b,x:i%9,y:Math.floor(i/9)}))}};
-function prepared(){let s=createGame(0);s.pattes=10000;s.grass=100;s=run(s,{type:'buyBuilding',kind:'farm',x: 4, y: 3});s=run(s,{type:'buyBuilding',kind:'nest',x: 5, y: 3});s=run(s,{type:'buyBuilding',kind:'nursery',x: 3, y: 4});s=run(s,{type:'feed',id:'rabbit-2'});return run(s,{type:'feed',id:'rabbit-3'})}
+function prepared(){let s=createGame(0);s.pattes=10000;s.grass=100;s=run(s,{type:'buyBuilding',kind:'farm',x: 16, y: 12});s=run(s,{type:'buyBuilding',kind:'nest',x: 20, y: 12});s=run(s,{type:'buyBuilding',kind:'nursery',x: 12, y: 16});s=run(s,{type:'feed',id:'rabbit-2'});return run(s,{type:'feed',id:'rabbit-3'})}
 export function representative(){
  let expanded=createGame(0);expanded.pattes=10000;expanded=run(run(expanded,{type:'expand',parcelId:'east',expectedCost:500}),{type:'expand',parcelId:'west',expectedCost:1000});
  const production=advance(run(prepared(),{type:'startOrder',id:'building-4',recipe:'small'}),12345);

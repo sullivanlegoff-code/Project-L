@@ -18,9 +18,9 @@ function run(s: GameState, command: Command, now = s.lastSimulatedAt): GameState
 }
 function prepared(): GameState {
   let s = createGame(0); s.pattes = 5000;
-  s = run(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 3});
-  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 5, y: 3});
-  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 3, y: 4});
+  s = run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 12});
+  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 20, y: 12});
+  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 12, y: 16});
   s = run(s, {type: 'feed', id: 'rabbit-2'}); s = run(s, {type: 'feed', id: 'rabbit-3'});
   return s;
 }
@@ -49,7 +49,7 @@ const current = (c: GameController) => c.getSnapshot().state!;
 
 describe('hearts initialization, migration and gifts', () => {
   it('creates 12 hearts and a first gift exactly 24 hours after creation', () => {
-    expect(createGame(123)).toMatchObject({version: 6, hearts: 12, nextHeartGiftAt: 123 + DAY});
+    expect(createGame(123)).toMatchObject({version: 7, hearts: 12, nextHeartGiftAt: 123 + DAY});
   });
   it('migrates all v1 fields including guaranteed results, reservations and income fractions', () => {
     let s = prepared(); s.pityFailures = 9; s = run(s, breed, 17);
@@ -110,7 +110,7 @@ describe('acceleration transactions', () => {
   });
   it('finishes only the selected farm at now, without extra income or changing another timer', () => {
     let s = run(prepared(), {type: 'startOrder', id: 'building-4', recipe: 'large'});
-    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 4});
+    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 16});
     s = run(s, {type: 'startOrder', id: 'building-7', recipe: 'medium'});
     const baseline = advance(s, MINUTE), command = speed(s, 'building-4', 'order', MINUTE);
     const result = run(s, command, MINUTE);
@@ -191,7 +191,7 @@ describe('pattes complement transactions', () => {
     expect(complementCost(missing)).toBe(expected);
   });
   it.each<PattesCommand>([
-    {type: 'buyBuilding', kind: 'enclosure', x: 4, y: 4},
+    {type: 'buyBuilding', kind: 'enclosure', x: 16, y: 16},
     {type: 'buyRabbit', species: 'terre', enclosureId: 'building-1'},
     {type:'expand',parcelId:'east',expectedCost:500}, {type: 'startOrder', id: 'building-4', recipe: 'small'}, breed,
   ])('explicitly pays the exact shortage for $type and does not grant change', action => {
@@ -209,8 +209,8 @@ describe('pattes complement transactions', () => {
   });
   it('checks space and parent availability before proposing any payment', () => {
     let s = prepared(); s.pattes = 0;
-    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 3, y: 3}, 0)).toEqual({ok: false, reason: 'CELL_OCCUPIED'});
-    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 8, y: 3}, 0)).toEqual({ok: false, reason: 'INVALID_CELL'});
+    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 12, y: 12}, 0)).toEqual({ok: false, reason: 'CELL_OCCUPIED'});
+    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 32, y: 12}, 0)).toEqual({ok: false, reason: 'INVALID_CELL'});
     expect(quoteComplement(s, {type: 'breed', parents: ['rabbit-2', 'rabbit-2']}, 0)).toEqual({ok: false, reason: 'SAME_PARENT'});
     s.rabbits[0].affection = 1; expect(quoteComplement(s, breed, 0)).toEqual({ok: false, reason: 'AFFECTION_TOO_LOW'});
     s.rabbits[0].affection = 2; s = run(s, pay(s, breed));
@@ -238,7 +238,7 @@ describe('v1/v2 imports and exports', () => {
     const preview = c.prepareImport(encodeGame(s)); if (!preview.ok) throw new Error(preview.reason);
     expect(preview.summary.hearts).toBe(3); expect(c.confirmImport(preview.token, true)).toEqual({ok: true});
     expect(current(c).hearts).toBe(3); const exported = c.exportGame(); if (!exported.ok) throw new Error(exported.reason);
-    expect(JSON.parse(exported.json)).toMatchObject({version: 6, hearts: 3});
+    expect(JSON.parse(exported.json)).toMatchObject({version: 7, hearts: 3});
   });
   it('migrates v1 at confirmation time, with cancellation and write failures preserving the active save', () => {
     const memory = store(); let now = 0; const c = new GameController(memory.storage, () => now);

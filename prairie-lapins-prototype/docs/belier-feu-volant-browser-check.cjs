@@ -21,7 +21,7 @@ const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-volant-proof';
   await page.click('#open-settings');await page.click('#dev-scenario-collection');await page.click('#close-panel');
   await page.evaluate(()=>{const c=window.__controller,s=JSON.parse(c.exportGame().json),home=s.buildings.find(b=>b.kind==='enclosure'),types=['paille','neige','terre','belier-gris','feu','volant','brumelin'];s.rabbits.filter(r=>r.enclosureId===home.id).forEach((r,i)=>r.species=types[i]);const p=c.prepareImport(JSON.stringify(s));if(!p.ok)throw Error(p.reason);const done=c.confirmImport(p.token,true);if(!done.ok)throw Error(done.reason);});
   const ids=await page.evaluate(()=>{const s=window.__scene,home=s.current.buildings.find(b=>b.kind==='enclosure');
-   s.view.x=120+(home.x+.5)*176;s.view.y=120+(home.y+.5)*148;s.applyCamera();
+   s.view.x=120+(home.x/4+.5)*176;s.view.y=120+(home.y/4+.5)*148;s.applyCamera();
    return s.current.rabbits.filter(r=>r.enclosureId===home.id).map(r=>({id:r.id,species:r.species}));});
   assert.equal(ids.length,7);assert.deepEqual(ids.slice(0,3).map(r=>r.species),['paille','neige','terre']);
   for(const zoom of [.8,1.05,1.65]){
@@ -61,7 +61,7 @@ const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-volant-proof';
   await page.screenshot({path:out+'/belier-feu-volant-shop.png'});await page.click('#close-panel');
   await page.click('#open-collection');for(const species of ['belier-gris','feu','volant'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
   await page.screenshot({path:out+'/belier-feu-volant-collection.png'});await page.click('#close-panel');
-  const nest=await page.evaluate(()=>{const s=window.__scene,b=s.current.buildings.find(b=>b.kind==='nest'),p={x:120+(b.x+.5)*176,y:120+(b.y+.5)*148};s.view.zoom=1.05;s.view.x=p.x;s.view.y=p.y;s.applyCamera();return s.view.screen(p);});
+  const nest=await page.evaluate(()=>{const s=window.__scene,b=s.current.buildings.find(b=>b.kind==='nest'),p={x:120+(b.x/4+.5)*176,y:120+(b.y/4+.5)*148};s.view.zoom=1.05;s.view.x=p.x;s.view.y=p.y;s.applyCamera();return s.view.screen(p);});
   await page.touchscreen.tap(nest.x,nest.y);for(const species of ['belier-gris','feu','volant'])assert.ok(await page.locator(`img[data-rabbit-art="${species}"]`).count()>=1);
   await page.screenshot({path:out+'/belier-feu-volant-parents.png'});await page.click('#close-panel');
   await page.setViewportSize({width:390,height:844});await page.click('#continue-portrait');await page.click('#open-collection');

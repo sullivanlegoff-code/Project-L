@@ -2,17 +2,18 @@ import {RABBIT_ART, rabbitArt, type RabbitArt} from '../config/rabbitArt';
 import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
 import type {GameController} from '../application/GameController';
-import {drawHabitat} from './habitatArt';
+import {drawBuildingArt} from './buildingArt';
+import {buildingAt, buildingPlacementReason, footprintPlacementReason} from '../simulation/placement';
 import {drawParcelTerrain} from './parcelArt';
-import {PARCELS, PARCEL_IDS, acquiredCell, parcelAt, type ParcelId} from '../config/land';
+import {PARCELS, PARCEL_IDS, parcelAt, type ParcelId} from '../config/land';
 import {rabbitOffset, rabbitPosition, rabbitHitPoint, rabbitHit} from './rabbitLayout';
 import {habitatStats, habitatName, visibleColumns} from '../simulation/habitats';
 import {HOUR} from '../config/balance';
-import type {DecorationLocation, GameState} from '../state/types';
+import type {Building, DecorationLocation, GameState} from '../state/types';
 import {DECORATIONS, DECORATION_IDS, FINE_GRID} from '../config/decorations';
-import {decorationPlacementReason, decorationsInCell, footprint} from '../simulation/decorations';
+import {decorationPlacementReason, footprint} from '../simulation/decorations';
 import {decorationSvg, decorationTexture, decorationScale} from './decorationArt';
-import {MeadowCamera, gridCell, gridPoint, type Point} from '../ui/gestures';
+import {MeadowCamera, gridCell, fineCell, finePoint, buildingCenter, gridPoint, type Point} from '../ui/gestures';
 import {BUILDING_NAMES, type Placement} from '../ui/models';
 import {COATS} from '../ui/portraits';
 import {bindMeadowInput} from './meadowInput';
@@ -31,6 +32,10 @@ export class MeadowScene extends Phaser.Scene {
   private rabbitViews: VisualRabbit[] = [];
   private bubbleHits: {point: Point; selection: MeadowSelection}[] = [];
   private layoutKey = '';
+  private buildingsLayer!: Phaser.GameObjects.Container;
+  private buildingViews = new Map<string, Phaser.GameObjects.Image>();
+  private buildingTextures = new Set<string>();
+  private buildingGhost: Phaser.GameObjects.Image | null = null;
   private readonly groundTexture = 'meadow-static-ground';
   private arrangement = false;
   private ghost: DecorationGhost | null = null;
@@ -57,7 +62,7 @@ export class MeadowScene extends Phaser.Scene {
   }
   create(): void {
     this.cameras.main.setBackgroundColor('#91d3ce');
-    this.ground = this.add.container(0, 0); this.animals = this.add.container(0, 0).setDepth(2);
+    this.ground = this.add.container(0, 0); this.buildingsLayer = this.add.container(0, 0).setDepth(.1); this.animals = this.add.container(0, 0).setDepth(2);
     this.decorationsLayer = this.add.container(0, 0).setDepth(.5);
     this.decorationSelection = this.add.graphics().setDepth(.9);
     this.labels = this.add.container(0, 0).setDepth(2.5);
@@ -66,7 +71,7 @@ export class MeadowScene extends Phaser.Scene {
     this.unsubscribe = this.controller.subscribe(snapshot => { this.current = snapshot.state; this.renderState(); });
     this.scale.on('resize', this.resize, this);
     const disposeInput = bindMeadowInput(this.game.canvas, this.view, point => this.tap(point), this.blocked, () => this.applyCamera());
-    this.events.once('shutdown', () => { this.unsubscribe?.(); disposeInput(); this.scale.off('resize', this.resize, this); this.groundTextures.forEach(key => this.textures.remove(key)); });
+    this.events.once('shutdown', () => { this.unsubscribe?.(); disposeInput(); this.scale.off('resize', this.resize, this); this.groundTextures.forEach(key => this.textures.remove(key)); this.buildingTextures.forEach(key=>this.textures.remove(key)); });
   }
   recenter(): void { if (!this.cameras?.main) return; this.view.recenter(); this.applyCamera(); }
   private resize(): void { this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
@@ -131,7 +136,7 @@ export class MeadowScene extends Phaser.Scene {
   setPhoto(active: boolean): void {
     this.photo = active;
     this.drawDecorationSelection();
-    this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active);
+    this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active); this.buildingGhost?.setVisible(!active && !!this.placement?.cell);
   }
   reactToFeed(id: string): void {
     const rabbit = this.rabbitViews.find(r => r.id === id); if (!rabbit) return;
@@ -143,7 +148,7 @@ export class MeadowScene extends Phaser.Scene {
     const s = this.current;
     if (s) { this.view.setColumns(visibleColumns(s)); this.applyCamera(); }
     const key = JSON.stringify([s?.acquiredParcels, s?.buildings.map(b => [b.id, b.kind, b.x, b.y, b.habitat]), s?.rabbits.map(r => [r.id, r.species, r.enclosureId])]);
-    if (key !== this.layoutKey) { this.layoutKey = key; this.drawGround(); this.drawAnimals(); }
+    if (key !== this.layoutKey) { this.layoutKey = key; this.drawGround(); this.drawBuildings(); this.drawAnimals(); }
     this.drawDecorations(); this.drawBubbles(); this.drawGrid(); this.drawGhost();
   }
   private decorationPoint(location: DecorationLocation, catalogId: typeof DECORATION_IDS[number]): Point | null {
@@ -193,48 +198,43 @@ export class MeadowScene extends Phaser.Scene {
     const resolution=Math.min(2,limit/Math.max(w,h));
     g.scaleCanvas(resolution,resolution);g.translateCanvas(pad-px,pad-py);
     const key=this.groundTexture+':'+id;
-    const signature=JSON.stringify([this.current.acquiredParcels.filter(other=>{const q=PARCELS[other];return Math.abs(q.x-parcel.x)+Math.abs(q.y-parcel.y)<=3;}),this.current.buildings.filter(b=>parcelAt(b.x,b.y)===id).map(b=>[b.id,b.kind,b.x,b.y,b.habitat])]);
+    const signature=JSON.stringify([this.current.acquiredParcels.filter(other=>{const q=PARCELS[other];return Math.abs(q.x-parcel.x)+Math.abs(q.y-parcel.y)<=3;})]);
     const changed=this.groundSignatures.get(key)!==signature;
     if(changed) drawParcelTerrain(g,id,this.current);
-    for (const b of this.current.buildings.filter(b=>parcelAt(b.x,b.y)===id)) {
-      const p = gridPoint(b.x + .5, b.y + .5), x = p.x, y = p.y;
-      g.fillStyle(0x506b42, .13); g.fillEllipse(x + 5, y + 30, 150, 65);
-      if (b.kind === 'enclosure') {
-        drawHabitat(g, x, y, b.habitat!.type, b.habitat!.level);
-      } else if (b.kind === 'farm') {
-        g.fillStyle(0xb88d68); g.fillRoundedRect(x - 62, y - 27, 124, 77, 10);
-        for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
-          const px = x - 45 + col * 23, py = y - 13 + row * 23;
-          g.lineStyle(2, 0x89634e); g.lineBetween(px - 7, py + 10, px + 8, py + 10);
-          g.fillStyle(0x60994f); g.fillEllipse(px - 3, py, 10, 18); g.fillEllipse(px + 5, py + 2, 15, 8);
-        }
-        g.fillStyle(0xe8c7a0); g.fillRect(x + 49, y - 51, 5, 38); g.fillRoundedRect(x + 30, y - 62, 45, 21, 4);
-      } else if (b.kind === 'nest') {
-        g.fillStyle(0xc7a574); g.fillEllipse(x, y + 10, 132, 82); g.fillStyle(0xe7cf98); g.fillEllipse(x, y, 122, 74);
-        g.fillStyle(0xe4adad); g.fillEllipse(x, y - 1, 82, 48);
-        g.lineStyle(3, 0xb79260); for (let i = 0; i < 12; i++) { const angle = i / 12 * Math.PI * 2; const px = x + Math.cos(angle) * 51, py = y + Math.sin(angle) * 29; g.lineBetween(px - 6, py - 3, px + 9, py + 5); }
-        this.ground.add(this.add.text(x, y - 9, '♥', {fontSize: '27px', color: '#bc7681'}).setOrigin(.5));
-      } else {
-        g.lineStyle(7, 0xd9b98d); g.beginPath(); g.arc(x, y - 4, 52, Math.PI, Math.PI * 2); g.strokePath();
-        g.fillStyle(0xbb926a); g.fillRoundedRect(x - 54, y, 108, 45, 18);
-        g.fillStyle(0xf5debc); g.fillEllipse(x, y, 109, 41); g.fillStyle(0xacc8cf); g.fillEllipse(x + 3, y - 3, 85, 28);
-        g.lineStyle(2, 0xe7c69d); for (let i = 0; i < 5; i++) g.lineBetween(x - 40 + i * 19, y + 13, x - 34 + i * 17, y + 35);
-        this.ground.add(this.add.text(x + 30, y - 54, '✦', {fontSize: '24px', color: '#f4df93'}).setOrigin(.5));
-      }
-      const label = this.add.text(x, y + 70, b.kind === 'enclosure' ? habitatName(b) : BUILDING_NAMES[b.kind], {fontFamily: 'Arial', fontSize: '13px', color: '#435b38', padding: {x: 7, y: 3}}).setOrigin(.5);
-      const labelBackground = this.add.graphics();
-      labelBackground.fillStyle(0xf8f4de, .96); labelBackground.fillRoundedRect(x - label.width / 2, y + 70 - label.height / 2, label.width, label.height, 7);
-      this.labels.add([labelBackground, label]);
-    }
     if(changed){if(this.textures.exists(key))this.textures.remove(key);g.generateTexture(key, Math.ceil(w * resolution), Math.ceil(h * resolution));this.groundSignatures.set(key,signature);if(!this.groundTextures.includes(key))this.groundTextures.push(key);}
     this.ground.addAt(this.add.image(px-pad,py-pad,key).setOrigin(0).setScale(1/resolution),0);g.destroy();
     }
+  }
+  private buildingTexture(b: Pick<Building, 'kind' | 'habitat'>): string {
+    const key = `meadow-building-${b.kind}-${b.habitat?.type ?? 'none'}-${b.habitat?.level ?? 0}`;
+    if (!this.textures.exists(key)) {
+      const g = this.add.graphics();g.scaleCanvas(2,2);drawBuildingArt(g,128,128,b);
+      g.generateTexture(key,512,512);g.destroy();this.buildingTextures.add(key);
+    }
+    return key;
+  }
+  private drawBuildings(): void {
+    this.labels.removeAll(true);
+    const present = new Set<string>();
+    for (const b of this.current?.buildings ?? []) {
+      present.add(b.id);const p=buildingCenter(b),x=p.x,y=p.y;
+      let image=this.buildingViews.get(b.id);
+      if(!image){image=this.add.image(x,y,this.buildingTexture(b));this.buildingsLayer.add(image);this.buildingViews.set(b.id,image);}
+      image.setTexture(this.buildingTexture(b)).setPosition(x,y).setScale(.5).setDepth(y);
+      if(b.kind==='nest')this.labels.add(this.add.text(x,y-9,'♥',{fontSize:'27px',color:'#bc7681'}).setOrigin(.5));
+      if(b.kind==='nursery')this.labels.add(this.add.text(x+30,y-54,'✦',{fontSize:'24px',color:'#f4df93'}).setOrigin(.5));
+      const label=this.add.text(x,y+70,b.kind==='enclosure'?habitatName(b):BUILDING_NAMES[b.kind],{fontFamily:'Arial',fontSize:'13px',color:'#435b38',padding:{x:7,y:3}}).setOrigin(.5);
+      const background=this.add.graphics();background.fillStyle(0xf8f4de,.96);background.fillRoundedRect(x-label.width/2,y+70-label.height/2,label.width,label.height,7);
+      this.labels.add([background,label]);
+    }
+    for(const [id,image] of this.buildingViews)if(!present.has(id)){image.destroy();this.buildingViews.delete(id);}
+    this.buildingsLayer.sort('depth');
   }
   private drawAnimals(): void {
     this.animals.removeAll(true); this.rabbitViews = [];
     for (const enclosure of this.current?.buildings.filter(b => b.kind === 'enclosure') ?? []) {
       const residents = this.current!.rabbits.filter(r => r.enclosureId === enclosure.id);
-      const center = gridPoint(enclosure.x + .5, enclosure.y + .5);
+      const center = buildingCenter(enclosure);
       residents.forEach((rabbit, index) => {
         const offset = rabbitOffset(index, residents.length);
         const base = {x: center.x + offset.x, y: center.y + offset.y};
@@ -288,13 +288,13 @@ export class MeadowScene extends Phaser.Scene {
       if (b.kind === 'farm' && b.order && b.order.endsAt <= now) { text = 'Herbe ✓'; kind = 'grass'; }
       if (b.kind === 'nursery' && b.baby && b.baby.readyAt <= now) text = 'Prêt !';
       if (!text) continue;
-      const p = gridPoint(b.x + .5, b.y + .5); p.y -= 72;
+      const p = buildingCenter(b); p.y -= 72;
       const bubble = this.add.text(p.x, p.y, text, {fontFamily: 'Arial', fontSize: '17px', color: '#3b4d2d', backgroundColor: b.kind === 'enclosure' && amount >= habitatStats(b).cap ? '#f0c889' : '#fff7dc', padding: {x: 13, y: 10}}).setOrigin(.5);
       this.bubbles.add(bubble); this.bubbleHits.push({point: p, selection: {kind, id: b.id}});
     }
   }
   private drawGrid(): void {
-    this.grid.clear();
+    this.grid.clear(); this.buildingGhost?.setVisible(false);
     if (this.expanding && this.current) {
       for (const id of PARCEL_IDS.filter(id => !this.current!.acquiredParcels.includes(id))) {
         const parcel = PARCELS[id], point = gridPoint(parcel.x, parcel.y);
@@ -309,23 +309,24 @@ export class MeadowScene extends Phaser.Scene {
       }
       return;
     }
-    if (this.arrangement) { this.drawDecorationGrid(); return; } if (!this.placement) return;
-    for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
-      const locked = !this.current || !acquiredCell(this.current,x,y);
-      const occupied = this.current?.buildings.some(b => b.id !== this.placement!.movingId && b.x === x && b.y === y);
-      const valid = !locked && !occupied && !decorationsInCell(this.current!, x, y).length;
-      const center = gridPoint(x + .5, y + .5), points = [gridPoint(x, y), gridPoint(x + 1, y), gridPoint(x + 1, y + 1), gridPoint(x, y + 1)];
-      this.grid.lineStyle(3, valid ? 0x487b5c : 0xa66e61, .9); this.grid.strokePoints(points, true);
-      this.grid.lineStyle(4, valid ? 0x396447 : 0x8d4f45);
-      if (valid) { this.grid.lineBetween(center.x - 10, center.y, center.x - 2, center.y + 9); this.grid.lineBetween(center.x - 2, center.y + 9, center.x + 13, center.y - 10); }
-      else { this.grid.lineBetween(center.x - 8, center.y - 8, center.x + 8, center.y + 8); this.grid.lineBetween(center.x + 8, center.y - 8, center.x - 8, center.y + 8); }
-      if (this.placement.cell?.x === x && this.placement.cell.y === y) {
-        this.grid.fillStyle(valid ? 0xefffd4 : 0xf4b9ac, .55); this.grid.fillPoints(points, true);
-        this.grid.lineStyle(5, 0xfffcde); this.grid.strokePoints(points, true);
-        // A compact silhouette is the provisional footprint preview.
-        this.grid.fillStyle(valid ? 0x769b69 : 0xad7e73, .65); this.grid.fillRoundedRect(center.x - 35, center.y - 30, 70, 45, 12);
-      }
+    if(this.placement){this.drawBuildingGrid();return;}
+    if(this.arrangement)this.drawDecorationGrid();
+  }
+  private drawBuildingGrid(): void {
+    if(!this.current || !this.placement)return;
+    const p=this.placement;
+    for(let y=0;y<36;y++)for(let x=0;x<36;x++){
+      const point=finePoint(x,y),reason=buildingPlacementReason(this.current,x,y,p.movingId);
+      this.grid.lineStyle(1,reason?0xa37872:0x5b8864,.45);this.grid.strokeRect(point.x,point.y,VISUAL.grid.width/FINE_GRID,VISUAL.grid.depth/FINE_GRID);
     }
+    if(!p.cell)return;
+    const valid=!buildingPlacementReason(this.current,p.cell.x,p.cell.y,p.movingId),corner=finePoint(p.cell.x,p.cell.y),center=buildingCenter(p.cell);
+    this.grid.fillStyle(valid?0xe5ffd2:0xf5b7b1,.3);this.grid.fillRect(corner.x,corner.y,VISUAL.grid.width,VISUAL.grid.depth);
+    this.grid.lineStyle(3,valid?0x396447:0xa54242);this.grid.strokeRect(corner.x,corner.y,VISUAL.grid.width,VISUAL.grid.depth);
+    const moving=this.current.buildings.find(b=>b.id===p.movingId);
+    const habitat=p.kind==='enclosure'?(moving?.habitat??{type:p.habitatType??'universal',level:1 as const}):null;
+    if(!this.buildingGhost)this.buildingGhost=this.add.image(0,0,this.buildingTexture({kind:p.kind,habitat})).setDepth(1.5).setAlpha(.55).setScale(.5);
+    this.buildingGhost.setTexture(this.buildingTexture({kind:p.kind,habitat})).setPosition(center.x,center.y).setTint(valid?0xe4ffb5:0xf3a6a1).setVisible(!this.photo);
   }
   private drawDecorationGrid(): void {
     if (!this.current) return;
@@ -334,7 +335,7 @@ export class MeadowScene extends Phaser.Scene {
       for (let y = 0; y < 36; y++) for (let x = 0; x < 36; x++) {
         const location = {kind: 'outside' as const, x, y, rotation: this.ghost?.location?.kind === 'outside' ? this.ghost.location.rotation : 0 as const};
         const reason = owned ? decorationPlacementReason(this.current, owned.id, location) :
-          !acquiredCell(this.current,Math.floor(x/4),Math.floor(y/4)) ? 'INVALID_CELL' : this.current.buildings.some(b => b.x === Math.floor(x / 4) && b.y === Math.floor(y / 4)) ? 'CELL_OCCUPIED' : null;
+          footprintPlacementReason(this.current,{x,y,width:1,height:1});
         const p = gridPoint(x / 4, y / 4);
         this.grid.lineStyle(1, reason ? 0xa37872 : 0x5b8864, .45); this.grid.strokeRect(p.x, p.y, VISUAL.grid.width / 4, VISUAL.grid.depth / 4);
       }
@@ -356,6 +357,7 @@ export class MeadowScene extends Phaser.Scene {
     if (this.photo) return;
     for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
     if (this.expanding) {const id=parcelAt(cell.x,cell.y);if(id && !this.current?.acquiredParcels.includes(id))this.select({kind:'extension',parcelId:id});return;}
+    if (this.placement) {this.select({kind:'fineCell',...fineCell(world)});return;}
     if (this.arrangement) {
       const chosen = this.current?.decorations.find(d => d.id === this.ghost?.id);
       if (!chosen) {
@@ -363,14 +365,13 @@ export class MeadowScene extends Phaser.Scene {
         if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
       }
       if (chosen) {
-        this.select({kind: 'fineCell', x: Math.floor((world.x - VISUAL.grid.originX) / (VISUAL.grid.width / FINE_GRID)), y: Math.floor((world.y - VISUAL.grid.originY) / (VISUAL.grid.depth / FINE_GRID))}); return;
+        this.select({kind: 'fineCell', ...fineCell(world)}); return;
       }
       const decorationId = this.decorationAt(screen);
       if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
-      const home = this.current?.buildings.find(b => b.kind === 'enclosure' && b.x === cell.x && b.y === cell.y);
+      const home=this.current?buildingAt(this.current,fineCell(world)):null;
       this.select(home ? {kind: 'building', id: home.id} : {kind: 'empty'}); return;
     }
-    if (this.placement) { this.select({kind: 'cell', ...cell}); return; }
     const closest = rabbitHit(screen, this.rabbitViews.flatMap(r => {
       if (r.sprite && r.art) {
         // Reference images use their own alpha silhouette, avoiding rectangular hits on adjacent residents.
@@ -387,7 +388,7 @@ export class MeadowScene extends Phaser.Scene {
     const decorationId = this.decorationAt(screen);
     if (decorationId) { this.select({kind: 'decoration', id: decorationId}); return; }
 
-    const building = this.current?.buildings.find(b => b.x === cell.x && b.y === cell.y);
+    const building=this.current?buildingAt(this.current,fineCell(world)):null;
     this.select(building ? {kind: 'building', id: building.id} : {kind: 'empty'});
   }
   update(time: number): void {

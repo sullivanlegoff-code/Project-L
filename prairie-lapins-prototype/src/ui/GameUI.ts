@@ -8,7 +8,7 @@ import type {GameController, Snapshot} from '../application/GameController';
 import {BALANCE, HEARTS, ORDERS, SPECIES, SPECIES_IDS, SHOP_SPECIES, growthDuration, type BuildingKind, type SpeciesId, type OrderId, type RabbitType} from '../config/balance';
 import type {Command, DecorationLocation, GameState, PattesCommand, TimedStage} from '../state/types';
 import {DECORATIONS, DECORATION_IDS, decorationResalePrice, type DecorationId} from '../config/decorations';
-import {decorationPlacementReason, decorationsInCell, purchaseDecorationReason} from '../simulation/decorations';
+import {decorationPlacementReason, purchaseDecorationReason} from '../simulation/decorations';
 import {decorationSvg} from '../display/decorationArt';
 import {quoteComplement} from '../simulation/actions';
 import {accelerationCost, quoteAcceleration} from '../simulation/hearts';
@@ -155,8 +155,7 @@ export class GameUI {
     }
     if (this.arranging) { this.selectDecoration(selection); return; }
     if (selection.kind === 'decoration') { this.open({kind: 'decoration', id: selection.id}); return; }
-    if (selection.kind === 'fineCell') return;
-    if (selection.kind === 'cell') {
+    if (selection.kind === 'fineCell' || selection.kind === 'cell') {
       if (this.placement) { this.placement.cell = {x: selection.x, y: selection.y}; this.scene.setPlacement(this.placement); this.render(); }
       return;
     }
@@ -231,6 +230,7 @@ export class GameUI {
     }
   }
   private beginPlacement(kind: BuildingKind, movingId?: string, habitatType?: HabitatType): void {
+    this.arranging=false;this.decorationDraft=null;this.syncArrangement();
     this.placement = {kind, movingId, habitatType, cell: null}; this.view = {kind: 'placement'}; this.scene.setPlacement(this.placement); this.render();
   }
   private renderPlacement(s: GameState): void {
@@ -238,19 +238,17 @@ export class GameUI {
     const price = p.kind === 'enclosure' ? habitatPrice(p.habitatType ?? 'universal') : BALANCE.buildings[p.kind].price;
     const name = p.kind === 'enclosure' ? HABITATS[p.habitatType ?? s.buildings.find(b => b.id === p.movingId)?.habitat?.type ?? 'universal'].name : BUILDING_NAMES[p.kind];
     this.title.textContent = `${p.movingId ? 'Déplacer' : 'Placer'} : ${name}`;
-    this.content.append(node('p', 'Touchez une case. ✓ indique une place libre ; × une case occupée ou verrouillée. Glissez pour déplacer la vue.'));
-    this.content.append(node('p', p.cell ? `Case ${p.cell.x + 1} · ${p.cell.y + 1}` : 'Aucune case sélectionnée.', 'badge'));
+    this.content.append(node('p', 'Touchez un petit carré pour choisir le coin de l’empreinte 4 × 4. Déplacement par pas d’un carré. Glissez ou pincez pour ajuster la vue.'));
+    this.content.append(node('p', p.cell ? `Grille fine : (${p.cell.x}, ${p.cell.y}) · empreinte 4 × 4` : 'Aucune case sélectionnée.', 'badge'));
+    const reason = placementReason(s, p);
+    this.content.append(node('p', !p.cell ? 'Choisissez une destination.' : reason ? `× ${reason}` : '✓ Emplacement valide · empreinte 4 × 4', !p.cell ? 'placement-pending' : reason ? 'placement-invalid' : 'placement-valid'));
     this.button(this.content, p.movingId ? 'Confirmer le déplacement · gratuit' : `Acheter et placer · ${price} pattes`, () => {
       if (!p.cell) return;
       const cmd: Command = p.movingId ? {type: 'moveBuilding', id: p.movingId, ...p.cell} : {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell};
       this.execute(cmd, p.movingId ? 'Bâtiment déplacé.' : `${name} construit.`, () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     }, placementReason(s, p));
-    if (p.cell && decorationsInCell(s, p.cell.x, p.cell.y).length) {
-      const cell = {...p.cell}, count = decorationsInCell(s, cell.x, cell.y).length;
-      this.button(this.content, `Ranger les ${count} décoration(s) de cette case`, () => this.confirm('Libérer cette case ?', 'Les objets seront conservés dans votre inventaire. Aucun bâtiment ne sera acheté ni déplacé ; confirmez ensuite sa pose séparément.', () => this.execute({type: 'storeDecorationsInCell', ...cell}, 'Objets rangés. Vous pouvez confirmer le bâtiment.')), null, true);
-    }
     if (!p.movingId && p.cell) this.complement(this.content, s, {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell},
-      `Acheter et placer : ${name} (case ${p.cell.x + 1}, ${p.cell.y + 1})`, `${name} construit.`,
+      `Acheter et placer : ${name} (grille fine ${p.cell.x}, ${p.cell.y})`, `${name} construit.`,
       () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     this.button(this.content, 'Annuler · aucun coût', () => this.close(), null, true);
   }
