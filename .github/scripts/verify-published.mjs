@@ -37,7 +37,7 @@ async function check() {
       for (const marker of ['supabase.co', 'signInWithOtp']) assert.ok(!scripts.includes(marker), `Online client in decorations: ${marker}`);
     }
     if(route==='dev/')assert.ok(scripts.includes('fineBuildings'));
-    if(format===7)for(const marker of ['acquiredParcels','Agrandir l’île','parcel-preview','empreinte 4 × 4'])assert.ok((scripts+html).includes(marker),marker);
+    if(format===7)for(const marker of ['acquiredParcels','Agrandir l’île','parcel-preview','empreinte 4 × 4','overview-view'])assert.ok((scripts+html).includes(marker),marker);
     report.push({url, revision, saveFormat: format, html: 200, application: 200, featuresChecked: true});
   }
   return report;

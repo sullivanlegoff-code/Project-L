@@ -44,19 +44,49 @@ export function fineCell(point:Point):Point{return {x:Math.floor((point.x-grid.o
 export function gridCell(point: Point): Point {
   return {x: Math.floor((point.x - grid.originX) / grid.width), y: Math.floor((point.y - grid.originY) / grid.depth)};
 }
+export interface WorldBounds {left: number; right: number; top: number; bottom: number}
+export interface ViewInsets {left: number; right: number; top: number; bottom: number}
 export class MeadowCamera {
   x: number = gridPoint(camera.focusX, camera.focusY).x;
   y: number = gridPoint(camera.focusX, camera.focusY).y;
   zoom: number = camera.initialZoom;
   width = 900; height = 500;
+  private insets: ViewInsets | null = null;
+  private pendingInsets: ViewInsets | null | undefined;
   private interacting = false;
   private pendingSize: Point | null = null;
   private pendingColumns: number | null = null;
   get resizing(): boolean { return this.pendingSize !== null; }
   readonly bounds = {left: grid.originX - camera.marginX, right: grid.originX + grid.columns * grid.width + camera.marginX,
     top: grid.originY - camera.marginY, bottom: grid.originY + grid.rows * grid.depth + camera.marginY};
+  private get viewport() {
+    const pad = camera.overviewPadding;
+    const hud = this.width < this.height && this.width <= 980 ? camera.portraitHudHeight : this.height <= 450 ? camera.compactHudHeight : camera.hudHeight;
+    const i = this.insets ?? {left: pad, right: pad, top: hud + pad, bottom: pad};
+    return {x: i.left, y: i.top, width: Math.max(1, this.width - i.left - i.right), height: Math.max(1, this.height - i.top - i.bottom)};
+  }
+  private fullIsland(): WorldBounds {return {left: grid.originX, right: this.bounds.right - camera.marginX, top: grid.originY, bottom: grid.originY + grid.rows * grid.depth};}
+  private fitZoom(rect: WorldBounds): number {
+    const v = this.viewport, water = camera.overviewWaterMargin;
+    return Math.min(v.width / (rect.right - rect.left + 2 * water), v.height / (rect.bottom - rect.top + 2 * water));
+  }
+  /** .4 on large screens; smaller when necessary to fit the full map with water. */
+  get minimumZoom(): number {return Math.min(camera.minZoom, this.fitZoom(this.fullIsland()));}
+  setInsets(insets: ViewInsets | null): void {
+    if (this.interacting) {this.pendingInsets=insets;return;}
+    this.insets = insets;
+  }
+  overview(rect: WorldBounds): void {
+    if (this.interacting) return;
+    const v = this.viewport;
+    this.zoom = Math.max(this.minimumZoom, Math.min(camera.maxZoom, this.fitZoom(rect)));
+    this.x = (rect.left + rect.right) / 2 - (v.x + v.width / 2 - this.width / 2) / this.zoom;
+    this.y = (rect.top + rect.bottom) / 2 - (v.y + v.height / 2 - this.height / 2) / this.zoom;
+    this.clamp();
+  }
   interaction(active: boolean): void {
     this.interacting = active;
+    if (!active && this.pendingInsets !== undefined) {this.insets=this.pendingInsets;this.pendingInsets=undefined;}
     if (!active && this.pendingColumns !== null) { const columns = this.pendingColumns; this.pendingColumns = null; this.setColumns(columns); }
     if (!active && this.pendingSize) { const size = this.pendingSize; this.pendingSize = null; this.resize(size.x, size.y); }
   }
@@ -83,13 +113,15 @@ export class MeadowCamera {
   scale(factor: number, at: Point, dx = 0, dy = 0): void {
     // One clamp for the entire pinch: the old midpoint follows the moving fingers.
     const anchor = this.world({x: at.x - dx, y: at.y - dy});
-    this.zoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, this.zoom * factor));
+    // A retained zoom after orientation must not jump upward on a zoom-out gesture.
+    this.zoom = Math.max(Math.min(this.minimumZoom, this.zoom), Math.min(camera.maxZoom, this.zoom * factor));
     const after = this.world(at); this.x += anchor.x - after.x; this.y += anchor.y - after.y; this.clamp();
   }
   clamp(): void {
     const clamp = (value: number, low: number, high: number, half: number) => high - low < half * 2 ? (high + low) / 2 : Math.max(low + half, Math.min(high - half, value));
-    this.x = clamp(this.x, this.bounds.left, this.bounds.right, this.width / this.zoom / 2);
-    this.y = clamp(this.y, this.bounds.top, this.bounds.bottom, this.height / this.zoom / 2);
+    const v = this.viewport, dx = (v.x + v.width / 2 - this.width / 2) / this.zoom, dy = (v.y + v.height / 2 - this.height / 2) / this.zoom;
+    this.x = clamp(this.x + dx, this.bounds.left, this.bounds.right, v.width / this.zoom / 2) - dx;
+    this.y = clamp(this.y + dy, this.bounds.top, this.bounds.bottom, v.height / this.zoom / 2) - dy;
   }
 }
 /** A click-only command gate guards re-entrancy and accidental double clicks/taps. */

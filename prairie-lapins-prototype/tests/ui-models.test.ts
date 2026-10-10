@@ -46,7 +46,7 @@ describe('touch gestures and camera', () => {
   it('bounds zoom and panning including a viewport larger than the terrain', () => {
     const c = new MeadowCamera(); c.resize(844, 390); c.scale(100, {x: 400, y: 200}); expect(c.zoom).toBe(VISUAL.camera.maxZoom);
     c.pan(1e6, 1e6); expect(c.x).toBeGreaterThanOrEqual(c.bounds.left); expect(c.y).toBeGreaterThanOrEqual(c.bounds.top);
-    c.scale(.0001, {x: 400, y: 200}); expect(c.zoom).toBe(VISUAL.camera.minZoom);
+    c.scale(.0001, {x: 400, y: 200}); expect(c.zoom).toBe(c.minimumZoom);
     c.resize(3000, 1800); expect(c.x).toBe((c.bounds.left + c.bounds.right) / 2);
   });
   it('ignores pointer activity in sibling panels and disposes all canvas listeners', () => {

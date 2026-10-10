@@ -1,8 +1,10 @@
-# Prairie de lapins — bâtiments sur grille fine v7
+# Prairie de lapins — vue d’ensemble et grille fine v7
 
 [Jouer](https://sullivanlegoff-code.github.io/Project-L/) · [Laboratoire séparé](https://sullivanlegoff-code.github.io/Project-L/dev/)
 
 Bâtiments de 4 × 4 petits carrés, déplaçables d’un petit carré et à travers les frontières acquises. Neuf parcelles de neuf anciennes grosses cases : centre acquis au départ, huit achats libres de 500 à 4000 pattes selon leur ordre d’achat. Douze décorations exclusivement extérieures, dont tunnel tournable. Sélection directe, déplacement avec aperçu et annulation, rangement sans coût, vente confirmée à 50 % des pattes. Quinze espèces, neuf recettes, collection/carnet/filtres, missions, économie et habitats conservés ; six espèces utilisent leurs originaux liés aux identifiants stables : Neige, Paille, Terre, Bélier Gris, Feu et Volant.
+
+[Vue d’ensemble, dézoom et vérifications](docs/camera-overview.md). Minimum de référence 0,4, adapté à l’écran pour cadrer neuf parcelles ; zoom initial 1,05 et maximum 1,65 conservés.
 
 [Placement fin, migration et essai iPhone](docs/fine-buildings-v7.md). [Historique de l’île](docs/land-v6.md). Les anciens objets intérieurs rejoignent l’inventaire avec leurs identifiants. Les parties 1 à 6 passent directement en v7 avec secours, sans redotation ni perte. Les deux anciennes extensions deviennent Est puis Ouest ; huit nouvelles parcelles restent indépendantes. Les travaux et résultats déjà tirés conservent leurs échéances. Ne pas effacer les données Safari ; fermer les anciens onglets avant de rouvrir le jeu.
 
