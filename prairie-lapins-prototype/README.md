@@ -2,7 +2,7 @@
 
 [Jouer](https://sullivanlegoff-code.github.io/Project-L/) · [Laboratoire séparé](https://sullivanlegoff-code.github.io/Project-L/dev/)
 
-Neuf parcelles de neuf cases : centre acquis au départ, huit achats libres de 500 à 4000 pattes selon leur ordre d’achat. Douze décorations exclusivement extérieures, dont tunnel tournable. Sélection directe, déplacement avec aperçu et annulation, rangement sans coût, vente confirmée à 50 % des pattes. Quinze espèces, neuf recettes, collection/carnet/filtres, missions, économie et habitats conservés ; aucune nouvelle illustration de lapin.
+Neuf parcelles de neuf cases : centre acquis au départ, huit achats libres de 500 à 4000 pattes selon leur ordre d’achat. Douze décorations exclusivement extérieures, dont tunnel tournable. Sélection directe, déplacement avec aperçu et annulation, rangement sans coût, vente confirmée à 50 % des pattes. Quinze espèces, neuf recettes, collection/carnet/filtres, missions, économie et habitats conservés ; six espèces utilisent leurs originaux liés aux identifiants stables : Neige, Paille, Terre, Bélier Gris, Feu et Volant.
 
 [Règles, conversion unique et parcours iPhone](docs/land-v6.md). Les anciens objets intérieurs rejoignent l’inventaire avec leurs identifiants. Les parties 1 à 5 passent directement en v6 avec secours, sans redotation ni perte. Les deux anciennes extensions deviennent Est puis Ouest ; huit nouvelles parcelles restent indépendantes. Les travaux et résultats déjà tirés conservent leurs échéances. Ne pas effacer les données Safari ; fermer les anciens onglets avant de rouvrir le jeu.
 
@@ -35,6 +35,8 @@ Historique v5 : [PR nº 2 fusionnée](https://github.com/sullivanlegoff-code/Pro
 
 Fondations techniques : [architecture, invariants, stockage et vérifications](docs/technical-foundations.md).
 
-Visuel Neige uniquement : [original, comparaison en jeu et vérifications](docs/neige-v1.md).
+Visuel Neige : [original, comparaison en jeu et vérifications](docs/neige-v1.md).
 
 [Paille et Terre : originaux, transparence, comparaisons et contrôles](docs/paille-terre-v1.md).
+
+[Bélier Gris, Feu et nouveau Volant : originaux, comparaisons et vérifications](docs/belier-feu-volant-v1.md).

@@ -1,3 +1,13 @@
+# Bélier Gris, Feu et nouveau Volant — livrés
+
+Jeu normal et laboratoire : application `550dceb49c4c42f54da799137dd37e0c9c9c4fe9`, [PR nº 7 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/7). Le nouvel original complet `volant.png` remplace l’ancien museau coupé ; ancien fichier supprimé. Bélier Gris et Feu sont également finalisés. Trois PNG fidèles, transparence préparée sans changement des RGB opaques, textures réutilisées dans habitats et tous les portraits, taille uniforme selon le corps, ancrage et animation légère de l’image entière. [Sources, méthode et comparaisons](belier-feu-volant-v1.md) · [preuve de publication](validation/belier-feu-v1/publication.json).
+
+[CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38045871955) : 586 tests / 18 fichiers, TypeScript, deux builds, parcours existants, 21 sélections des sept occupants mixtes aux trois zooms, oreilles et aile, rejet des marges transparentes, profils, boutique, collection, parents et orientation portrait. Arbre livré identique à la fusion testée. [Captures CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38045871955/artifacts/11666579253).
+
+[Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38046399231) : quatre routes et révisions confirmées, six suites navigateur, 25 contrôles publics. Les six PNG servis sont vérifiés par SHA-256, dimensions et transparence. [Captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38046399231/artifacts/11667004162).
+
+Neige, Paille et Terre validés sur iPhone par le joueur conservent exactement leurs assets et paramètres. Autres espèces, règles, sauvegardes, caméra, île, habitats et décorations inchangés. Décorations v5 `85fe255` et Comptes v4 `3e70d9e` conservés ; Supabase en pause. Les trois nouveaux rendus sont vérifiés par Chromium tactile, sans iPhone physique disponible.
+
 # Paille et Terre originales v1 — livrées
 
 Jeu normal et laboratoire : application `5248235b964947d67ae295f64d5832525d2e1d93`, [PR nº 6 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/6). Deux visuels remplacés depuis les fichiers ajoutés par le joueur, transparence préparée avec conservation des couleurs opaques (différence RGB maximale 0). Même texture dans habitats, fiches, boutique, collection, carnet et parents. Échelle uniforme, ancrage et animation légère de l’image entière ; sélection par la silhouette alpha propre à chaque espèce, oreilles comprises. [Sources, méthode et comparaisons](paille-terre-v1.md) · [Preuve de publication](validation/paille-terre-v1/publication.json).

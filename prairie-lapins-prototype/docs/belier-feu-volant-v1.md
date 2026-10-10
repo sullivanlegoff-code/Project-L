@@ -18,4 +18,6 @@ Comparaisons référence à gauche / capture réelle de la fiche à droite : [B�
 
 Contrôles locaux : 586 tests / 18 fichiers, TypeScript, builds normal et laboratoire ; 21 sélections aux zooms 0,8 / 1,05 / 1,65, oreilles, profils, boutique, collection, parents et écran portrait. [Rapport navigateur](validation/belier-feu-v1/browser.json). Le fixture mixte et les sondes sont limités au script ; aucun hook dans l’application livrée. Vérification Chromium tactile, sans iPhone physique disponible.
 
-La validation CI et la publication des quatre routes sont suivies dans la PR nº 7.
+[PR nº 7 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/7), application publiée `550dceb49c4c42f54da799137dd37e0c9c9c4fe9`, arbre `c73d6fb2a661354f79a21677b7ca00ffe13af1b3` identique à la fusion testée. [CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38045871955) et [captures CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38045871955/artifacts/11666579253).
+
+[Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38046399231) : quatre routes et révisions vérifiées, six suites Chromium et 25 contrôles publics réussis ; dimensions, transparence et SHA-256 des six PNG confirmés. [Captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38046399231/artifacts/11667004162) · [preuve durable](validation/belier-feu-v1/publication.json). Décorations reste en v5 `85fe255`, Comptes en v4 `3e70d9e` ; leurs sources et sauvegardes sont conservées.
