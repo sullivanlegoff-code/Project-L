@@ -1,0 +1,18 @@
+{
+  "belier-gris": {
+    "sourceCrop": "527x488+39+8",
+    "sourcePadding": 4,
+    "opaquePixels": 141564,
+    "maxOpaqueRgbDifference": 0,
+    "cornerAlpha": 0,
+    "sha256": "5072d1f8ee2d14ac592cea8a3da933dfc11d5d08e5e435a22c41da4fd291f505"
+  },
+  "feu": {
+    "sourceCrop": "1004x827+7+149",
+    "sourcePadding": 0,
+    "opaquePixels": 539351,
+    "maxOpaqueRgbDifference": 0,
+    "cornerAlpha": 0,
+    "sha256": "d080ac1a9a21e6f9c3259dc45800b0713e8b57bb853eb043aea9886cdc16e536"
+  }
+}
