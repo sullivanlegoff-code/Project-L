@@ -10,7 +10,7 @@ describe('Paille and Terre reference artwork', () => {
       expect(html).toContain(`width="${art.width}" height="${art.height}"`);
       expect(html).not.toContain(SNOW_ART.url);
     }
-    expect(rabbitArt('feu')).toBeUndefined();
+    expect(rabbitArt('dragon')).toBeUndefined();
     expect(rabbitArt()).toBeUndefined();
   });
   it('preserves the validated snow scale and anchor while retaining species proportions', () => {

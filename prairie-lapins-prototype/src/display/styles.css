@@ -100,3 +100,4 @@ button.mission-claim:not(:disabled) { background: #e6f2ce; color: #365331; borde
 
 .portrait img[data-rabbit-art="neige"] { width: 100%; height: 100%; object-fit: contain; padding: 4px; box-sizing: border-box; }
 .portrait img[data-rabbit-art="paille"], .portrait img[data-rabbit-art="terre"] { width: 100%; height: 100%; object-fit: contain; padding: 4px; box-sizing: border-box; }
+.portrait img[data-rabbit-art="belier-gris"], .portrait img[data-rabbit-art="feu"], .portrait img[data-rabbit-art="volant"] { width: 100%; height: 100%; object-fit: contain; padding: 4px; box-sizing: border-box; }
