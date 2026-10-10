@@ -1,6 +1,8 @@
-# Vue d’ensemble — validation en cours
+# Vue d’ensemble — livrée
 
-Depuis production `8bd2263` (application `687075e`). Minimum de référence 0,4, limite adaptative selon écran et espace visible ; Vue d’ensemble pour les parcelles acquises, Agrandir pour les neuf possibles. Recentrer 1,05 et maximum 1,65 conservés. Noms/bulles progressivement masqués, sélection sans agrandissement des voisins, sauvegardes v7 inchangées. TypeScript, 627 tests / 20 fichiers, deux builds et contrôles Chromium tactiles/publics réussis. [Cadrage, captures et vérifications](camera-overview.md). Publication normale/laboratoire préparée avec maintien des deux anciennes routes.
+Application `c37966c10756dfe45bbfefae9e4ce63c446f599f`, [PR nº 9 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/9), depuis production `8bd2263` (application `687075e`). Minimum de référence 0,4, limite adaptative selon écran et espace visible ; Vue d’ensemble pour les parcelles acquises, Agrandir pour les neuf possibles. Recentrer 1,05 et maximum 1,65 conservés. Noms/bulles progressivement masqués, sélection sans agrandissement des voisins, sauvegardes v7 inchangées.
+
+[CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38064379170) : TypeScript, 627 tests / 20 fichiers, deux builds, contrôles Chromium tactiles et huit suites / 31 contrôles des builds réels. Arbre livré `a70db89048f90dea5d1b386661bfd3972c0d223c` identique à la fusion testée. [Preuves CI](validation/camera-overview/ci.json). [Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38065148706) : quatre révisions et formats confirmés, huit suites / 31 contrôles publics sans erreur. [Preuves durables](validation/camera-overview/publication.json). Décorations v5 et Comptes v4 conservés ; Supabase en pause. [Cadrage, captures avant/après et essai iPhone](camera-overview.md).
 
 # Placement fin des bâtiments — livré v7
 

@@ -35,3 +35,11 @@ Même scénario d’île complète : l’ancienne production à son minimum 0,8 
 3. Recentrer, rapprocher le zoom et sélectionner un lapin ou essayer un placement puis annuler.
 
 Les prévisualisations Décorations v5 et Comptes v4 sont publiées depuis leurs révisions figées. Comptes et Supabase restent en pause.
+
+## Livraison
+
+Application `c37966c10756dfe45bbfefae9e4ce63c446f599f`, [PR nº 9 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/9). [CI complète réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38064379170) : 627 tests, TypeScript, deux builds, parcours tactiles et huit suites de builds réels avec 31 contrôles. L’arbre livré est exactement celui de la fusion testée. [Preuve durable CI](validation/camera-overview/ci.json).
+
+[Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38065148706) : les quatre révisions et formats réellement servis sont confirmés ; huit suites navigateur et 31 contrôles publics passent sans erreur. [Rapports durables](validation/camera-overview/publication.json) · [Captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38065148706/artifacts/11674952639).
+
+[Jeu normal](https://sullivanlegoff-code.github.io/Project-L/) · [Laboratoire](https://sullivanlegoff-code.github.io/Project-L/dev/). Les six assets et paramètres de lapins restent inchangés ; les deux prévisualisations gardent leurs révisions v5 et v4.
