@@ -29,7 +29,7 @@ export interface MissionState {
   daily: {referenceAt: number; cycleIndex: number; progress: Record<DailyMissionId, number>; claimed: DailyMissionId[]; bonusClaimed: boolean};
 }
 export interface GameState {
-  version: 7; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
+  version: 8; decorations: OwnedDecoration[]; missions: MissionState; lastSimulatedAt: number; nextId: number;
   hearts: number; nextHeartGiftAt: number;
   pattes: number; grass: number; acquiredParcels: ParcelId[];
   buildings: Building[]; rabbits: Rabbit[]; discovered: SpeciesId[];
@@ -46,6 +46,8 @@ export type ActionResult = {ok: true; state: GameState; value?: string | number}
 export type BaseCommand =
   | {type: 'buyBuilding'; kind: BuildingKind; x: number; y: number; habitatType?: HabitatType}
   | {type: 'moveBuilding'; id: string; x: number; y: number}
+  | {type: 'placeStarterBuilding'; kind: 'nest' | 'nursery'; x: number; y: number}
+  | {type: 'transferBirth'; id: string; birthId: string}
   | {type: 'buyRabbit'; species: SpeciesId; enclosureId: string}
   | {type: 'moveRabbit'; id: string; enclosureId: string}
   | {type: 'collectIncome'; id: string}
@@ -57,7 +59,7 @@ export type BaseCommand =
   | {type: 'upgradeHabitat'; id: string; fromLevel: HabitatLevel}
   | {type: 'expand'; parcelId: ParcelId; expectedCost: number}
   | {type: 'release'; id: string};
-export type PattesCommand = Extract<BaseCommand, {type: 'buyBuilding' | 'buyRabbit' | 'expand' | 'startOrder' | 'breed' | 'upgradeHabitat'}>;
+export type PattesCommand = Extract<BaseCommand, {type: 'buyBuilding' | 'buyRabbit' | 'expand' | 'startOrder' | 'upgradeHabitat'}>;
 export type TimedStage = 'order' | 'breeding' | 'growth';
 export type Command = BaseCommand
   | {type: 'buyDecoration'; catalogId: DecorationId}

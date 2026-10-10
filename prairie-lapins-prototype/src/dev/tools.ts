@@ -63,9 +63,9 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
       host.hidden = false; host.replaceChildren();
       const intro = document.createElement('p');
       intro.textContent = 'Laboratoire public : partie, préférences, horloge et sauvegardes de secours séparées. Aucun compte ni service en ligne. Importez volontairement un export normal pour tester une copie. Les fichiers MODE-TEST peuvent contenir des ressources ajoutées et du temps avancé.';
-      if (options.decorationPreview) intro.textContent = 'Prévisualisation expérimentale v7 : partie, préférences, horloge et secours distincts des trois autres versions. Aucun compte ni synchronisation. Import v4 volontaire uniquement ; les exports v7 de cette prévisualisation ne sont pas compatibles avec les versions v4.';
+      if (options.decorationPreview) intro.textContent = 'Prévisualisation expérimentale v8 : partie, préférences, horloge et secours distincts des trois autres versions. Aucun compte ni synchronisation. Import v4 volontaire uniquement ; les exports v8 de cette prévisualisation ne sont pas compatibles avec les versions v4.';
       host.append(intro);
-      const version = document.createElement('p'); version.textContent = options.decorationPreview ? `Version expérimentale v7 · build ${BUILD_REVISION.slice(0, 7)}. Jeu normal et laboratoire en v7 ; comptes figés en v4.` : `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
+      const version = document.createElement('p'); version.textContent = options.decorationPreview ? `Version expérimentale v8 · build ${BUILD_REVISION.slice(0, 7)}. Jeu normal et laboratoire en v8 ; comptes figés en v4.` : `Même révision que le jeu normal : ${BUILD_REVISION.slice(0, 7)}.`; host.append(version);
       const status = document.createElement('p'); status.setAttribute('role', 'status'); status.id = 'dev-status';
       const resultMessage = (result: TestResult, message: string) => { status.textContent = result.ok ? message : result.reason === 'NOT_CONFIRMED' ? 'Opération annulée. La partie de test est conservée.' : 'Opération de test refusée. Vérifiez la sauvegarde et l’espace disponible ; la partie normale est conservée.'; };
       const section = (title: string) => { const h = document.createElement('h3'); h.textContent = title; host.append(h); };
@@ -94,7 +94,7 @@ export function developmentEnvironment(base: SaveStorage, options: {decorationPr
       host.append(status);
       const badge = document.getElementById('dev-badge')!;
       document.body.classList.add('test-session');
-      badge.hidden = false; badge.replaceChildren(document.createTextNode(options.decorationPreview ? 'PRÉVISUALISATION DÉCORATIONS v7 — PARTIE SÉPARÉE' : 'MODE TEST — PARTIE SÉPARÉE'));
+      badge.hidden = false; badge.replaceChildren(document.createTextNode(options.decorationPreview ? 'PRÉVISUALISATION DÉCORATIONS v8 — PARTIE SÉPARÉE' : 'MODE TEST — PARTIE SÉPARÉE'));
       const shortcut = document.getElementById('open-preview-tools');
       if (options.decorationPreview && shortcut) { shortcut.hidden = false; shortcut.onclick = () => { document.getElementById('open-settings')!.click(); host.scrollIntoView({block: 'start'}); }; }
       const back = document.createElement('a'); back.textContent = 'Retour au jeu normal';

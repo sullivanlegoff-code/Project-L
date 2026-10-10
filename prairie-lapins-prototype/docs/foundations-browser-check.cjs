@@ -7,7 +7,7 @@ const {chromium} = require('playwright');
  const url=process.argv[2], expected=process.argv[3]?.slice(0,7);
  const output=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/foundations-proof'; fs.mkdirSync(output,{recursive:true});
  const report={url,expected,browser:'Chromium mobile viewport; not physical Safari',checks:[],errors:[],passed:false};
- const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const context=await browser.newContext({viewport:{width:852,height:393},acceptDownloads:true});
  const ready=async page=>{await page.locator('#game canvas').waitFor();await page.waitForFunction(()=>document.querySelector('#save-status')?.dataset.status==='saved');if(expected)assert.match(await page.locator('#game-version').textContent(),new RegExp(expected));};
  const save=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('prairie-lapins.save.v1')));

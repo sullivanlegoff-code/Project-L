@@ -10,7 +10,7 @@ async function run() {
   const expected = process.argv[3]?.slice(0,7);
   const output = process.env.PRAIRIE_CAPTURE_DIR || '/workspace/artifacts/laboratory-validation'; fs.mkdirSync(output,{recursive:true});
   const report = {normal: normal.href, laboratory: laboratory.href, expected, checks: [], errors: [], failedRequests: [], httpErrors: [], passed:false};
-  const browser = await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM === 'playwright' ? undefined : process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',args:['--no-sandbox']});
+  const browser = await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM === 'playwright' ? undefined : process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context = await browser.newContext({viewport:{width:852,height:393},acceptDownloads:true});
   const page = await context.newPage(); page.setDefaultTimeout(15000);
   page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});
@@ -51,7 +51,7 @@ async function run() {
     for(const [resource,amounts] of Object.entries({pattes:[1000,10000],grass:[100,1000],hearts:[10,100]}))for(const amount of amounts)await page.click(`#dev-grant-${resource}-${amount}`);
     const rich=await state(true);assert.equal(rich.pattes,11300);assert.equal(rich.grass,1110);assert.equal(rich.hearts,122);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('All five clock advances and six resource grants leave every normal-origin key byte-for-byte unchanged.');
-    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,7);
+    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,8);
     await importFile(normalExport,'normal-copy.json');await page.click('#cancel-import');assert.deepEqual(progress(await state(true)),progress(rich));
     await importFile(normalExport,'normal-copy.json');await page.click('#confirm-import');assert.deepEqual(progress(await state(true)),normalProgress);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('MODE-TEST JSON export; cancelled and confirmed normal-copy imports leave the source unchanged.');
@@ -60,7 +60,7 @@ async function run() {
     confirm=true;await page.click('#dev-reset');assert.equal((await state(true)).grass,10);assert.equal((await state(true)).hearts,12);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('Laboratory reload restores its save/clock; cancelled and confirmed reset preserve normal storage.');
     for(const id of ['fineBuildings','collection','reproduction','missions','habitats','islandStart','islandExpanded','islandFull','islandDiagonal','islandL','parcelEdges','decorationStart','decorationDemo','decoratedHabitat','decorationDense']) {
-      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,7);
+      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,8);
       if(id==='collection') {
         assert.equal(fixture.discovered.length,15);
         await page.click('#open-collection');
@@ -75,7 +75,7 @@ async function run() {
       if(id==='habitats')for(const home of fixture.buildings)assert.equal(fixture.rabbits.filter(r=>r.enclosureId===home.id).length,7);
       assert.deepEqual(await protectedData(),baseline);
     }
-    report.checks.push('All fifteen confirmed scenario loads produce valid saved v7 states without writing normal keys.');
+    report.checks.push('All sixteen confirmed scenario loads produce valid saved v8 states without writing normal keys.');
     await page.click('#close-panel');await screenshot('laboratory-habitats');
     await settings(); await page.click('#dev-scenario-habitats'); await page.click('#close-panel'); await page.reload({waitUntil:'networkidle'});await ready();assert.equal((await state(true)).rabbits.length,49);assert.deepEqual(await protectedData(),baseline);
     await page.setViewportSize({width:390,height:844});

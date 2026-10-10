@@ -1,4 +1,4 @@
-import {FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
+import {BREEDING_MIGRATION_BACKUP_KEY, FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
 import {act, advance, createGame, decodeGame, encodeGame} from '../simulation';
 import {MAX_JSON_LENGTH, type DecodeResult} from '../persistence/json';
 import {MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, SAVE_KEY, type SaveStorage} from '../persistence/storage';
@@ -98,7 +98,7 @@ export class GameController {
         // Also retain the original in memory if even the backup write is denied.
         this.migrationSource = backup;
         const source = decodeGame(backup, savedAt);
-        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 4 ? DECORATIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 6 ? FINE_BUILDINGS_MIGRATION_BACKUP_KEY : LAND_MIGRATION_BACKUP_KEY, backup);
+        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 4 ? DECORATIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 7 ? BREEDING_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 6 ? FINE_BUILDINGS_MIGRATION_BACKUP_KEY : LAND_MIGRATION_BACKUP_KEY, backup);
       }
       this.storage.setItem(SAVE_KEY, json);
     }
@@ -131,20 +131,20 @@ export class GameController {
     if (this.updateTime(now)) this.saveCurrent(now);
     this.emit();
   }
-  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'STORAGE_CHANGED'} {
+  perform(command: Command): ActionResult | {ok: false; reason: 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'ACTION_NOT_SAVED' | 'STORAGE_CHANGED'} {
     if (this.disposed) return {ok: false, reason: 'DISPOSED'};
     if (!this.state) return {ok: false, reason: 'NO_GAME'};
     if (this.storageChanged()) { this.emit(); return {ok: false, reason: command.type === 'sellDecoration' ? 'SALE_NOT_SAVED' : 'STORAGE_CHANGED'}; }
     const now = this.clock();
     const changed = this.updateTime(now);
     const result = act(this.state!, command, now, this.rng);
-    // A sale commits ownership and payment together, only after the complete save succeeds.
-    if (result.ok && command.type === 'sellDecoration') {
+    // Sales and nursery transfers commit the whole transaction only after the save succeeds.
+    if (result.ok && (command.type === 'sellDecoration' || command.type === 'transferBirth')) {
       const saved = this.write(result.state, now);
       if (!saved.ok) {
         this.status = saved.reason === 'STORAGE_CHANGED' ? 'conflict' : saved.reason === 'READ_FAILED' ? 'read-error' : 'write-error';
         this.issue = saved.reason; this.dirty = true; this.emit();
-        return {ok: false, reason: 'SALE_NOT_SAVED'};
+        return {ok: false, reason: command.type === 'sellDecoration' ? 'SALE_NOT_SAVED' : 'ACTION_NOT_SAVED'};
       }
       this.state = result.state; this.status = 'saved'; this.issue = null; this.dirty = false;
       this.emit(); return structuredClone(result);
@@ -178,7 +178,7 @@ export class GameController {
   migrationBackup(): string | null {
     if (this.migrationSource !== null) return this.migrationSource;
     try {
-      for (const key of [FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
+      for (const key of [BREEDING_MIGRATION_BACKUP_KEY, FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
         const raw = this.storage.getItem(key);
         if (raw !== null) return raw;
       }

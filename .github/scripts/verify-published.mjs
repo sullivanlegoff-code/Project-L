@@ -4,8 +4,8 @@ import {writeFileSync} from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
 const origin = process.env.PRAIRIE_ORIGIN || 'https://sullivanlegoff-code.github.io';
 const routes = [
-  ['', process.env.STABLE_REVISION, 7, 'Prairie de lapins · île à neuf parcelles · v7'],
-  ['dev/', process.env.STABLE_REVISION, 7, 'Prairie de lapins · île à neuf parcelles · v7'],
+  ['', process.env.STABLE_REVISION, 8, 'Prairie de lapins · île à neuf parcelles · v8'],
+  ['dev/', process.env.STABLE_REVISION, 8, 'Prairie de lapins · île à neuf parcelles · v8'],
   ['preview/accounts/', process.env.ACCOUNTS_REVISION, 4, 'Habitats · passe visuelle'],
   ['preview/decorations/', process.env.DECORATIONS_REVISION, 5, 'Aménagement · prévisualisation v5'],
 ];
@@ -37,7 +37,7 @@ async function check() {
       for (const marker of ['supabase.co', 'signInWithOtp']) assert.ok(!scripts.includes(marker), `Online client in decorations: ${marker}`);
     }
     if(route==='dev/')assert.ok(scripts.includes('fineBuildings'));
-    if(format===7)for(const marker of ['acquiredParcels','Agrandir l’île','parcel-preview','empreinte 4 × 4','overview-view'])assert.ok((scripts+html).includes(marker),marker);
+    if(format===8)for(const marker of ['acquiredParcels','Agrandir l’île','parcel-preview','empreinte 4 × 4','overview-view','transferBirth','placeStarterBuilding','Au nid'])assert.ok((scripts+html).includes(marker),marker);
     report.push({url, revision, saveFormat: format, html: 200, application: 200, featuresChecked: true});
   }
   return report;

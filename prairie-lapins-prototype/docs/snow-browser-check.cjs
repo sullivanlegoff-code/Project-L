@@ -3,7 +3,7 @@ const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('nod
 const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5190/Project-L/?dev=1';
 const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/snow-proof';
 (async()=>{
- fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});
+ fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const context=await browser.newContext({viewport:{width:852,height:393},hasTouch:true});const page=await context.newPage();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  const report={passed:false,errors,checks:[],selections:[],browser:'Chromium touch emulation; not physical iPhone Safari'};
  try{

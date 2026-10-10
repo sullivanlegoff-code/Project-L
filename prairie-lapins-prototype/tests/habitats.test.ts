@@ -1,3 +1,5 @@
+import {withStarterBuildings} from './starter-expectation';
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {describe, expect, it, vi} from 'vitest';
 import {HABITAT_TYPES, HABITATS, habitatLevel, type HabitatType} from '../src/config/habitats';
@@ -36,7 +38,7 @@ function memory(raw?:string){
   return {data,flags,storage};
 }
 function breedingState(){
-  let s=rich();s=run(s,{type:'buyBuilding',kind:'nest',x: 16, y: 12});s=run(s,{type:'buyBuilding',kind:'nursery',x: 20, y: 12});
+  let s=rich();s=run(s,{type: 'placeStarterBuilding',kind:'nest',x: 16, y: 12});s=run(s,{type: 'placeStarterBuilding',kind:'nursery',x: 20, y: 12});
   s=run(s,{type:'feed',id:'rabbit-2'});s=run(s,{type:'feed',id:'rabbit-3'});s.pityFailures=9;
   return run(s,{type:'breed',parents:['rabbit-2','rabbit-3']},17);
 }
@@ -74,7 +76,7 @@ describe('habitat compatibility and atomic entries',()=>{
     expect(s.rabbits[0].enclosureId).toBe('building-1');
   });
   it('welcomes a reserved hybrid into either matching type, rejects an incompatible nursery destination without loss',()=>{
-    let s=breedingState();s=build(s,'feu',0,1);s=build(s,'neige',1,1);s=advance(s,35*60_000+17);
+    let s=breedingState();s=build(s,'feu',0,1);s=build(s,'neige',1,1);s=sendToNursery(s,20*60_000+17);s=advance(s,35*60_000+17);
     const nursery=s.buildings.find(b=>b.kind==='nursery')!,birth=structuredClone(nursery.baby!.birth);
     expect(birth.species).toBe('brumelin');
     refuse(s,{type:'welcome',enclosureId:s.buildings[3].id},'TYPE_INCOMPATIBLE');
@@ -130,9 +132,9 @@ describe('levels, income and payments',()=>{
     refuse(s,{type:'release',id:'rabbit-3'},'LAST_OF_SPECIES');expect(decode(encodeGame(s))).toEqual(s);
   });
   it('keeps parent income during reproduction after transfer to matching habitats',()=>{
-    let s=breedingState();s=build(s,'paille',0,1);s=run(s,{type:'moveRabbit',id:'rabbit-2',enclosureId:s.buildings[3].id});
+    let s=breedingState();s=build(s,'paille',0,1);expect(act(s,{type:'moveRabbit',id:'rabbit-2',enclosureId:s.buildings[3].id},s.lastSimulatedAt)).toMatchObject({ok:false,reason:'PARENT_BUSY'});
     const before=s.buildings[3].incomeUnits;s=advance(s,s.lastSimulatedAt+10*60_000);
-    expect(s.buildings[3].incomeUnits-before).toBe(14*10*60_000);expect(s.buildings[1].breeding).not.toBeNull();
+    expect(s.buildings[3].incomeUnits-before).toBe(0);expect(s.buildings[1].breeding).not.toBeNull();
   });
   it('buys with optional heart complement only after all cell conditions and blocks a second purchase on the same cell',()=>{
     let s=rich();s.pattes=30;const action:PattesCommand={type:'buyBuilding',kind:'enclosure',habitatType:'vol',x: 16, y: 12};
@@ -147,7 +149,7 @@ describe('levels, income and payments',()=>{
     s=run(s,payment);expect(s).toMatchObject({pattes:0,hearts:89});expect(s.buildings[1].habitat!.level).toBe(2);refuse(s,payment,'STALE_ACTION');
   });
   it('growth acceleration recognizes upgraded free capacity without revealing the species in its quote',()=>{
-    let s=breedingState();s=run(s,{type:'buyRabbit',species:'paille',enclosureId:'building-1'});s=advance(s,20*60_000+17);
+    let s=breedingState();s=run(s,{type:'buyRabbit',species:'paille',enclosureId:'building-1'});s=sendToNursery(advance(s,20*60_000+17));
     const nursery=s.buildings.find(b=>b.kind==='nursery')!,birth=structuredClone(nursery.baby!.birth);
     expect(quoteAcceleration(s,nursery.id,'growth',s.lastSimulatedAt)).toEqual({ok:false,reason:'CAPACITY_FULL'});
     s=run(s,{type:'upgradeHabitat',id:'building-1',fromLevel:1});const q=quoteAcceleration(s,nursery.id,'growth',s.lastSimulatedAt);if(!q.ok)throw Error(q.reason);
@@ -203,7 +205,7 @@ describe('v4 validation, migrations, imports and storage',()=>{
   });
   it.each([1,2] as const)('retains v%i migration with its historical heart rules and exact old fields',version=>{
     const {hearts,nextHeartGiftAt,...base}=previous;const raw=JSON.stringify({...base,version,...(version===2?{hearts,nextHeartGiftAt}:{})});
-    const migrated=decode(raw,previous.lastSimulatedAt);expect(migrated.version).toBe(7);expect(migrated.hearts).toBe(version===1?12:hearts);
+    const migrated=decode(raw,previous.lastSimulatedAt);expect(migrated.version).toBe(8);expect(migrated.hearts).toBe(version===1?12:hearts);
     expect(migrated.buildings[0].habitat).toEqual({type:'universal',level:1});expect(migrated.buildings[0].incomeUnits).toBe(previous.buildings[0].incomeUnits);
     expect(migrated.rabbits).toEqual(previous.rabbits);expect(pendingDiscoveries(migrated)).toEqual(['brumelin']);expect(migrated.acquiredParcels.includes('west')).toBe(false);
   });
@@ -216,8 +218,8 @@ describe('v4 validation, migrations, imports and storage',()=>{
   });
   it.each([HABITATS_MIGRATION_BACKUP_KEY,SAVE_KEY])('preserves the original if %s write fails during migration',key=>{
     const s=rich(),raw=JSON.stringify({...withoutHabitats(s),version:3}),m=memory(raw);m.flags.fail=key;
-    const c=new GameController(m.storage,()=>0);expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(c.getSnapshot().state).toEqual(s);
-    expect(c.exportGame().ok).toBe(true);m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(7);
+    const c=new GameController(m.storage,()=>0);expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(c.getSnapshot().state).toEqual(withStarterBuildings(s));
+    expect(c.exportGame().ok).toBe(true);m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(8);
   });
   it('imports v3 without resetting missions or hearts; v4 exports/reloads retain upgraded specialized habitats',()=>{
     const initial=rich(),m=memory(encodeGame(initial)),c=new GameController(m.storage,()=>0);
@@ -227,7 +229,7 @@ describe('v4 validation, migrations, imports and storage',()=>{
     m.flags.fail='';expect(c.confirmImport(p.token,true).ok).toBe(true);expect(c.getSnapshot().state).toEqual(s);
     const out=c.exportGame();if(!out.ok)throw Error(out.reason);expect(decode(out.json)).toEqual(s);
     const old=rich();old.hearts=2;old.missions.completed=['first-farm'];old.missions.claimed=['first-farm'];
-    p=c.prepareImport(JSON.stringify({...withoutHabitats(old),version:3}));if(!p.ok)throw Error(p.reason);expect(c.confirmImport(p.token,true).ok).toBe(true);expect(c.getSnapshot().state).toEqual(old);
+    p=c.prepareImport(JSON.stringify({...withoutHabitats(old),version:3}));if(!p.ok)throw Error(p.reason);expect(c.confirmImport(p.token,true).ok).toBe(true);expect(c.getSnapshot().state).toEqual(withStarterBuildings(old));
   });
   it.each(['level0','level4','fractionalLevel','unknownType','missingHabitat','utilityHabitat','overCap','overCapacity','incompatible','secondWithoutFirst','outside','missingSecond'] as const)('rejects invalid %s without replacing the active game',damage=>{
     const s=rich(),raw=JSON.parse(encodeGame(s));

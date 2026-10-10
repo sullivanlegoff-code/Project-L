@@ -43,6 +43,7 @@ function button(text: string, scope: ParentNode = panel()): HTMLButtonElement {
 function state(controller: GameController): GameState { return controller.getSnapshot().state!; }
 function place(ui: GameUI, kind: 'farm' | 'nest' | 'nursery' | 'enclosure', x: number, y: number) {
   x=x<6?x+3:x-6;y+=3;
+  if(kind==='nest'||kind==='nursery'){document.getElementById('open-arrange')!.click();button(`Placer gratuitement : ${kind==='nest'?'Nid':'Nurserie'}`).click();ui.select({kind:'cell',x:x*4,y:y*4});button('Placer gratuitement').click();return;}
   document.getElementById('open-shop')!.click();
   const prices = {farm: 60, nest: 100, nursery: 80, enclosure: 120};
   button(`Placer · ${prices[kind]} pattes`).click(); ui.select({kind: 'cell', x: x * 4, y: y * 4}); button(`Acheter et placer · ${prices[kind]} pattes`).click();
@@ -255,7 +256,7 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     ui.open({kind: 'recipes'}); expect(recipe().textContent).toContain('Recette possible, résultat non garanti · 20 %');
     const before = state(controller), perform = vi.spyOn(controller, 'perform');
     button('Préparer cette paire au nid', recipe()).click(); expect(perform).not.toHaveBeenCalled(); expect(state(controller)).toEqual(before);
-    expect(button('Lancer la reproduction · 20 pattes').disabled).toBe(false);
+    expect(button('Lancer la reproduction · gratuit').disabled).toBe(false);
     expect(panel().textContent).toContain('Parent A : Lapin Neige · Parent B : Lapin Feu');
   });
   it('keeps a guaranteed new rare hidden through reproduction and growth, then discovers it on manual welcome', () => {
@@ -266,10 +267,10 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     ui.open({kind: 'recipes'});
     const recipe = [...panel().querySelectorAll('article')].find(c => c.textContent?.includes('feu + neige · Rare'))!;
     expect(recipe.textContent).toContain('Résultat garanti pour cette recette · 100 %');
-    button('Préparer cette paire au nid', recipe).click(); button('Lancer la reproduction · 20 pattes').click();
+    button('Préparer cette paire au nid', recipe).click(); button('Lancer la reproduction · gratuit').click();
     expect(panel().textContent).not.toContain('Lapin Feu Glacé'); expect(state(controller).pityFailures).toBe(0);
     const saved = decodeGame(data.get(SAVE_KEY)!); expect(saved.ok && saved.state.buildings.find(b => b.breeding)?.breeding?.birth).toMatchObject({species: 'feu-glace', guaranteed: true, reservedDiscovery: true});
-    clock.now += 20 * 60_000; controller.refresh(); ui.select({kind: 'building', id: 'building-5'});
+    clock.now += 20 * 60_000; controller.refresh();button('Envoyer dans la nurserie').click(); ui.select({kind: 'building', id: 'building-5'});
     expect(panel().textContent).not.toContain('Lapin Feu Glacé'); expect(panel().querySelector('.timer')!.textContent).toBe('30 min 0 s');
     button('Terminer · 6 cœurs').click(); const dialog = document.getElementById('game-dialog')!;
     expect(dialog.textContent).not.toContain('Lapin Feu Glacé'); button('Confirmer', dialog).click();
@@ -293,8 +294,8 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     ui.select({kind: 'building', id: find('nest').id});
     const parentCard = (name: string) => [...panel().querySelectorAll<HTMLElement>('.card')].find(c => c.querySelector('h3')?.textContent === name)!;
     button('Parent A', parentCard('Lapin Paille')).click(); button('Parent B', parentCard('Lapin Neige')).click();
-    button('Lancer la reproduction · 20 pattes').click(); expect(find('nest').breeding?.birth.species).toBe('brumelin'); expect(panel().textContent).not.toContain('Brumelin');
-    clock.now += 20 * 60_000; controller.refresh(); ui.select({kind: 'building', id: find('nursery').id});
+    button('Lancer la reproduction · gratuit').click(); expect(find('nest').breeding?.birth.species).toBe('brumelin'); expect(panel().textContent).not.toContain('Brumelin');
+    clock.now += 20 * 60_000; controller.refresh();ui.select({kind:'building',id:find('nest').id});button('Envoyer dans la nurserie').click(); ui.select({kind: 'building', id: find('nursery').id});
     expect(panel().textContent).toContain('secrète'); expect(panel().textContent).not.toContain('Brumelin');
     ui.open({kind: 'collection'}); expect(panel().textContent).not.toContain('Brumelin');
     clock.now += 15 * 60_000; controller.refresh(); ui.select({kind: 'building', id: find('nursery').id});
@@ -410,6 +411,7 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     ui.open({kind: 'extension',parcelId:'east'}); button('Compléter · 0 pattes + 20 cœurs').click(); confirm(); expect(state(controller).acquiredParcels.includes('east')).toBe(true);
     const build = (kind: 'farm' | 'nest' | 'nursery', price: number, hearts: number, x: number) => {
       x += 3;
+      if(kind==='nest'||kind==='nursery'){document.getElementById('open-arrange')!.click();button(`Placer gratuitement : ${kind==='nest'?'Nid':'Nurserie'}`).click();ui.select({kind:'cell',x:x*4,y:12});button('Placer gratuitement').click();return;}
       document.getElementById('open-shop')!.click(); button(`Placer · ${price} pattes`).click(); ui.select({kind: 'cell', x: x * 4, y: 12});
       button(`Compléter · 0 pattes + ${hearts} cœurs`).click(); confirm();
       expect(state(controller).buildings.find(b => b.x === x * 4 && b.y === 12)?.kind).toBe(kind);
@@ -420,9 +422,9 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     controller.perform({type: 'feed', id: 'rabbit-2'}); controller.perform({type: 'feed', id: 'rabbit-3'});
     const nest = state(controller).buildings.find(b => b.kind === 'nest')!; ui.select({kind: 'building', id: nest.id});
     const cards = [...panel().querySelectorAll('article')]; button('Parent A', cards[0]).click(); button('Parent B', panel().querySelectorAll('article')[1]).click();
-    button('Compléter · 0 pattes + 1 cœur').click(); confirm();
+    expect(panel().textContent).not.toContain('Compléter');button('Lancer la reproduction · gratuit').click();
     expect(state(controller).buildings.find(b => b.id === nest.id)!.breeding).not.toBeNull();
-    button('Terminer · 4 cœurs').click(); confirm(); expect(panel().textContent).not.toContain('Brumelin');
+    button('Terminer · 4 cœurs').click(); confirm(); expect(panel().textContent).not.toContain('Brumelin');button('Envoyer dans la nurserie').click();
     clock.now = 1; const nursery = state(controller).buildings.find(b => b.kind === 'nursery')!;
     ui.select({kind: 'building', id: nursery.id}); expect(panel().textContent).not.toContain('Brumelin');
     expect(panel().textContent).not.toContain('Terminer ·'); // all three enclosure places are occupied
@@ -433,7 +435,7 @@ describe('real HTML UI wired to the real controller (simulated DOM, not a browse
     controller.perform({type: 'feed', id: 'rabbit-2'}); controller.perform({type: 'feed', id: 'rabbit-3'});
     controller.perform({type: 'breed', parents: ['rabbit-2', 'rabbit-3']}); ui.select({kind: 'building', id: 'building-4'});
     const dialog = document.getElementById('game-dialog')!;
-    button('Terminer · 4 cœurs').click(); expect(dialog.textContent).not.toContain('Brumelin'); button('Confirmer', dialog).click();
+    button('Terminer · 4 cœurs').click(); expect(dialog.textContent).not.toContain('Brumelin'); button('Confirmer', dialog).click();expect(state(controller).buildings.find(b=>b.kind==='nursery')!.baby).toBeNull();button('Envoyer dans la nurserie').click();
     ui.select({kind: 'building', id: 'building-5'}); expect(panel().textContent).not.toContain('Brumelin');
     expect(state(controller).hearts).toBe(8); button('Terminer · 3 cœurs').click(); button('Confirmer', dialog).click();
     expect(panel().textContent).toContain('Brumelin'); expect(state(controller).hearts).toBe(5);
@@ -530,9 +532,9 @@ describe('habitat panels and controller transactions',()=>{
     const normal=encodeGame(createGame(0)),values=new Map([[SAVE_KEY,normal]]),base:SaveStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{values.set(k,v);}};
     const dev=developmentEnvironment(base),c=new GameController(dev.storage,()=>0);cleanups.push(()=>c.dispose());
     expect(c.perform({type:'buyBuilding',kind:'enclosure',habitatType:'paille',x: 16, y: 12}).ok).toBe(true);
-    expect(c.perform({type:'payWithHearts',action:{type:'upgradeHabitat',id:'building-4',fromLevel:1},maxPattes:100,maxHearts:8}).ok).toBe(true);
-    expect(state(c).buildings[1].habitat).toEqual({type:'paille',level:2});expect(values.get(SAVE_KEY)).toBe(normal);
-    expect(JSON.parse(values.get('prairie-lapins.development.'+SAVE_KEY)!).version).toBe(7);
+    expect(c.perform({type:'payWithHearts',action:{type:'upgradeHabitat',id:'building-6',fromLevel:1},maxPattes:100,maxHearts:8}).ok).toBe(true);
+    expect(state(c).buildings.find(b=>b.id==='building-6')!.habitat).toEqual({type:'paille',level:2});expect(values.get(SAVE_KEY)).toBe(normal);
+    expect(JSON.parse(values.get('prairie-lapins.development.'+SAVE_KEY)!).version).toBe(8);
   });
 });
 
@@ -626,7 +628,7 @@ describe('bubble actions retain priority during arrangement', () => {
   it('collects income without selecting an object and a nursery bubble opens ordinary building actions', () => {
     const initial = createGame(0); initial.pattes = 1000; initial.buildings[0].incomeUnits = 10 * 3600000;
     const {controller, ui} = setup(initial);
-    expect(controller.perform({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12}).ok).toBe(true);
+    expect(controller.perform({type:'placeStarterBuilding',kind:'nursery',x:20,y:12}).ok).toBe(true);
     const before = state(controller).pattes;
     document.getElementById('open-arrange')!.click();
     ui.select({kind: 'income', id: 'building-1'});
@@ -667,4 +669,22 @@ describe('new collection and exact-species recipe UI', () => {
     expect(state(controller).buildings.find(b=>b.kind==='nest')!.breeding).toBeNull();
     expect(state(controller)).toEqual(before);
   });
+});
+
+describe('manual nest UI and free equipment recovery',()=>{
+ it('shows parents Au nid after the deadline, keeps moves locked and transfers only through the explicit button',()=>{
+  const initial=scenarioState('reproduction',0);initial.pattes=0;initial.hearts=0;
+  const {controller,ui,clock}=setup(initial);const nid=initial.buildings.find(b=>b.kind==='nest')!,nursery=initial.buildings.find(b=>b.kind==='nursery')!;
+  controller.perform({type:'breed',parents:['rabbit-2','rabbit-3']});clock.now=3600000;controller.refresh();
+  ui.select({kind:'rabbit',id:'rabbit-2'});expect(panel().textContent).toContain('Au nid');expect(button('Changer d’habitat').disabled).toBe(true);expect(button('Confier ce lapin').disabled).toBe(true);
+  ui.select({kind:'building',id:nid.id});expect(button('Envoyer dans la nurserie').disabled).toBe(false);expect(state(controller).buildings.find(b=>b.id===nursery.id)!.baby).toBeNull();
+  const transfer=button('Envoyer dans la nurserie');transfer.click();transfer.click();expect(state(controller).buildings.find(b=>b.id===nid.id)!.breeding).toBeNull();expect(state(controller).buildings.find(b=>b.id===nursery.id)!.baby!.startedAt).toBe(clock.now);expect(panel().textContent).not.toContain('Envoyer dans la nurserie');
+ });
+ it('explains an occupied nursery and offers a free placement outside the shop for missing equipment',()=>{
+  const initial=scenarioState('manualBreeding',3600000),{controller,ui,clock}=setup(initial);clock.now=7200000;controller.refresh();
+  ui.select({kind:'building',id:initial.buildings.find(b=>b.kind==='nest')!.id});expect(button('Envoyer dans la nurserie').disabled).toBe(true);expect(panel().textContent).toContain('nurserie est occupée');
+  const missing=createGame(0);missing.pattes=0;missing.hearts=0;const second=setup(missing);document.getElementById('open-shop')!.click();expect(panel().textContent).not.toContain('Deux parents · maximum 1');
+  document.getElementById('open-arrange')!.click();button('Placer gratuitement : Nid').click();second.ui.select({kind:'fineCell',x:16,y:12});expect(panel().textContent).not.toContain('Compléter');button('Annuler · aucun coût').click();expect(state(second.controller)).toEqual(missing);
+  document.getElementById('open-arrange')!.click();button('Placer gratuitement : Nid').click();second.ui.select({kind:'fineCell',x:16,y:12});button('Placer gratuitement').click();expect(state(second.controller).buildings.some(b=>b.kind==='nest')).toBe(true);expect(state(second.controller).pattes).toBe(0);expect(state(second.controller).hearts).toBe(0);
+ });
 });

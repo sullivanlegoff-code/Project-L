@@ -1,7 +1,7 @@
-name: Vérifier les fondations et le terrain v7
+name: Vérifier les fondations et le terrain v8
 on:
   push:
-    branches: [feature/square-island, feature/technical-foundations, feature/neige-original-art, feature/paille-terre-original-art, feature/belier-feu-volant-art, feature/fine-buildings-v7, feature/overview-camera]
+    branches: [feature/square-island, feature/technical-foundations, feature/neige-original-art, feature/paille-terre-original-art, feature/belier-feu-volant-art, feature/fine-buildings-v7, feature/overview-camera, feature/manual-breeding-v8]
   pull_request:
     branches: [production]
   workflow_dispatch:
@@ -54,6 +54,7 @@ jobs:
           node docs/paille-terre-browser-check.cjs
           node docs/belier-feu-volant-browser-check.cjs
           node docs/fine-buildings-browser-check.cjs
+          node docs/manual-breeding-browser-check.cjs
           node docs/camera-overview-browser-check.cjs
       - name: Vérifier les builds sans injection
         env:
@@ -72,6 +73,7 @@ jobs:
           node docs/belier-feu-volant-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
           node docs/fine-buildings-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
           node docs/camera-overview-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
+          node docs/manual-breeding-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

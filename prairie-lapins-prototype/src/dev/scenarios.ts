@@ -1,5 +1,5 @@
 import {PARCEL_IDS, extensionPrice, type ParcelId} from '../config/land';
-import {SPECIES, SPECIES_IDS, type SpeciesId} from '../config/balance';
+import {growthDuration, SPECIES, SPECIES_IDS, type SpeciesId} from '../config/balance';
 import {HABITAT_TYPES} from '../config/habitats';
 import {act, createGame, decodeGame, encodeGame} from '../simulation';
 import {createMissions} from '../simulation/missions';
@@ -9,7 +9,7 @@ import {DECORATIONS, DECORATION_IDS, MAX_DECORATIONS} from '../config/decoration
 import {decorationPlacementReason} from '../simulation/decorations';
 
 export const DECORATION_SCENARIOS = ['islandStart', 'islandExpanded', 'islandFull', 'islandDiagonal', 'islandL', 'parcelEdges', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'] as const;
-export const SCENARIOS = {fineBuildings:'Bâtiments décalés — grille fine 4 × 4',islandStart: 'Centre seul — 3 × 3', islandExpanded: 'Extension cardinale — Centre + Est', islandDiagonal: 'Extension diagonale — Centre + Nord-ouest', islandL: 'Forme en L — Centre + Est + Nord', islandFull: 'Île complète — 9 × 9', parcelEdges: 'Décorations proches des frontières',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — quinze espèces et recettes', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat entouré de décorations — sept occupants'} as const;
+export const SCENARIOS = {manualBreeding:'Nid — parents et transfert manuel',fineBuildings:'Bâtiments décalés — grille fine 4 × 4',islandStart: 'Centre seul — 3 × 3', islandExpanded: 'Extension cardinale — Centre + Est', islandDiagonal: 'Extension diagonale — Centre + Nord-ouest', islandL: 'Forme en L — Centre + Est + Nord', islandFull: 'Île complète — 9 × 9', parcelEdges: 'Décorations proches des frontières',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — quinze espèces et recettes', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat entouré de décorations — sept occupants'} as const;
 export type ScenarioId = keyof typeof SCENARIOS;
 
 /** Explicit test fixtures only; ordinary play still uses act/controller.perform. */
@@ -25,14 +25,14 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
   const acquire=(id:ParcelId)=>run({type:'expand',parcelId:id,expectedCost:extensionPrice(s)});
   if(id==='fineBuildings'){
     acquire('east');acquire('north');
+    run({type:'moveBuilding',id:'building-5',x:27,y:13});run({type:'moveBuilding',id:'building-4',x:18,y:10});
     run({type:'moveBuilding',id:'building-1',x:13,y:14});
     run({type:'upgradeHabitat',id:'building-1',fromLevel:1});run({type:'upgradeHabitat',id:'building-1',fromLevel:2});
     const mixed:SpeciesId[]=['paille','neige','terre','belier-gris','feu','volant','brumelin'];
     s.rabbits=mixed.map(species=>({id:`rabbit-${s.nextId++}`,species,affection:4,enclosureId:'building-1'}));s.discovered=[...mixed];
     run({type:'buyBuilding',kind:'farm',x:22,y:15});
     run({type:'startOrder',id:s.buildings.at(-1)!.id,recipe:'small'});
-    run({type:'buyBuilding',kind:'nest',x:18,y:10});
-    run({type:'buyBuilding',kind:'nursery',x:27,y:13});
+
     run({type:'buyBuilding',kind:'enclosure',habitatType:'vol',x:18,y:18});
     run({type:'buyDecoration',catalogId:'flowering-bush'});
     run({type:'placeDecoration',id:s.decorations.at(-1)!.id,location:{kind:'outside',x:17,y:14,rotation:0}});
@@ -43,15 +43,16 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
     if (id === 'islandDiagonal') acquire('northwest');
     if (id === 'islandL') acquire('north');
     if (id === 'islandFull') for(const id of PARCEL_IDS.filter(id=>id!=='center'))acquire(id);
-    if(id==='parcelEdges'){run({type:'buyDecoration',catalogId:'wood-bench'});run({type:'placeDecoration',id:s.decorations.at(-1)!.id,location:{kind:'outside',x:23,y:12,rotation:0}});}
+    if(id==='parcelEdges'){run({type:'moveBuilding',id:'building-5',x:20,y:16});run({type:'buyDecoration',catalogId:'wood-bench'});run({type:'placeDecoration',id:s.decorations.at(-1)!.id,location:{kind:'outside',x:23,y:12,rotation:0}});}
     // Almost empty, not an automatic reset: ordinary starting habitat and two rabbits.
     const checked = decodeGame(encodeGame(s), now);
     if (!checked.ok) throw new Error('Invalid island scenario');
     return checked.state;
   }
   if (id === 'decorationDemo' || id === 'decoratedHabitat' || id === 'decorationDense') {
-    s.buildings[0].x=12;s.buildings[0].y=12;
     acquire('east');
+    run({type:'moveBuilding',id:'building-4',x:24,y:12});run({type:'moveBuilding',id:'building-5',x:28,y:12});
+    run({type:'moveBuilding',id:'building-1',x:12,y:12});
     run({type: 'upgradeHabitat', id: 'building-1', fromLevel: 1});
     run({type: 'upgradeHabitat', id: 'building-1', fromLevel: 2});
     const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', 20, 12, 'terre'); home.habitat!.level = 3; s.buildings.push(home);
@@ -85,11 +86,17 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
         if(!installed)cursor=1296;
       }
     }
-  } else if (id === 'reproduction') {
-    run({type: 'buyBuilding', kind: 'nest', x: 12, y: 12});
-    run({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+  } else if (id === 'reproduction' || id==='manualBreeding') {
     run({type: 'feed', id: 'rabbit-2'}); run({type: 'feed', id: 'rabbit-3'});
-    // Ready parents; the player starts the real breeding action.
+    if(id==='manualBreeding') {
+      run({type:'buyBuilding',kind:'enclosure',x:12,y:16});
+      run({type:'moveRabbit',id:'rabbit-3',enclosureId:s.buildings.at(-1)!.id});
+      const nursery=s.buildings.find(b=>b.kind==='nursery')!;
+      nursery.baby={birth:{id:`birth-${s.nextId++}`,species:'paille',guaranteed:false,reservedDiscovery:false},startedAt:now-growthDuration('paille'),readyAt:now};
+      s.pattes=0;s.hearts=0;
+      run({type:'breed',parents:['rabbit-2','rabbit-3']});
+    }
+    // Ready parents or a real running job, with an occupied nursery in the manual scenario.
   } else {
     acquire('east'); for(const id of PARCEL_IDS.filter(id=>!s.acquiredParcels.includes(id)))acquire(id);
     s.rabbits = []; s.buildings = []; s.discovered = [];

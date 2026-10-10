@@ -16,7 +16,7 @@ const run = (s: GameState, c: Command, now = s.lastSimulatedAt) => {
 };
 function prepared() {
   let s = createGame(0); s.pattes = 5000; s.grass = 1000;
-  for (const [kind, x, y] of [['farm',4,3], ['nest',5,3], ['nursery',3,4]] as const) s = run(s,{type:'buyBuilding',kind,x: x * 4,y: y * 4});
+  for (const [kind, x, y] of [['farm',4,3], ['nest',5,3], ['nursery',3,4]] as const) s = run(s,kind==='nest'||kind==='nursery'?{type:'placeStarterBuilding',kind,x:x*4,y:y*4}:{type:'buyBuilding',kind,x:x*4,y:y*4});
   return s;
 }
 function legacy(s: GameState, version: 1 | 2 = 2) {
@@ -43,7 +43,7 @@ const state=(c:GameController)=>c.getSnapshot().state!;
 describe('main missions and unique rewards',()=>{
   it('starts eight unclaimed visible objectives and a fresh 24-hour cycle without changing initial resources',()=>{
     const s=createGame(123);
-    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:7,pattes:300,grass:10,hearts:12});
+    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:8,pattes:300,grass:10,hearts:12});
     expect(s.missions).toEqual({completed:[],claimed:[],daily:{referenceAt:123,cycleIndex:0,progress:emptyDailyProgress(),claimed:[],bonusClaimed:false}});
     expect(dailyCycleEnd(s)).toBe(123+DAY);
   });
@@ -183,7 +183,7 @@ describe('v3 persistence, migrations and controller',()=>{
     const raw=legacy(prepared()),m=memory(raw);m.flags.fail=key;
     const c=new GameController(m.storage,()=>HOUR);
     expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(state(c).hearts).toBe(12);
-    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(7);
+    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(8);
   });
   it('saves a claim and its reward together; write failure preserves them in memory and retry never grants twice',()=>{
     const m=memory(encodeGame(prepared())),c=new GameController(m.storage,()=>0);const raw=m.data.get(SAVE_KEY),before=state(c);
@@ -211,7 +211,7 @@ describe('v3 persistence, migrations and controller',()=>{
     const m=memory();let now=previous.lastSimulatedAt;const rng=vi.fn(()=>0),c=new GameController(m.storage,()=>now,rng);
     const p=c.prepareImport(JSON.stringify(previous));if(!p.ok)throw Error(p.reason);now+=HOUR;
     expect(c.confirmImport(p.token,true).ok).toBe(true);expect(state(c).missions.daily.referenceAt).toBe(now);
-    expect(state(c).hearts).toBe(7);expect(state(c).buildings.find(b=>b.baby)?.baby?.birth).toEqual(previous.buildings.find(b=>b.breeding)?.breeding?.birth);
+    expect(state(c).hearts).toBe(7);expect(state(c).buildings.find(b=>b.breeding)?.breeding?.birth).toEqual(previous.buildings.find(b=>b.breeding)?.breeding?.birth);
     expect(rng).not.toHaveBeenCalled();expect(state(c).missions.daily.progress).toEqual(emptyDailyProgress());
   });
   it.each(['unknown','duplicate','unearned','bonus','cycle','future'] as const)('rejects inconsistent mission state: %s',kind=>{

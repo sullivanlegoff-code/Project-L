@@ -18,4 +18,6 @@ export const DECORATIONS_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v5
 
 export const LAND_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v6';
 
+export const BREEDING_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v8';
+
 export const FINE_BUILDINGS_MIGRATION_BACKUP_KEY = 'prairie-lapins.backup.before-v7';

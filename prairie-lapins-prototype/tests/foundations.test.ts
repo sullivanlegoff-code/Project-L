@@ -1,5 +1,6 @@
+import {regressionStart as createGame} from './regression-start';
 import {describe, expect, it, vi} from 'vitest';
-import {act, advance, createGame, encodeGame, decodeGame} from '../src/simulation';
+import {act, advance, encodeGame, decodeGame} from '../src/simulation';
 import {GameController} from '../src/application/GameController';
 import {SAVE_KEY, type SaveStorage} from '../src/persistence/storage';
 import {ActionGate} from '../src/ui/gestures';
@@ -16,8 +17,8 @@ function apply(s: GameState, command: Command, now = s.lastSimulatedAt): GameSta
 }
 function equipped(): GameState {
  let s = createGame(0); s.pattes = 100_000; s.grass = 100_000; s.hearts = 1000;
- for (const [kind, x, y] of [['farm',3,3], ['nest',4,3], ['nursery',5,3], ['enclosure',3,4]] as const)
-  s = apply(s, {type:'buyBuilding',kind,x: x * 4,y: y * 4});
+ for (const [kind, x, y] of [['farm',4,3], ['nest',5,3], ['nursery',3,4], ['enclosure',4,4]] as const)
+  s = apply(s, kind==='nest'||kind==='nursery'?{type:'placeStarterBuilding',kind,x:x*4,y:y*4}:{type:'buyBuilding',kind,x:x*4,y:y*4});
  s = apply(s,{type:'feed',id:'rabbit-2'}); s = apply(s,{type:'feed',id:'rabbit-3'});
  return s;
 }

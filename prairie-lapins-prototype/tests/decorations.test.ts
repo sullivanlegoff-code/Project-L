@@ -88,7 +88,7 @@ describe('decoration ownership and atomic commands', () => {
   });
   it('leaves income, affection, gifts, missions and birth RNG behavior unchanged', () => {
     let plain = rich(); plain.grass = 100; plain = run(plain, {type: 'feed', id: 'rabbit-2'}); plain = run(plain, {type: 'feed', id: 'rabbit-3'});
-    plain = run(plain, {type: 'buyBuilding', kind: 'nest', x: 16, y: 12}); plain = run(plain, {type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+    plain = run(plain, {type: 'placeStarterBuilding', kind: 'nest', x: 16, y: 12}); plain = run(plain, {type: 'placeStarterBuilding', kind: 'nursery', x: 20, y: 12});
     const decorated = pose(buy(plain), outside(1, 6));
     expect(advance(decorated, HOUR).buildings).toEqual(advance(plain, HOUR).buildings); expect(decorated.missions).toEqual(plain.missions);
     const a = vi.fn(() => .57), b = vi.fn(() => .57), command: Command = {type: 'breed', parents: ['rabbit-2', 'rabbit-3']};
@@ -110,7 +110,7 @@ describe('v5 saves, migrations and four-route boundaries', () => {
   it.each([DECORATIONS_MIGRATION_BACKUP_KEY, SAVE_KEY])('keeps the original v4 save when the migration write fails at %s', key => {
     const raw = JSON.stringify(v4), m = memory(raw); m.fail.key = key;
     const c = new GameController(m.storage, () => v4.lastSimulatedAt); expect(m.values.get(SAVE_KEY)).toBe(raw); expect(c.getSnapshot().status).toBe('write-error');
-    m.fail.key = ''; expect(c.retrySave()).toEqual({ok: true}); expect(JSON.parse(m.values.get(SAVE_KEY)!).version).toBe(7);
+    m.fail.key = ''; expect(c.retrySave()).toEqual({ok: true}); expect(JSON.parse(m.values.get(SAVE_KEY)!).version).toBe(8);
   });
   it.each(['decorationDemo', 'decoratedHabitat', 'decorationDense'] as const)('validates and restores the prepared %s scenario', id => {
     const s = scenarioState(id, 0); const placed = s.decorations.filter(d => d.location.kind !== 'inventory');
@@ -119,7 +119,7 @@ describe('v5 saves, migrations and four-route boundaries', () => {
     expect(decodeGame(encodeGame(s), 0)).toEqual({ok: true, state: s});
     if (id === 'decoratedHabitat' || id === 'decorationDense') expect(s.rabbits.filter(r => r.enclosureId === 'building-1')).toHaveLength(7);
     const m = memory(encodeGame(s)), c = new GameController(m.storage, () => 0), exported = c.exportGame();
-    if (!exported.ok) throw Error(exported.reason); expect(JSON.parse(exported.json).version).toBe(7);
+    if (!exported.ok) throw Error(exported.reason); expect(JSON.parse(exported.json).version).toBe(8);
     expect(c.restart(true).ok).toBe(true); const p = c.prepareImport(exported.json); if (!p.ok) throw Error(p.reason);
     expect(c.confirmImport(p.token, true).ok).toBe(true); expect(new GameController(m.storage, () => 0).getSnapshot().state).toEqual(s);
   });

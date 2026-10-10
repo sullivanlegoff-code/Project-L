@@ -1,3 +1,4 @@
+import {nestForParent} from '../simulation/breeding';
 import {RABBIT_ART, rabbitArt, type RabbitArt} from '../config/rabbitArt';
 import Phaser from 'phaser';
 import {VISUAL} from '../config/visual';
@@ -170,7 +171,7 @@ export class MeadowScene extends Phaser.Scene {
   private renderState(): void {
     const s = this.current;
     if (s) { this.view.setColumns(visibleColumns(s)); this.applyCamera(); }
-    const key = JSON.stringify([s?.acquiredParcels, s?.buildings.map(b => [b.id, b.kind, b.x, b.y, b.habitat]), s?.rabbits.map(r => [r.id, r.species, r.enclosureId])]);
+    const key = JSON.stringify([s?.acquiredParcels, s?.buildings.map(b => [b.id, b.kind, b.x, b.y, b.habitat, b.breeding?.parents]), s?.rabbits.map(r => [r.id, r.species, r.enclosureId])]);
     if (key !== this.layoutKey) { this.layoutKey = key; this.drawGround(); this.drawBuildings(); this.drawAnimals(); }
     this.drawDecorations(); this.drawBubbles(); this.drawGrid(); this.drawGhost(); this.updateDetails();
   }
@@ -255,10 +256,11 @@ export class MeadowScene extends Phaser.Scene {
   }
   private drawAnimals(): void {
     this.animals.removeAll(true); this.rabbitViews = [];
-    for (const enclosure of this.current?.buildings.filter(b => b.kind === 'enclosure') ?? []) {
-      const residents = this.current!.rabbits.filter(r => r.enclosureId === enclosure.id);
+    for (const enclosure of this.current?.buildings.filter(b => b.kind === 'enclosure' || b.kind==='nest' && b.breeding) ?? []) {
+      const residents = enclosure.kind==='nest' ? enclosure.breeding!.parents.flatMap(id=>this.current!.rabbits.filter(r=>r.id===id)) : this.current!.rabbits.filter(r => r.enclosureId === enclosure.id);
       const center = buildingCenter(enclosure);
       residents.forEach((rabbit, index) => {
+        if(enclosure.kind==='enclosure' && nestForParent(this.current!,rabbit.id)) return;
         const offset = rabbitOffset(index, residents.length);
         const base = {x: center.x + offset.x, y: center.y + offset.y};
         const object = this.add.container(base.x, base.y).setScale(VISUAL.rabbit.scale).setDepth(base.y);
@@ -309,6 +311,7 @@ export class MeadowScene extends Phaser.Scene {
       let text = '', kind: 'income' | 'grass' | 'building' = 'building';
       if (b.kind === 'enclosure' && amount >= 1) { text = `${amount} p`; kind = 'income'; }
       if (b.kind === 'farm' && b.order && b.order.endsAt <= now) { text = 'Herbe ✓'; kind = 'grass'; }
+      if (b.kind==='nest' && b.breeding && b.breeding.endsAt<=now) text='Envoyer';
       if (b.kind === 'nursery' && b.baby && b.baby.readyAt <= now) text = 'Prêt !';
       if (!text) continue;
       const p = buildingCenter(b); p.y -= 72;
