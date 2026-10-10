@@ -1,6 +1,12 @@
-# Paille et Terre originales v1 — validation de livraison
+# Paille et Terre originales v1 — livrées
 
-Deux visuels remplacés depuis les fichiers ajoutés par le joueur sur GitHub. Neige conservée. 586 tests / 18 fichiers, TypeScript, deux builds et contrôles Chromium locaux réussis ; 21 sélections parmi sept occupants mixtes aux trois zooms et sélection des oreilles. [Méthode, sources et comparaisons](paille-terre-v1.md). Publication après validation CI ; preuves publiques à consigner après déploiement.
+Jeu normal et laboratoire : application `5248235b964947d67ae295f64d5832525d2e1d93`, [PR nº 6 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/6). Deux visuels remplacés depuis les fichiers ajoutés par le joueur, transparence préparée avec conservation des couleurs opaques (différence RGB maximale 0). Même texture dans habitats, fiches, boutique, collection, carnet et parents. Échelle uniforme, ancrage et animation légère de l’image entière ; sélection par la silhouette alpha propre à chaque espèce, oreilles comprises. [Sources, méthode et comparaisons](paille-terre-v1.md) · [Preuve de publication](validation/paille-terre-v1/publication.json).
+
+[CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043020922) : **586 tests / 18 fichiers**, TypeScript, builds normal/laboratoire, parcours existants et Neige, 21 sélections parmi sept occupants mixtes aux zooms 0,8 / 1,05 / 1,65, oreilles, fiches, boutique, collection, parents et écran portrait. L’arbre Git de la livraison est identique à celui de la fusion testée. [Captures et rapports CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043020922/artifacts/11666244571).
+
+[Publication et essais publics réussis](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043530418) : quatre routes et révisions confirmées, cinq suites Chromium et 23 contrôles réussis. Les deux routes actives servent les bons PNG Paille 350 × 495 et Terre 992 × 907, vérifiés par SHA-256, dimensions et transparence ; portraits contrôlés sans hook ni injection de sauvegarde. [Preuves et captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043530418/artifacts/11667290388).
+
+Neige conserve son PNG `b85337b3d3b3079644fb3df3e7f13f50e4226a0389a5b1a1c95fabf3f348276a`, son échelle, son ancrage et son rendu. Autres espèces, règles, sauvegardes, caméra, île, habitats et décorations conservés. Décorations reste en v5 `85fe255`, Comptes en v4 `3e70d9e` ; Supabase/email restent en pause. Les autres designs ajoutés sur GitHub sont conservés pour une future demande. Chromium avec émulation tactile ; Safari sur iPhone physique reste à vérifier.
 
 # Neige originale v1 — livrée
 

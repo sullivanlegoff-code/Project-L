@@ -20,3 +20,5 @@ Neige conserve son PNG SHA-256 `b85337b3d3b3079644fb3df3e7f13f50e4226a0389a5b1a1
 Validation locale : 586 tests / 18 fichiers, TypeScript, builds normal et laboratoire ; [contrôle source](validation/paille-terre-v1/browser.json), 21 sélections individuelles aux zooms 0,8 / 1,05 / 1,65 et sélection des oreilles ; [contrôle des builds sans hooks](validation/paille-terre-v1/local-builds.json), SHA-256 des trois originaux, dimensions, transparence et portraits. Les scripts correspondants sont rejoués en CI et sur les routes publiques.
 
 Limite : Chromium avec émulation tactile et écrans 852 × 393 / 390 × 844 ; aucun iPhone Safari physique disponible. Sur iPhone, vérifier les sept sélections, le pincement sans sélection, les portraits et le retour en jeu.
+
+Livraison validée : application `5248235`, [PR nº 6](https://github.com/sullivanlegoff-code/Project-L/pull/6), [CI](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043020922), [publication et cinq suites publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38043530418). [Preuve durable](validation/paille-terre-v1/publication.json).
