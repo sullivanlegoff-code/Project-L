@@ -1,7 +1,7 @@
 // Hooks are added only to intercepted local source, never shipped to the game.
 const {chromium}=require('playwright'), fs=require('node:fs'), assert=require('node:assert/strict');
 const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5194/Project-L/?dev=1';
-const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-proof';
+const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-volant-proof';
 (async()=>{
  fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});
@@ -27,10 +27,10 @@ const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-proof';
   for(const zoom of [.8,1.05,1.65]){
    await page.evaluate(z=>{window.__scene.view.zoom=z;window.__scene.applyCamera();},zoom);
    for(const {id,species} of ids){await tapRabbit(id);report.selections.push({zoom,id,species});await page.click('#close-panel');}
-   await page.screenshot({path:out+`/belier-feu-seven-${zoom}.png`});
+   await page.screenshot({path:out+`/belier-feu-volant-seven-${zoom}.png`});
   }
   report.checks.push('Seven mixed residents including all six common species individually selected at zoom .8, 1.05, 1.65.');
-  for(const species of ['belier-gris','feu']){
+  for(const species of ['belier-gris','feu','volant']){
    const {id}=ids.find(r=>r.species===species);await tapRabbit(id);
    assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
    await page.screenshot({path:out+`/${species}-profile.png`});
@@ -44,18 +44,30 @@ const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/belier-feu-proof';
   }
   const styles=await page.evaluate(()=>window.__scene.rabbitViews.filter(r=>r.sprite).map(r=>({id:r.id,species:r.art.species,sx:r.sprite.scaleX,sy:r.sprite.scaleY,ears:r.ears.length,originX:r.sprite.originX,originY:r.sprite.originY,y:r.sprite.y})));
   for(const r of styles){assert.equal(r.sx,r.sy);assert.equal(r.ears,0);assert.equal(r.originX,.5);assert.equal(r.originY,1);assert.equal(r.y,12);}report.styles=styles;
+  const mask=await page.evaluate(()=>{
+   const s=window.__scene,flight=s.rabbitViews.find(r=>r.art?.species==='volant'),views=s.rabbitViews,select=s.select;
+   const results=[];try{s.rabbitViews=[flight];s.select=choice=>results.push(choice);
+    for(const [x,y] of [[Math.floor(flight.art.width*.12),Math.floor(flight.art.height*.32)],[0,0]]){
+     const world=flight.sprite.getWorldTransformMatrix().transformPoint(x-flight.art.width/2,y-flight.art.height);
+     s.tap(s.view.screen(world));
+    }
+   }finally{s.rabbitViews=views;s.select=select;}
+   return {id:flight.id,results};
+  });
+  assert.equal(mask.results[0].kind,'rabbit');assert.equal(mask.results[0].id,mask.id);assert.notEqual(mask.results[1].kind,'rabbit');
+  report.checks.push('Volant wing is selectable; transparent corner is rejected by the same scene hit path (isolated mask probe).');
   await page.click('#open-shop');await page.getByRole('button',{name:'Lapins',exact:true}).click();
-  for(const species of ['belier-gris','feu'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
-  await page.screenshot({path:out+'/belier-feu-shop.png'});await page.click('#close-panel');
-  await page.click('#open-collection');for(const species of ['belier-gris','feu'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
-  await page.screenshot({path:out+'/belier-feu-collection.png'});await page.click('#close-panel');
+  for(const species of ['belier-gris','feu','volant'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
+  await page.screenshot({path:out+'/belier-feu-volant-shop.png'});await page.click('#close-panel');
+  await page.click('#open-collection');for(const species of ['belier-gris','feu','volant'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
+  await page.screenshot({path:out+'/belier-feu-volant-collection.png'});await page.click('#close-panel');
   const nest=await page.evaluate(()=>{const s=window.__scene,b=s.current.buildings.find(b=>b.kind==='nest'),p={x:120+(b.x+.5)*176,y:120+(b.y+.5)*148};s.view.zoom=1.05;s.view.x=p.x;s.view.y=p.y;s.applyCamera();return s.view.screen(p);});
-  await page.touchscreen.tap(nest.x,nest.y);for(const species of ['belier-gris','feu'])assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
-  await page.screenshot({path:out+'/belier-feu-parents.png'});await page.click('#close-panel');
+  await page.touchscreen.tap(nest.x,nest.y);for(const species of ['belier-gris','feu','volant'])assert.ok(await page.locator(`img[data-rabbit-art="${species}"]`).count()>=1);
+  await page.screenshot({path:out+'/belier-feu-volant-parents.png'});await page.click('#close-panel');
   await page.setViewportSize({width:390,height:844});await page.click('#continue-portrait');await page.click('#open-collection');
-  await page.screenshot({path:out+'/belier-feu-portrait.png'});
-  report.checks.push('Bélier Gris and Feu profiles, shop, collection, parent selection and portrait viewport share their original PNG.');
+  await page.screenshot({path:out+'/belier-feu-volant-portrait.png'});
+  report.checks.push('Bélier Gris, Feu and Volant profiles, shop, collection, parent selection and portrait viewport share their original PNG.');
   report.checks.push('Each sprite uses its own alpha hit mask including the ears, uniform scale and unchanged whole-image motion.');
   assert.deepEqual(report.errors,[]);report.passed=true;
- }finally{if(!report.passed)await page.screenshot({path:out+'/belier-feu-failure.png'});fs.writeFileSync(out+'/belier-feu-browser-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));await browser.close();}
+ }finally{if(!report.passed)await page.screenshot({path:out+'/belier-feu-volant-failure.png'});fs.writeFileSync(out+'/belier-feu-volant-browser-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

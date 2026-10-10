@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ImageMagick 7, original RGB retained; alpha only. Volant awaits a complete source.
+# ImageMagick 7, original RGB retained; alpha only.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 scratch="$(mktemp -d)"
@@ -21,3 +21,11 @@ for species in belier-gris feu; do
   magick "$scratch/$species.png" "$scratch/alpha.png" -channel A -fx 'v.r' +channel \
     -bordercolor none -border 4 "$root/public/assets/rabbits/$species/$species-v1.png"
 done
+
+# Complete Volant original: original RGB, connected background removal only.
+magick "$root/docs/reference/volant/source.png" -alpha on -fill none -fuzz 8% \
+  -draw 'alpha 0,0 floodfill' -trim +repage "$scratch/volant.png"
+magick "$scratch/volant.png" -alpha extract -morphology Erode Diamond:1 \
+  -blur 0x0.35 -level 1%,99% "$scratch/alpha.png"
+magick "$scratch/volant.png" "$scratch/alpha.png" -channel A -fx 'v.r' +channel \
+  -bordercolor none -border 4 "$root/public/assets/rabbits/volant/volant-v1.png"

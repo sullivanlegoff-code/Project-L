@@ -25,7 +25,12 @@ export const FIRE_ART = {
   url: `${import.meta.env.BASE_URL}assets/rabbits/feu/feu-v1.png`,
   width: 1004, height: 827, worldWidth: 50, groundY: 12,
 } as const;
-export const RABBIT_ART = [SNOW_ART, STRAW_ART, EARTH_ART, LOP_ART, FIRE_ART] as const;
+export const FLIGHT_ART = {
+  species: 'volant', texture: 'rabbit-volant-original-v1',
+  url: `${import.meta.env.BASE_URL}assets/rabbits/volant/volant-v1.png`,
+  width: 814, height: 966, worldWidth: 50, groundY: 12,
+} as const;
+export const RABBIT_ART = [SNOW_ART, STRAW_ART, EARTH_ART, LOP_ART, FIRE_ART, FLIGHT_ART] as const;
 export type RabbitArt = typeof RABBIT_ART[number];
 export function rabbitArt(species?: string): RabbitArt | undefined {
   return RABBIT_ART.find(art => art.species === species);

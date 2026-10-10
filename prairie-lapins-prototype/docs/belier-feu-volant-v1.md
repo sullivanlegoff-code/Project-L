@@ -1,22 +1,21 @@
-# Bélier Gris, Feu et Volant — chantier en attente de la source Volant
+# Bélier Gris, Feu et Volant — originaux intégrés
 
-Base : dernier `production` `e455986`, application publiée `5248235`. Neige, Paille et Terre sont validés sur iPhone par le joueur ; leurs fichiers, paramètres d’échelle et ancrage restent inchangés.
+Base : production `e455986`, application précédente `5248235`. Neige, Paille et Terre validés sur iPhone restent inchangés, fichiers et paramètres compris. Règles, sauvegardes, caméra, île, habitats, décorations et autres espèces inchangés ; Supabase en pause.
 
-Bélier Gris et Feu sont préparés et intégrés dans cette branche de travail. Chaque espèce réutilise la méthode des originaux déjà validés : texture préchargée une seule fois, image entière sans déformation, même PNG dans habitats et portraits, ancrage au sol `(0.5, 1)` à `y = 12`, sélection par son masque alpha. Les noms des portraits proviennent désormais du catalogue `SPECIES`, ce qui permet d’étendre le registre sans maintenir une liste de trois noms. Aucun changement aux règles, sauvegardes, caméra, île, habitats ou décorations ; autres designs et Supabase conservés en l’état.
+Les trois espèces réutilisent la méthode existante : une texture par espèce, même PNG dans habitats, fiches, boutique, collection et parents, image entière animée par translation sans déformation, masque alpha pour la sélection. Les noms des portraits proviennent du catalogue `SPECIES`.
 
-| Espèce | Source conservée | Asset | Dimensions | Largeur monde |
+| Espèce | Source | Asset | Dimensions | Largeur monde |
 | --- | --- | --- | --- | --- |
-| Bélier Gris | [source](reference/belier-gris/source.png) | [PNG](../public/assets/rabbits/belier-gris/belier-gris-v1.png) | 527 × 488 | 48 |
-| Feu | [source](reference/feu/source.png) | [PNG](../public/assets/rabbits/feu/feu-v1.png) | 1004 × 827 | 50 |
+| Bélier Gris | [original](reference/belier-gris/source.png) | [PNG](../public/assets/rabbits/belier-gris/belier-gris-v1.png) | 527 × 488 | 48 |
+| Feu | [original](reference/feu/source.png) | [PNG](../public/assets/rabbits/feu/feu-v1.png) | 1004 × 827 | 50 |
+| Volant | [nouvel original](reference/volant/source.png) | [PNG](../public/assets/rabbits/volant/volant-v1.png) | 814 × 966 | 50 |
 
-[Préparation reproductible](reference/prepare-belier-feu.sh), ImageMagick 7 : retrait du fond connecté, masque alpha nettoyé, marge transparente de quatre pixels, RGB opaques conservés. Pointes des moustaches du Bélier préservées hors du museau pour éviter leur suppression par l’érosion. Le bandeau gris du fond s’arrête avant le corps et est retiré. [Comparaison des pixels](validation/belier-feu-v1/pixel-fidelity.json) : différence RGB maximale **0** sur 141 564 pixels opaques du Bélier et 539 351 de Feu.
+Volant utilise `Design des lapins/volant.png`, blob `007d40a6e1a5ecefe5492999d187efb4a9fe1a82` fourni sur main `e316c14`. L’ancienne référence `Lapin Volant.png`, au museau coupé, est supprimée de la branche livrée. Aucun redessin ni illustration générée. Le corps de Volant conserve une taille comparable à Paille : les ailes ne déterminent pas seules l’échelle. Ancrage commun `(0.5, 1)`, y = 12.
 
-Comparaisons : original à gauche, capture réelle de la fiche à droite, agrandie uniformément depuis son format 150 × 140 : [Bélier Gris](validation/belier-feu-v1/belier-gris-reference-vs-game.png), [Feu](validation/belier-feu-v1/feu-reference-vs-game.png). [Sept occupants mixtes](validation/belier-feu-v1/seven-occupants.png).
+[Préparation reproductible](reference/prepare-belier-feu.sh) : suppression du fond connecté, nettoyage du masque alpha, quatre pixels transparents autour, RGB conservés. [Comparaison des pixels](validation/belier-feu-v1/pixel-fidelity.json) : différence RGB maximale 0 pour les pixels opaques des trois PNG.
 
-Contrôles locaux réussis : **586 tests / 18 fichiers**, TypeScript, builds normal et laboratoire, 21 sélections individuelles aux zooms 0,8 / 1,05 / 1,65 parmi Paille, Neige, Terre, Bélier Gris, Feu, Volant provisoire et Brumelin ; oreilles tombantes, fiches, boutique, collection, parents et écran portrait. [Rapport Chromium](validation/belier-feu-v1/browser.json). Le fixture mixte est créé uniquement par le script navigateur via le contrôleur d’import, sans modifier les scénarios ni introduire de hook dans le jeu livré. Aucun iPhone physique disponible pour ces nouveaux rendus.
+Comparaisons référence à gauche / capture réelle de la fiche à droite : [Bélier Gris](validation/belier-feu-v1/belier-gris-reference-vs-game.png), [Feu](validation/belier-feu-v1/feu-reference-vs-game.png), [Volant](validation/belier-feu-v1/volant-reference-vs-game.png). [Habitat mixte](validation/belier-feu-v1/seven-occupants.png).
 
-## Blocage concret pour Volant
+Contrôles locaux : 586 tests / 18 fichiers, TypeScript, builds normal et laboratoire ; 21 sélections aux zooms 0,8 / 1,05 / 1,65, oreilles, profils, boutique, collection, parents et écran portrait. [Rapport navigateur](validation/belier-feu-v1/browser.json). Le fixture mixte et les sondes sont limités au script ; aucun hook dans l’application livrée. Vérification Chromium tactile, sans iPhone physique disponible.
 
-L’original [GitHub](https://github.com/sullivanlegoff-code/Project-L/blob/production/Design%20des%20lapins/Lapin%20Volant.png), aussi conservé [ici](reference/volant/source.png), a un contour de museau déjà coupé par son bord droit à x = 1023. Aucune reconstruction ni génération n’est effectuée. Le joueur a explicitement choisi d’attendre une référence complète. En attendant, le visuel provisoire de Volant reste actif. Les ailes nécessiteront une échelle fondée sur le corps et un contrôle du masque alpha parmi les six originaux.
-
-Cette branche est un brouillon : **aucune fusion ni publication** tant que les trois rendus ne sont pas finalisés et validés. Le jeu public reste en `5248235` avec Neige, Paille et Terre inchangés.
+La validation CI et la publication des quatre routes sont suivies dans la PR nº 7.

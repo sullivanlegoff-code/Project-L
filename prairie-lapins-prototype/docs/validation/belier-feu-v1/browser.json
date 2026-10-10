@@ -2,7 +2,8 @@
   "passed": true,
   "checks": [
     "Seven mixed residents including all six common species individually selected at zoom .8, 1.05, 1.65.",
-    "Bélier Gris and Feu profiles, shop, collection, parent selection and portrait viewport share their original PNG.",
+    "Volant wing is selectable; transparent corner is rejected by the same scene hit path (isolated mask probe).",
+    "Bélier Gris, Feu and Volant profiles, shop, collection, parent selection and portrait viewport share their original PNG.",
     "Each sprite uses its own alpha hit mask including the ears, uniform scale and unchanged whole-image motion."
   ],
   "selections": [
@@ -160,6 +161,26 @@
       "species": "feu",
       "sx": 0.049800796812749,
       "sy": 0.049800796812749,
+      "ears": 0,
+      "originX": 0.5,
+      "originY": 1,
+      "y": 12
+    },
+    {
+      "id": "rabbit-10",
+      "species": "volant",
+      "sx": 0.06142506142506143,
+      "sy": 0.06142506142506143,
+      "ears": 0,
+      "originX": 0.5,
+      "originY": 1,
+      "y": 12
+    },
+    {
+      "id": "rabbit-13",
+      "species": "volant",
+      "sx": 0.06142506142506143,
+      "sy": 0.06142506142506143,
       "ears": 0,
       "originX": 0.5,
       "originY": 1,
