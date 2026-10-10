@@ -13,7 +13,7 @@ describe('representative v4 migration and recovery readiness',()=>{
   const source=JSON.parse(raw),now=source.lastSimulatedAt;
   const decoded=decodeGame(raw,now);expect(decoded.ok).toBe(true);if(!decoded.ok)return;
   const s=decoded.state;
-  expect(decoded.migratedFrom).toBe(4);expect(s.version).toBe(6);
+  expect(decoded.migratedFrom).toBe(4);expect(s.version).toBe(7);
   expect([s.pattes,s.hearts,s.grass,s.nextId,s.nextHeartGiftAt]).toEqual([source.pattes,source.hearts,source.grass,source.nextId,source.nextHeartGiftAt]);
   expect(s.rabbits).toEqual(source.rabbits);expect(s.missions).toEqual(source.missions);
   expect(s.buildings.map(({x:_x,y:_y,...b})=>b)).toEqual(source.buildings.map(({x:_x,y:_y,...b}: {x:number;y:number})=>b));
@@ -26,12 +26,12 @@ describe('representative v4 migration and recovery readiness',()=>{
  it.each([DECORATIONS_MIGRATION_BACKUP_KEY,SAVE_KEY])('failed write at %s preserves source and permits raw recovery',key=>{
   const raw=sources['../docs/test-saves/migration-v4/reproduction.json'],st=storage(raw);st.flags.fail=key;
   const c=new GameController(st.store,()=>0);expect(c.getSnapshot().status).toBe('write-error');expect(st.data.get(SAVE_KEY)).toBe(raw);const before=st.writes.length;expect(c.migrationBackup()).toBe(raw);expect(st.writes).toHaveLength(before);
-  st.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(st.data.get(SAVE_KEY)!).version).toBe(6);expect(st.data.get(DECORATIONS_MIGRATION_BACKUP_KEY)).toBe(raw);
+  st.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(st.data.get(SAVE_KEY)!).version).toBe(7);expect(st.data.get(DECORATIONS_MIGRATION_BACKUP_KEY)).toBe(raw);
  });
  it('blocks a v5 controller if the underlying key is changed by an older writer',()=>{
   const raw=JSON.stringify(v4(createGame(0))),st=storage(raw);new GameController(st.store,()=>0);
   const persisted=st.data.get(SAVE_KEY)!;
-  expect(st.data.get(SAVE_KEY)).not.toBe(raw);expect(JSON.parse(persisted).version).toBe(6);
+  expect(st.data.get(SAVE_KEY)).not.toBe(raw);expect(JSON.parse(persisted).version).toBe(7);
   const c=new GameController(st.store,()=>0);st.data.set(SAVE_KEY,raw);expect(c.perform({type:'buyDecoration',catalogId:'wildflowers'})).toEqual({ok:false,reason:'STORAGE_CHANGED'});expect(c.getSnapshot().status).toBe('conflict');expect(st.data.get(SAVE_KEY)).toBe(raw);
  });
  it('invalid data is never migrated or written, and remains exportable',()=>{const st=storage('{bad');const c=new GameController(st.store,()=>0);expect(st.writes).toEqual([]);expect(c.unreadableBackup()).toBe('{bad');expect(c.retrySave().ok).toBe(false)});

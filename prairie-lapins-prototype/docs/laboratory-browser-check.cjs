@@ -51,7 +51,7 @@ async function run() {
     for(const [resource,amounts] of Object.entries({pattes:[1000,10000],grass:[100,1000],hearts:[10,100]}))for(const amount of amounts)await page.click(`#dev-grant-${resource}-${amount}`);
     const rich=await state(true);assert.equal(rich.pattes,11300);assert.equal(rich.grass,1110);assert.equal(rich.hearts,122);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('All five clock advances and six resource grants leave every normal-origin key byte-for-byte unchanged.');
-    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,6);
+    const labExport=await exportFile('#dev-export','laboratory-export.json',true);assert.equal(JSON.parse(labExport).version,7);
     await importFile(normalExport,'normal-copy.json');await page.click('#cancel-import');assert.deepEqual(progress(await state(true)),progress(rich));
     await importFile(normalExport,'normal-copy.json');await page.click('#confirm-import');assert.deepEqual(progress(await state(true)),normalProgress);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('MODE-TEST JSON export; cancelled and confirmed normal-copy imports leave the source unchanged.');
@@ -59,8 +59,8 @@ async function run() {
     confirm=false;const beforeReset=await raw(prefix+saveKey);await page.click('#dev-reset');assert.equal((await state(true)).pattes,JSON.parse(beforeReset).pattes);
     confirm=true;await page.click('#dev-reset');assert.equal((await state(true)).grass,10);assert.equal((await state(true)).hearts,12);assert.deepEqual(await protectedData(),baseline);
     report.checks.push('Laboratory reload restores its save/clock; cancelled and confirmed reset preserve normal storage.');
-    for(const id of ['collection','reproduction','missions','habitats','islandStart','islandExpanded','islandFull','islandDiagonal','islandL','parcelEdges','decorationStart','decorationDemo','decoratedHabitat','decorationDense']) {
-      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,6);
+    for(const id of ['fineBuildings','collection','reproduction','missions','habitats','islandStart','islandExpanded','islandFull','islandDiagonal','islandL','parcelEdges','decorationStart','decorationDemo','decoratedHabitat','decorationDense']) {
+      await page.click('#dev-scenario-'+id);const fixture=await state(true);assert.equal(fixture.version,7);
       if(id==='collection') {
         assert.equal(fixture.discovered.length,15);
         await page.click('#open-collection');
@@ -75,7 +75,7 @@ async function run() {
       if(id==='habitats')for(const home of fixture.buildings)assert.equal(fixture.rabbits.filter(r=>r.enclosureId===home.id).length,7);
       assert.deepEqual(await protectedData(),baseline);
     }
-    report.checks.push('All fourteen confirmed scenario loads produce valid saved v6 states without writing normal keys.');
+    report.checks.push('All fifteen confirmed scenario loads produce valid saved v7 states without writing normal keys.');
     await page.click('#close-panel');await screenshot('laboratory-habitats');
     await settings(); await page.click('#dev-scenario-habitats'); await page.click('#close-panel'); await page.reload({waitUntil:'networkidle'});await ready();assert.equal((await state(true)).rabbits.length,49);assert.deepEqual(await protectedData(),baseline);
     await page.setViewportSize({width:390,height:844});

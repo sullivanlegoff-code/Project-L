@@ -1,3 +1,4 @@
+import {FINE_GRID} from './decorations';
 export const PARCEL_IDS = ['center', 'northwest', 'north', 'northeast', 'west', 'east', 'southwest', 'south', 'southeast'] as const;
 export type ParcelId = typeof PARCEL_IDS[number];
 export const PARCELS: Record<ParcelId, {name: string; x: number; y: number}> = {
@@ -12,7 +13,7 @@ export function parcelAt(x:number,y:number): ParcelId | null {
 export function acquiredCell(s:LandState,x:number,y:number):boolean {const id=parcelAt(x,y);return id!==null&&s.acquiredParcels.includes(id)}
 export const extensionPrice=(s:LandState)=>s.acquiredParcels.length*500;
 export function acquiredFootprint(s:LandState,x:number,y:number,width:number,height:number):boolean {
- if(![x,y,width,height].every(Number.isInteger)||width<1||height<1)return false;
- for(let row=y;row<y+height;row++)for(let col=x;col<x+width;col++)if(!acquiredCell(s,Math.floor(col/4),Math.floor(row/4)))return false;
+ if(![x,y,width,height].every(Number.isInteger)||width<1||height<1||x<0||y<0||x+width>MAP_SIZE*FINE_GRID||y+height>MAP_SIZE*FINE_GRID)return false;
+ for(let row=y;row<y+height;row++)for(let col=x;col<x+width;col++)if(!acquiredCell(s,Math.floor(col/FINE_GRID),Math.floor(row/FINE_GRID)))return false;
  return true;
 }

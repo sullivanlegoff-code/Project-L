@@ -17,7 +17,7 @@ function apply(s: GameState, command: Command, now = s.lastSimulatedAt): GameSta
 function equipped(): GameState {
  let s = createGame(0); s.pattes = 100_000; s.grass = 100_000; s.hearts = 1000;
  for (const [kind, x, y] of [['farm',3,3], ['nest',4,3], ['nursery',5,3], ['enclosure',3,4]] as const)
-  s = apply(s, {type:'buyBuilding',kind,x,y});
+  s = apply(s, {type:'buyBuilding',kind,x: x * 4,y: y * 4});
  s = apply(s,{type:'feed',id:'rabbit-2'}); s = apply(s,{type:'feed',id:'rabbit-3'});
  return s;
 }
@@ -38,7 +38,7 @@ describe('technical foundation regressions', () => {
  });
  it('refuses exhausted entity allocation before payment or random draw', () => {
   const s = equipped(); s.nextId = Number.MAX_SAFE_INTEGER; const rng = vi.fn(() => .2);
-  for (const command of [{type:'buyBuilding',kind:'farm',x:5,y:4}, {type:'buyRabbit',species:'terre',enclosureId:'building-7'}, {type:'breed',parents:['rabbit-2','rabbit-3']}] as Command[]) {
+  for (const command of [{type:'buyBuilding',kind:'farm',x:20,y:16}, {type:'buyRabbit',species:'terre',enclosureId:'building-7'}, {type:'breed',parents:['rabbit-2','rabbit-3']}] as Command[]) {
    const before = structuredClone(s); expect(act(s,command,0,rng)).toEqual({ok:false,reason:'RESOURCE_LIMIT',state:s}); expect(s).toEqual(before);
   }
   expect(rng).not.toHaveBeenCalled(); invariant(s);

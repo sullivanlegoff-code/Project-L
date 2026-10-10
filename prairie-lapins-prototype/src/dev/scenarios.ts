@@ -9,7 +9,7 @@ import {DECORATIONS, DECORATION_IDS, MAX_DECORATIONS} from '../config/decoration
 import {decorationPlacementReason} from '../simulation/decorations';
 
 export const DECORATION_SCENARIOS = ['islandStart', 'islandExpanded', 'islandFull', 'islandDiagonal', 'islandL', 'parcelEdges', 'decorationStart', 'decorationDemo', 'decoratedHabitat', 'decorationDense'] as const;
-export const SCENARIOS = {islandStart: 'Centre seul — 3 × 3', islandExpanded: 'Extension cardinale — Centre + Est', islandDiagonal: 'Extension diagonale — Centre + Nord-ouest', islandL: 'Forme en L — Centre + Est + Nord', islandFull: 'Île complète — 9 × 9', parcelEdges: 'Décorations proches des frontières',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — quinze espèces et recettes', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat entouré de décorations — sept occupants'} as const;
+export const SCENARIOS = {fineBuildings:'Bâtiments décalés — grille fine 4 × 4',islandStart: 'Centre seul — 3 × 3', islandExpanded: 'Extension cardinale — Centre + Est', islandDiagonal: 'Extension diagonale — Centre + Nord-ouest', islandL: 'Forme en L — Centre + Est + Nord', islandFull: 'Île complète — 9 × 9', parcelEdges: 'Décorations proches des frontières',decorationStart: 'Prairie de départ — acheter et placer', decorationDense: 'Prairie dense — sélection et performances', collection: 'Collection — quinze espèces et recettes', reproduction: 'Reproduction — parents prêts', missions: 'Missions — récompenses à réclamer', habitats: 'Habitats — sept occupants par enclos', decorationDemo: 'Prairie de démonstration décorée', decoratedHabitat: 'Habitat entouré de décorations — sept occupants'} as const;
 export type ScenarioId = keyof typeof SCENARIOS;
 
 /** Explicit test fixtures only; ordinary play still uses act/controller.perform. */
@@ -23,6 +23,21 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
     s = result.state;
   };
   const acquire=(id:ParcelId)=>run({type:'expand',parcelId:id,expectedCost:extensionPrice(s)});
+  if(id==='fineBuildings'){
+    acquire('east');acquire('north');
+    run({type:'moveBuilding',id:'building-1',x:13,y:14});
+    run({type:'upgradeHabitat',id:'building-1',fromLevel:1});run({type:'upgradeHabitat',id:'building-1',fromLevel:2});
+    const mixed:SpeciesId[]=['paille','neige','terre','belier-gris','feu','volant','brumelin'];
+    s.rabbits=mixed.map(species=>({id:`rabbit-${s.nextId++}`,species,affection:4,enclosureId:'building-1'}));s.discovered=[...mixed];
+    run({type:'buyBuilding',kind:'farm',x:22,y:15});
+    run({type:'startOrder',id:s.buildings.at(-1)!.id,recipe:'small'});
+    run({type:'buyBuilding',kind:'nest',x:18,y:10});
+    run({type:'buyBuilding',kind:'nursery',x:27,y:13});
+    run({type:'buyBuilding',kind:'enclosure',habitatType:'vol',x:18,y:18});
+    run({type:'buyDecoration',catalogId:'flowering-bush'});
+    run({type:'placeDecoration',id:s.decorations.at(-1)!.id,location:{kind:'outside',x:17,y:14,rotation:0}});
+    const checked=decodeGame(encodeGame(s),now);if(!checked.ok)throw Error('Invalid fine building scenario');return checked.state;
+  }
   if (id === 'islandStart' || id === 'islandExpanded' || id === 'islandDiagonal' || id === 'islandL' || id === 'islandFull' || id === 'parcelEdges') {
     if (['islandExpanded','islandL','parcelEdges'].includes(id)) acquire('east');
     if (id === 'islandDiagonal') acquire('northwest');
@@ -35,11 +50,11 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
     return checked.state;
   }
   if (id === 'decorationDemo' || id === 'decoratedHabitat' || id === 'decorationDense') {
-    s.buildings[0].x=3;s.buildings[0].y=3;
+    s.buildings[0].x=12;s.buildings[0].y=12;
     acquire('east');
     run({type: 'upgradeHabitat', id: 'building-1', fromLevel: 1});
     run({type: 'upgradeHabitat', id: 'building-1', fromLevel: 2});
-    const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', 5, 3, 'terre'); home.habitat!.level = 3; s.buildings.push(home);
+    const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', 20, 12, 'terre'); home.habitat!.level = 3; s.buildings.push(home);
     if (id === 'decoratedHabitat' || id === 'decorationDense') {
       s.rabbits = SPECIES_IDS.slice(0, 7).map(species => ({id: `rabbit-${s.nextId++}`, species, affection: 3, enclosureId: 'building-1'}));
       s.discovered = s.rabbits.map(r => r.species);
@@ -71,8 +86,8 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
       }
     }
   } else if (id === 'reproduction') {
-    run({type: 'buyBuilding', kind: 'nest', x: 3, y: 3});
-    run({type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
+    run({type: 'buyBuilding', kind: 'nest', x: 12, y: 12});
+    run({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
     run({type: 'feed', id: 'rabbit-2'}); run({type: 'feed', id: 'rabbit-3'});
     // Ready parents; the player starts the real breeding action.
   } else {
@@ -80,7 +95,7 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
     s.rabbits = []; s.buildings = []; s.discovered = [];
     const types = id === 'habitats' ? HABITAT_TYPES : id === 'collection' ? ['universal', 'universal', 'universal'] as const : ['universal', 'universal'] as const;
     for (const [index, type] of types.entries()) {
-      const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', 3+index%3, 3+Math.floor(index/3), type);
+      const home = emptyBuilding(`building-${s.nextId++}`, 'enclosure', (3+index%3) * 4, (3+Math.floor(index/3)) * 4, type);
       home.habitat!.level = 3; s.buildings.push(home);
       const species: SpeciesId[] = id === 'habitats' ? SPECIES_IDS.slice(0, 11).filter(species => type === 'universal' || SPECIES[species].types.includes(type)) : (id === 'collection' ? SPECIES_IDS : SPECIES_IDS.slice(0, 11)).slice(index * 7, index * 7 + 7);
       const count = id === 'habitats' ? 7 : species.length;
@@ -91,7 +106,7 @@ export function scenarioState(id: ScenarioId, now: number): GameState {
       }
     }
     if (id === 'missions' || id === 'collection') {
-      for (const [x, kind] of ['farm', 'nest', 'nursery'].entries()) s.buildings.push(emptyBuilding(`building-${s.nextId++}`, kind as 'farm' | 'nest' | 'nursery', x, 1));
+      for (const [x, kind] of ['farm', 'nest', 'nursery'].entries()) s.buildings.push(emptyBuilding(`building-${s.nextId++}`, kind as 'farm' | 'nest' | 'nursery', (x) * 4, 4));
     }
     s.missions = createMissions(s, now);
     if (id === 'missions') s.missions.daily.progress = {'collect-pattes': 100, 'collect-grass': 40, 'gain-affection': 3};

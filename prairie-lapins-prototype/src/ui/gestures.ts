@@ -1,3 +1,4 @@
+import {FINE_GRID} from '../config/decorations';
 import {VISUAL} from '../config/visual';
 export interface Point {x: number; y: number}
 export type Gesture = {type: 'pan'; dx: number; dy: number} | {type: 'zoom'; factor: number; at: Point; dx: number; dy: number} | {type: 'tap'; at: Point};
@@ -36,6 +37,10 @@ export class Gestures {
 const grid = VISUAL.grid, camera = VISUAL.camera;
 /** Regular aerial projection: horizontal columns, compressed depth, no shear or roll. */
 export const gridPoint = (x: number, y: number): Point => ({x: grid.originX + x * grid.width, y: grid.originY + y * grid.depth});
+/** Explicit fine-grid ↔ world conversion; camera remains in world coordinates. */
+export const finePoint=(x:number,y:number):Point=>gridPoint(x/FINE_GRID,y/FINE_GRID);
+export const buildingCenter=(b:Point):Point=>finePoint(b.x+FINE_GRID/2,b.y+FINE_GRID/2);
+export function fineCell(point:Point):Point{return {x:Math.floor((point.x-grid.originX)/(grid.width/FINE_GRID)),y:Math.floor((point.y-grid.originY)/(grid.depth/FINE_GRID))};}
 export function gridCell(point: Point): Point {
   return {x: Math.floor((point.x - grid.originX) / grid.width), y: Math.floor((point.y - grid.originY) / grid.depth)};
 }

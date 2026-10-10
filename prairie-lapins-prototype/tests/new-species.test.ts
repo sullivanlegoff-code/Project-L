@@ -20,7 +20,7 @@ function run(s: GameState, command: Command, now=s.lastSimulatedAt, roll=.999) {
 function couple(a: SpeciesId,b: SpeciesId,level:number) {
  let s=createGame(0);s.pattes=2000;s.grass=1000;s.rabbits[0].species=a;s.rabbits[1].species=b;
  s.rabbits.forEach(r=>r.affection=level);s.discovered=[...new Set([a,b])];
- s=run(s,{type:'buyBuilding',kind:'nest',x: 4, y: 3});return run(s,{type:'buyBuilding',kind:'nursery',x: 5, y: 3});
+ s=run(s,{type:'buyBuilding',kind:'nest',x: 16, y: 12});return run(s,{type:'buyBuilding',kind:'nursery',x: 20, y: 12});
 }
 const breed:Command={type:'breed',parents:['rabbit-2','rabbit-3']};
 describe('approved four-species rules',()=>{

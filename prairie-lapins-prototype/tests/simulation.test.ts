@@ -20,9 +20,9 @@ function refuses(s: GameState, command: Command, reason: Refusal, now = s.lastSi
 }
 function setup(): GameState {
   let s = createGame(0); s.pattes = 10_000;
-  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 4, y: 3});
-  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
-  s = run(s, {type: 'buyBuilding', kind: 'enclosure', x: 3, y: 4});
+  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 16, y: 12});
+  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+  s = run(s, {type: 'buyBuilding', kind: 'enclosure', x: 12, y: 16});
   s = run(s, {type: 'feed', id: 'rabbit-2'}); s = run(s, {type: 'feed', id: 'rabbit-3'});
   return s;
 }
@@ -38,35 +38,35 @@ describe('initial state, costs and atomic refusals', () => {
     expect(s.discovered).toEqual(['paille', 'neige']); expect(s.lastSimulatedAt).toBe(123);
   });
   it('buys and moves a building without moving any resident identifiers', () => {
-    let s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 4, y: 3});
+    let s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 16, y: 12});
     expect(s.pattes).toBe(240);
-    s = run(s, {type: 'moveBuilding', id: enclosure, x: 5, y: 4});
-    expect(s.buildings[0].x).toBe(5); expect(s.rabbits[0].enclosureId).toBe(enclosure);
+    s = run(s, {type: 'moveBuilding', id: enclosure, x: 20, y: 16});
+    expect(s.buildings[0].x).toBe(20); expect(s.rabbits[0].enclosureId).toBe(enclosure);
   });
   it('refuses occupied and invalid cells, including fractional coordinates', () => {
     const s = createGame(0);
-    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 3, y: 3}, 'CELL_OCCUPIED', HOUR);
-    for (const x of [-1, 3, 0.5, NaN]) refuses(s, {type: 'buyBuilding', kind: 'farm', x, y: 1}, 'INVALID_CELL');
+    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 12, y: 12}, 'CELL_OCCUPIED', HOUR);
+    for (const x of [-1, 3, 0.5, NaN]) refuses(s, {type: 'buyBuilding', kind: 'farm', x: x * 4, y: 4}, 'INVALID_CELL');
   });
   it('refuses costs without advancing time or spending anything', () => {
     const s = createGame(0); s.pattes = 0;
-    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 3}, 'NOT_ENOUGH_PATTES', HOUR);
+    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 12}, 'NOT_ENOUGH_PATTES', HOUR);
     refuses(s, {type: 'buyRabbit', species: 'terre', enclosureId: enclosure}, 'NOT_ENOUGH_PATTES');
     refuses(s, {type:'expand',parcelId:'east',expectedCost:500}, 'NOT_ENOUGH_PATTES');
   });
   it('enforces building limits', () => {
     let s = setup();
-    refuses(s, {type: 'buyBuilding', kind: 'nest', x: 4, y: 4}, 'BUILDING_LIMIT');
-    refuses(s, {type: 'buyBuilding', kind: 'nursery', x: 4, y: 4}, 'BUILDING_LIMIT');
-    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 4, y: 4});
-    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 5, y: 4});
-    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 3, y: 3}, 'BUILDING_LIMIT');
+    refuses(s, {type: 'buyBuilding', kind: 'nest', x: 16, y: 16}, 'BUILDING_LIMIT');
+    refuses(s, {type: 'buyBuilding', kind: 'nursery', x: 16, y: 16}, 'BUILDING_LIMIT');
+    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 16});
+    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 20, y: 16});
+    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 12, y: 12}, 'BUILDING_LIMIT');
   });
   it('buys the extension once and unlocks the new cells', () => {
     let s = createGame(0); s.pattes = 800;
-    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 6, y: 3}, 'INVALID_CELL');
+    refuses(s, {type: 'buyBuilding', kind: 'farm', x: 24, y: 12}, 'INVALID_CELL');
     s = run(s, {type:'expand',parcelId:'east',expectedCost:500}); expect(s.pattes).toBe(300);
-    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 8, y: 4});
+    s = run(s, {type: 'buyBuilding', kind: 'farm', x: 32, y: 16});
     refuses(s, {type:'expand',parcelId:'east',expectedCost:500}, 'ALREADY_EXPANDED');
   });
   it('rejects invalid times and random samples atomically', () => {
@@ -132,7 +132,7 @@ describe('income and time', () => {
 
 describe('farming and affection', () => {
   it.each(Object.keys(ORDERS) as (keyof typeof ORDERS)[])('runs exactly one %s farm order', recipe => {
-    let s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 4, y: 3}); const id = s.buildings[1].id;
+    let s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 16, y: 12}); const id = s.buildings[1].id;
     s = run(s, {type: 'startOrder', id, recipe}); expect(s.pattes).toBe(240 - ORDERS[recipe].cost);
     refuses(s, {type: 'startOrder', id, recipe}, 'BUSY');
     refuses(s, {type: 'collectOrder', id}, 'NOT_READY', ORDERS[recipe].duration - 1);
@@ -141,7 +141,7 @@ describe('farming and affection', () => {
     refuses(s, {type: 'collectOrder', id}, 'NOT_READY');
   });
   it('refuses an unaffordable order', () => {
-    const s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 4, y: 3}); s.pattes = 0;
+    const s = run(createGame(0), {type: 'buyBuilding', kind: 'farm', x: 16, y: 12}); s.pattes = 0;
     refuses(s, {type: 'startOrder', id: s.buildings[1].id, recipe: 'small'}, 'NOT_ENOUGH_PATTES');
   });
   it('requires 380 grass to reach affection 20, then refuses more food', () => {
@@ -296,7 +296,7 @@ describe('JSON format', () => {
   });
   it('round-trips initial state and a state with fractions, a farm order and a saved result', () => {
     expect(decodeGame(encodeGame(createGame(42)))).toEqual({ok: true, state: createGame(42)});
-    let s = run(setup(), {type: 'buyBuilding', kind: 'farm', x: 4, y: 4});
+    let s = run(setup(), {type: 'buyBuilding', kind: 'farm', x: 16, y: 16});
     s = run(s, {type: 'startOrder', id: s.buildings.at(-1)!.id, recipe: 'large'});
     s = run(s, breed, 17, 0.9); expect(decodeGame(encodeGame(s))).toEqual({ok: true, state: s});
   });

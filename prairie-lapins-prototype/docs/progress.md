@@ -1,3 +1,9 @@
+# Placement fin des bâtiments — validation v7
+
+Travail depuis production `45e2d2d` (application `550dceb`). Tous les bâtiments utilisent les coordonnées entières fines et l’empreinte commune 4 × 4 ; achats et déplacements unitaires, collisions partagées, aperçu, confirmation et annulation. Migration v6 → v7 sans décalage, décorations inchangées et secours brut conservé. Cache des bâtiments indépendant des parcelles, illustrations réutilisées sans coupure ni duplication. Les six visuels de lapins validés sur Safari sont conservés.
+
+614 tests / 19 fichiers, TypeScript et deux builds réussis. Chromium tactile et build réel : refus, annulations, doubles pressions, gestes, rechargement, cache et sept lapins sélectionnés à trois zooms après déplacement. Scénario `fineBuildings` ajouté aux quinze scénarios du laboratoire. [Règles, captures et essai iPhone](fine-buildings-v7.md). Publication à confirmer après la CI ; Décorations v5 et Comptes v4 restent figés, Supabase en pause.
+
 # Bélier Gris, Feu et nouveau Volant — livrés
 
 Jeu normal et laboratoire : application `550dceb49c4c42f54da799137dd37e0c9c9c4fe9`, [PR nº 7 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/7). Le nouvel original complet `volant.png` remplace l’ancien museau coupé ; ancien fichier supprimé. Bélier Gris et Feu sont également finalisés. Trois PNG fidèles, transparence préparée sans changement des RGB opaques, textures réutilisées dans habitats et tous les portraits, taille uniforme selon le corps, ancrage et animation légère de l’image entière. [Sources, méthode et comparaisons](belier-feu-volant-v1.md) · [preuve de publication](validation/belier-feu-v1/publication.json).

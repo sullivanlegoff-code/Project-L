@@ -16,7 +16,7 @@ const run = (s: GameState, c: Command, now = s.lastSimulatedAt) => {
 };
 function prepared() {
   let s = createGame(0); s.pattes = 5000; s.grass = 1000;
-  for (const [kind, x, y] of [['farm',4,3], ['nest',5,3], ['nursery',3,4]] as const) s = run(s,{type:'buyBuilding',kind,x,y});
+  for (const [kind, x, y] of [['farm',4,3], ['nest',5,3], ['nursery',3,4]] as const) s = run(s,{type:'buyBuilding',kind,x: x * 4,y: y * 4});
   return s;
 }
 function legacy(s: GameState, version: 1 | 2 = 2) {
@@ -43,7 +43,7 @@ const state=(c:GameController)=>c.getSnapshot().state!;
 describe('main missions and unique rewards',()=>{
   it('starts eight unclaimed visible objectives and a fresh 24-hour cycle without changing initial resources',()=>{
     const s=createGame(123);
-    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:6,pattes:300,grass:10,hearts:12});
+    expect(MAIN_MISSION_IDS).toHaveLength(8);expect(s).toMatchObject({version:7,pattes:300,grass:10,hearts:12});
     expect(s.missions).toEqual({completed:[],claimed:[],daily:{referenceAt:123,cycleIndex:0,progress:emptyDailyProgress(),claimed:[],bonusClaimed:false}});
     expect(dailyCycleEnd(s)).toBe(123+DAY);
   });
@@ -87,7 +87,7 @@ describe('main missions and unique rewards',()=>{
   });
   it('acquires a building mission when bought with hearts but counts no daily action',()=>{
     const s=createGame(0);s.pattes=0;
-    const bought=run(s,{type:'payWithHearts',action:{type:'buyBuilding',kind:'farm',x: 4, y: 3},maxHearts:3,maxPattes:0});
+    const bought=run(s,{type:'payWithHearts',action:{type:'buyBuilding',kind:'farm',x: 16, y: 12},maxHearts:3,maxPattes:0});
     expect(bought.missions.completed).toEqual(['first-farm']);expect(bought.missions.daily.progress).toEqual(emptyDailyProgress());
   });
 });
@@ -103,7 +103,7 @@ describe('daily event accounting and fixed cycles',()=>{
     let s=prepared();s=run(s,{type:'startOrder',id:'building-4',recipe:'medium'});s=advance(s,5*HOUR);
     expect(s.buildings[0].incomeUnits).toBe(120*HOUR);expect(s.missions.daily.progress).toEqual(emptyDailyProgress());
     s.grass=0; expect(act(s,{type:'feed',id:'rabbit-2'},s.lastSimulatedAt)).toMatchObject({ok:false,state:s});
-    expect(act(s,{type:'buyBuilding',kind:'farm',x: 3, y: 3},s.lastSimulatedAt)).toMatchObject({ok:false,state:s});
+    expect(act(s,{type:'buyBuilding',kind:'farm',x: 12, y: 12},s.lastSimulatedAt)).toMatchObject({ok:false,state:s});
   });
   it('counts a production started and ready before renewal only when harvested in the new cycle',()=>{
     let s=prepared();s=run(s,{type:'startOrder',id:'building-4',recipe:'small'},DAY-20*MINUTE);
@@ -183,7 +183,7 @@ describe('v3 persistence, migrations and controller',()=>{
     const raw=legacy(prepared()),m=memory(raw);m.flags.fail=key;
     const c=new GameController(m.storage,()=>HOUR);
     expect(c.getSnapshot().status).toBe('write-error');expect(m.data.get(SAVE_KEY)).toBe(raw);expect(state(c).hearts).toBe(12);
-    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(6);
+    m.flags.fail='';expect(c.retrySave().ok).toBe(true);expect(JSON.parse(m.data.get(SAVE_KEY)!).version).toBe(7);
   });
   it('saves a claim and its reward together; write failure preserves them in memory and retry never grants twice',()=>{
     const m=memory(encodeGame(prepared())),c=new GameController(m.storage,()=>0);const raw=m.data.get(SAVE_KEY),before=state(c);

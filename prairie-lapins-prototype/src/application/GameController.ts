@@ -1,4 +1,4 @@
-import {LAND_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
+import {FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY} from '../persistence/storage';
 import {act, advance, createGame, decodeGame, encodeGame} from '../simulation';
 import {MAX_JSON_LENGTH, type DecodeResult} from '../persistence/json';
 import {MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, SAVE_KEY, type SaveStorage} from '../persistence/storage';
@@ -98,7 +98,7 @@ export class GameController {
         // Also retain the original in memory if even the backup write is denied.
         this.migrationSource = backup;
         const source = decodeGame(backup, savedAt);
-        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 4 ? DECORATIONS_MIGRATION_BACKUP_KEY : LAND_MIGRATION_BACKUP_KEY, backup);
+        this.storage.setItem(source.ok && source.migratedFrom === 1 ? MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 2 ? MISSIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 3 ? HABITATS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 4 ? DECORATIONS_MIGRATION_BACKUP_KEY : source.ok && source.migratedFrom === 6 ? FINE_BUILDINGS_MIGRATION_BACKUP_KEY : LAND_MIGRATION_BACKUP_KEY, backup);
       }
       this.storage.setItem(SAVE_KEY, json);
     }
@@ -178,7 +178,7 @@ export class GameController {
   migrationBackup(): string | null {
     if (this.migrationSource !== null) return this.migrationSource;
     try {
-      for (const key of [LAND_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
+      for (const key of [FINE_BUILDINGS_MIGRATION_BACKUP_KEY, LAND_MIGRATION_BACKUP_KEY, DECORATIONS_MIGRATION_BACKUP_KEY, HABITATS_MIGRATION_BACKUP_KEY, MISSIONS_MIGRATION_BACKUP_KEY, MIGRATION_BACKUP_KEY]) {
         const raw = this.storage.getItem(key);
         if (raw !== null) return raw;
       }

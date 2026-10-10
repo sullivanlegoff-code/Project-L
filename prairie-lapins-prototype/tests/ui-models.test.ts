@@ -10,7 +10,7 @@ import type {Command, GameState} from '../src/state/types';
 function readyState(): GameState {
   let state = createGame(0); state.pattes = 10_000;
   const apply = (command: Command) => { const r = act(state, command, 0, () => .9); if (!r.ok) throw new Error(r.reason); state = r.state; };
-  apply({type: 'buyBuilding', kind: 'nest', x: 4, y: 3}); apply({type: 'buyBuilding', kind: 'nursery', x: 5, y: 3});
+  apply({type: 'buyBuilding', kind: 'nest', x: 16, y: 12}); apply({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
   apply({type: 'feed', id: 'rabbit-2'}); apply({type: 'feed', id: 'rabbit-3'});
   apply({type: 'breed', parents: ['rabbit-2', 'rabbit-3']});
   return state;
@@ -121,14 +121,14 @@ describe('UI projections preserve gameplay rules and secrets', () => {
   it('explains invalid placement, occupancy and price without spending', () => {
     const s = createGame(0), before = structuredClone(s);
     expect(placementReason(s, {kind: 'farm', cell: null})).toContain('Touchez');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 3, y: 3}})).toContain('occupée');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 6, y: 3}})).toContain('disponible');
-    expect(placementReason(s, {kind: 'farm', cell: {x: 4, y: 3}})).toBeNull(); expect(s).toEqual(before);
+    expect(placementReason(s, {kind: 'farm', cell: {x: 12, y: 12}})).toContain('occupée');
+    expect(placementReason(s, {kind: 'farm', cell: {x: 24, y: 12}})).toContain('disponible');
+    expect(placementReason(s, {kind: 'farm', cell: {x: 16, y: 12}})).toBeNull(); expect(s).toEqual(before);
     s.pattes = 0; expect(buildingReason(s, 'farm')).toContain('pattes');
   });
   it('allows a building to stay on its own cell, and new cells only after expansion', () => {
-    const s = createGame(0); expect(placementReason(s, {kind: 'enclosure', movingId: 'building-1', cell: {x: 3, y: 3}})).toBeNull();
-    s.acquiredParcels.push('east'); expect(placementReason(s, {kind: 'farm', cell: {x: 8, y: 4}})).toBeNull();
+    const s = createGame(0); expect(placementReason(s, {kind: 'enclosure', movingId: 'building-1', cell: {x: 12, y: 12}})).toBeNull();
+    s.acquiredParcels.push('east'); expect(placementReason(s, {kind: 'farm', cell: {x: 32, y: 16}})).toBeNull();
   });
   it('does not expose the species of a hidden birth in nursery or collection models', () => {
     let s = readyState(); const r = act(s, {type: 'collectIncome', id: 'building-1'}, 20 * 60_000); if (!r.ok) throw new Error(r.reason); s = r.state;

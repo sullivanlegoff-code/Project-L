@@ -1,3 +1,4 @@
+import {buildingPlacementReason} from './placement';
 import {acquiredCell, PARCEL_IDS, extensionPrice} from '../config/land';
 import {HABITAT_TYPES, habitatLevel, habitatPrice, type HabitatLevel} from '../config/habitats';
 import {habitatEntryReason} from './habitats';
@@ -54,9 +55,8 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
     return b;
   };
   const cell = (x: number, y: number, exclude?: string) => {
-    requireRule(acquiredCell(s, x, y), 'INVALID_CELL');
-    requireRule(!s.buildings.some(b => b.id !== exclude && b.x === x && b.y === y), 'CELL_OCCUPIED');
-    requireRule(!decorationsInCell(s, x, y).length, 'DECORATION_BLOCKS_BUILDING');
+    const reason = buildingPlacementReason(s, x, y, exclude);
+    requireRule(!reason, reason ?? 'INVALID_CELL');
   };
   const busy = (rabbitId: string) => s.buildings.some(b => b.breeding && b.breeding.endsAt > time && b.breeding.parents.includes(rabbitId));
   const reward = (r: Reward) => {
