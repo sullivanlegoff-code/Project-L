@@ -33,7 +33,7 @@ const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/paille-terre-proof';
    const {id}=ids.find(r=>r.species===species);await tapRabbit(id);
    assert.equal(await page.locator(`img[data-rabbit-art="${species}"]`).count(),1);
    await page.screenshot({path:out+`/${species}-profile.png`});
-   const clip=await page.locator(`img[data-rabbit-art="${species}"]`).boundingBox();
+   const clip=await page.evaluate(species=>{const img=document.querySelector(`img[data-rabbit-art="${species}"]`);if(!img)throw Error("Missing portrait");const {x,y,width,height}=img.getBoundingClientRect();return {x,y,width,height};},species);
    await page.screenshot({path:out+`/${species}-portrait-crop.png`,clip});await page.click('#close-panel');
    const ear=await page.evaluate(id=>{const s=window.__scene,r=s.rabbitViews.find(r=>r.id===id),a=r.art;
     const x=Math.floor(a.width*(a.species==='paille'?.46:.6)),y=Math.floor(a.height*.13);
