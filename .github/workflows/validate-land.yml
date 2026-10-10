@@ -1,7 +1,7 @@
 name: Vérifier les fondations et le terrain v6
 on:
   push:
-    branches: [feature/square-island, feature/technical-foundations, feature/neige-original-art]
+    branches: [feature/square-island, feature/technical-foundations, feature/neige-original-art, feature/paille-terre-original-art]
   pull_request:
     branches: [production]
   workflow_dispatch:
@@ -51,6 +51,7 @@ jobs:
           node docs/parcels-browser-check.cjs
           node docs/decorations-selection-check.cjs
           node docs/snow-browser-check.cjs
+          node docs/paille-terre-browser-check.cjs
       - name: Vérifier les builds sans injection
         env:
           PRAIRIE_CAPTURE_DIR: ${{ runner.temp }}/land-proof
@@ -64,6 +65,7 @@ jobs:
           node docs/laboratory-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
           node docs/foundations-browser-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
           node docs/snow-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
+          node docs/paille-terre-public-check.cjs http://127.0.0.1:5185/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

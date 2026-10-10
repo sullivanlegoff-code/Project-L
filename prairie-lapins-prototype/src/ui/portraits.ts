@@ -1,4 +1,4 @@
-import {SNOW_ART} from '../config/rabbitArt';
+import {rabbitArt} from '../config/rabbitArt';
 import type {SpeciesId} from '../config/balance';
 export interface Coat {
   body: string; patch: string;
@@ -17,7 +17,8 @@ export const COATS: Record<SpeciesId, Coat> = {
   magicien: {body: '#b7a2d6', patch: '#b7a2d6'}, dragon: {body: '#94b885', patch: '#94b885'},
 };
 export function portrait(species?: SpeciesId): string {
-  if (species === SNOW_ART.species) return `<img src="${SNOW_ART.url}" alt="Lapin Neige" width="${SNOW_ART.width}" height="${SNOW_ART.height}" decoding="async" draggable="false" data-rabbit-art="neige">`;
+  const art = rabbitArt(species);
+  if (art) return `<img src="${art.url}" alt="Lapin ${{neige: 'Neige', paille: 'Paille', terre: 'Terre'}[art.species]}" width="${art.width}" height="${art.height}" decoding="async" draggable="false" data-rabbit-art="${art.species}">`;
   const c: Coat = species ? COATS[species] : {body: '#b6c3b1', patch: '#b6c3b1'};
   const wings = c.wings ? `<g fill="${c.plumage ? '#86b9d0' : '#fff9ee'}" stroke="#8b9cb4" stroke-width="2"><path d="M35 69Q9 69 5 47Q16 37 29 50L42 68Z"/><path d="M82 65Q106 36 116 47Q115 68 91 77Z"/><path d="M15 48l14 16m74-15L88 65" fill="none"/></g>` : '';
   const ears = c.lop ? `<ellipse cx="31" cy="54" rx="11" ry="27" transform="rotate(18 31 54)" fill="${c.body}"/><ellipse cx="88" cy="54" rx="11" ry="27" transform="rotate(-18 88 54)" fill="${c.body}"/>` : `<ellipse cx="43" cy="33" rx="10" ry="27" transform="rotate(-13 43 33)" fill="${c.body}"/><ellipse cx="71" cy="31" rx="10" ry="27" transform="rotate(12 71 31)" fill="${c.frost ? c.patch : c.body}"/><ellipse cx="43" cy="30" rx="4" ry="17" fill="#dab5ac"/><ellipse cx="71" cy="28" rx="4" ry="17" fill="#dab5ac"/>`;
