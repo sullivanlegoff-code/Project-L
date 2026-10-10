@@ -9,6 +9,6 @@ export const VISUAL = {
     sixOffsets: [{x: -49, y: -8}, {x: 0, y: -8}, {x: 49, y: -8}, {x: -49, y: 34}, {x: 0, y: 34}, {x: 49, y: 34}],
     crowdedOffsets: [{x: -50, y: -17}, {x: 0, y: -17}, {x: 50, y: -17}, {x: -25, y: 9}, {x: 25, y: 9}, {x: -48, y: 34}, {x: 48, y: 34}],
   },
-  camera: {minZoom: .8, maxZoom: 1.65, initialZoom: 1.05, focusX: 4.5, focusY: 4.5,
+  camera: {minZoom: .4, maxZoom: 1.65, initialZoom: 1.05, overviewWaterMargin: 80, overviewPadding: 16, focusX: 4.5, focusY: 4.5,
     marginX: 300, marginY: 160, hudHeight: 70, compactHudHeight: 62, portraitHudHeight: 122},
 } as const;

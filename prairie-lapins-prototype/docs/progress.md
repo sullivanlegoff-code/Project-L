@@ -1,3 +1,7 @@
+# Vue d’ensemble — validation en cours
+
+Depuis production `8bd2263` (application `687075e`). Minimum de référence 0,4, limite adaptative selon écran et espace visible ; Vue d’ensemble pour les parcelles acquises, Agrandir pour les neuf possibles. Recentrer 1,05 et maximum 1,65 conservés. Noms/bulles progressivement masqués, sélection sans agrandissement des voisins, sauvegardes v7 inchangées. TypeScript, 627 tests / 20 fichiers, deux builds et contrôles Chromium tactiles/publics réussis. [Cadrage, captures et vérifications](camera-overview.md). Publication normale/laboratoire préparée avec maintien des deux anciennes routes.
+
 # Placement fin des bâtiments — livré v7
 
 Travail depuis production `45e2d2d` (application `550dceb`). Tous les bâtiments utilisent les coordonnées entières fines et l’empreinte commune 4 × 4 ; achats et déplacements unitaires, collisions partagées, aperçu, confirmation et annulation. Migration v6 → v7 sans décalage, décorations inchangées et secours brut conservé. Cache des bâtiments indépendant des parcelles, illustrations réutilisées sans coupure ni duplication. Les six visuels de lapins validés sur Safari sont conservés.

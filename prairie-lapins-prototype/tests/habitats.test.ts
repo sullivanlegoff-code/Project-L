@@ -181,12 +181,12 @@ describe('two extensions, camera and placement',()=>{
   it('extends camera bounds without zoom/focus jumps; defers bounds and orientation changes during gestures',()=>{
     const c=new MeadowCamera();c.resize(844,390);c.recenter();const old={x:c.x,y:c.y,zoom:c.zoom};c.setColumns(9);
     expect({x:c.x,y:c.y,zoom:c.zoom}).toEqual(old);expect(c.bounds.right).toBe(gridPoint(9,0).x+VISUAL.camera.marginX);
-    c.pan(-10000,0);expect(c.world({x:844,y:195}).x).toBe(c.bounds.right);
+    c.pan(-10000,0);expect(c.world({x:844-VISUAL.camera.overviewPadding,y:195}).x).toBe(c.bounds.right);
     const far={x:c.x,y:c.y,zoom:c.zoom};c.interaction(true);c.setColumns(6);c.resize(390,844);
     expect({x:c.x,y:c.y,zoom:c.zoom}).toEqual(far);expect(c.width).toBe(844);c.interaction(false);expect(c.width).toBe(390);expect(c.zoom).toBe(old.zoom);
     c.setColumns(9);c.resize(844,390);c.recenter();expect({x:c.x,y:c.y,zoom:c.zoom}).toEqual(old);
     for(let x=0;x<9;x++)for(let y=0;y<2;y++)expect(gridCell(c.world(c.screen(gridPoint(x+.5,y+.5))))).toEqual({x,y});
-    c.scale(100,{x:422,y:195});expect(c.zoom).toBe(1.65);c.scale(.001,{x:422,y:195});expect(c.zoom).toBe(.8);
+    c.scale(100,{x:422,y:195});expect(c.zoom).toBe(1.65);c.scale(.001,{x:422,y:195});expect(c.zoom).toBe(c.minimumZoom);
   });
   it('retains validated rabbit scale and targets and provides seven distinct resident slots',()=>{
     expect(VISUAL.rabbit.scale).toBe(1.3);expect(VISUAL.rabbit.hitRadius).toBe(27);expect(VISUAL.rabbit.offsets).toHaveLength(3);

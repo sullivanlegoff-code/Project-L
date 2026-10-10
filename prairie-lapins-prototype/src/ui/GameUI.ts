@@ -64,6 +64,7 @@ export class GameUI {
     document.getElementById('open-photo')!.addEventListener('click', () => this.setPhoto(true), options);
     document.getElementById('photo-return')!.addEventListener('click', () => this.setPhoto(false), options);
     document.getElementById('open-missions')!.addEventListener('click', () => this.open({kind: 'missions', tab: 'main'}), options);
+    document.getElementById('overview-view')!.addEventListener('click', () => this.scene.overview(), options);
     document.getElementById('recenter-view')!.addEventListener('click', () => this.scene.recenter(), options);
     document.getElementById('open-hearts')!.addEventListener('click', () => this.open({kind: 'hearts'}), options);
     document.getElementById('open-shop')!.addEventListener('click', () => this.open({kind: 'shop', tab: 'buildings'}), options);
@@ -130,7 +131,8 @@ export class GameUI {
     else if (view.kind !== 'decoration') this.arranging = true;
     if (view.kind !== 'decorationPlacement') this.decorationDraft = null;
     this.content.scrollTop = 0;
-    this.view = view; this.scene.setExpansion(view.kind==='extension',view.kind==='extension'?view.parcelId:undefined); this.syncArrangement(); this.controller.refresh(); this.render();
+    this.view = view; this.syncArrangement(); this.controller.refresh(); this.render();
+    this.scene.setExpansion(view.kind==='extension',view.kind==='extension'?view.parcelId:undefined);
   }
   close(): void {
     if (this.dialog.open || (document.getElementById('import-dialog') as HTMLDialogElement).open) return;

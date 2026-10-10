@@ -140,6 +140,7 @@ jobs:
           node prairie-lapins-prototype/docs/paille-terre-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/belier-feu-volant-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/fine-buildings-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
+          node prairie-lapins-prototype/docs/camera-overview-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves publiques
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

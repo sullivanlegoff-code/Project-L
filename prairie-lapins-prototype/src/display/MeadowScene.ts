@@ -28,9 +28,10 @@ export class MeadowScene extends Phaser.Scene {
   private animals!: Phaser.GameObjects.Container;
   private bubbles!: Phaser.GameObjects.Container;
   private labels!: Phaser.GameObjects.Container;
+  private buildingNames: Phaser.GameObjects.Container | null = null;
   private grid!: Phaser.GameObjects.Graphics;
   private rabbitViews: VisualRabbit[] = [];
-  private bubbleHits: {point: Point; selection: MeadowSelection}[] = [];
+  private bubbleHits: {point: Point; width: number; height: number; selection: MeadowSelection}[] = [];
   private layoutKey = '';
   private buildingsLayer!: Phaser.GameObjects.Container;
   private buildingViews = new Map<string, Phaser.GameObjects.Image>();
@@ -73,12 +74,34 @@ export class MeadowScene extends Phaser.Scene {
     const disposeInput = bindMeadowInput(this.game.canvas, this.view, point => this.tap(point), this.blocked, () => this.applyCamera());
     this.events.once('shutdown', () => { this.unsubscribe?.(); disposeInput(); this.scale.off('resize', this.resize, this); this.groundTextures.forEach(key => this.textures.remove(key)); this.buildingTextures.forEach(key=>this.textures.remove(key)); });
   }
-  recenter(): void { if (!this.cameras?.main) return; this.view.recenter(); this.applyCamera(); }
-  private resize(): void { this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
-  private applyCamera(): void { this.cameras.main.setZoom(this.view.zoom).centerOn(this.view.x, this.view.y); this.drawDecorationSelection(); }
+  recenter(): void { if (!this.cameras?.main) return; this.view.setInsets(null); this.view.recenter(); this.applyCamera(); }
+  private framingInsets() {
+    const pad=VISUAL.camera.overviewPadding, panel=document.getElementById('game-panel'), hud=document.getElementById('hud');
+    const rect=panel && !panel.hidden ? panel.getBoundingClientRect() : null;
+    const footer=document.getElementById('dev-badge');
+    const bottom=footer && getComputedStyle(footer).display!=='none' ? this.scale.height-footer.getBoundingClientRect().top+pad : pad;
+    return {left:pad,right:rect ? this.scale.width-rect.left+pad : pad,top:(hud?.getBoundingClientRect().bottom ?? 0)+pad,bottom};
+  }
+  overview(): void {
+    if (!this.current || !this.cameras?.main) return;
+    const ids=this.expanding ? PARCEL_IDS : this.current.acquiredParcels;
+    const parcels=ids.map(id=>PARCELS[id]);
+    this.view.setInsets(this.framingInsets());
+    this.view.overview({left:gridPoint(Math.min(...parcels.map(p=>p.x)),0).x,right:gridPoint(Math.max(...parcels.map(p=>p.x+3)),0).x,
+      top:gridPoint(0,Math.min(...parcels.map(p=>p.y))).y,bottom:gridPoint(0,Math.max(...parcels.map(p=>p.y+3))).y});
+    this.applyCamera();
+  }
+  private updateDetails(): void {
+    const fade=(low:number,high:number)=>Phaser.Math.Clamp((this.view.zoom-low)/(high-low),0,1);
+    this.buildingNames?.setAlpha(fade(.55,.85));
+    this.bubbles?.setAlpha(fade(.45,.7)).setVisible(!this.photo && this.view.zoom>.45);
+  }
+  private resize(): void { this.view.setInsets(this.framingInsets()); this.view.resize(this.scale.width, this.scale.height); this.applyCamera(); }
+  private applyCamera(): void { this.cameras.main.setZoom(this.view.zoom).centerOn(this.view.x, this.view.y); this.drawDecorationSelection(); this.updateDetails(); }
   setExpansion(active:boolean, parcelId?:ParcelId):void {
     const was=this.expanding;this.expanding=active;this.expansionParcelId=active?parcelId:undefined;
-    if(parcelId){const p=PARCELS[parcelId],point=gridPoint(p.x+1.5,p.y+1.5);this.view.x=point.x;this.view.y=point.y;this.view.clamp();this.applyCamera();}
+    if(active&&!was)this.overview();
+    else if(parcelId){const p=PARCELS[parcelId],point=gridPoint(p.x+1.5,p.y+1.5);this.view.x=point.x;this.view.y=point.y;this.view.clamp();this.applyCamera();}
     else if(was&&!active)this.recenter();
     if(this.grid)this.drawGrid();
   }
@@ -108,7 +131,7 @@ export class MeadowScene extends Phaser.Scene {
   /** Hit the drawn silhouette, including tall portions above the logical footprint.
    * Raster masks are cached per texture; only a tap samples pixels, never each frame. */
   private decorationAt(screen: Point): string | null {
-    const world = this.view.world(screen), pad = 4 / this.view.zoom;
+    const world = this.view.world(screen), pad = Math.min(4 / this.view.zoom, 5);
     const images = [...this.decorationViews.entries()].reverse().sort((a, b) => b[1].depth - a[1].depth);
     for (const [id, image] of images) {
       const bounds = image.getBounds();
@@ -136,7 +159,7 @@ export class MeadowScene extends Phaser.Scene {
   setPhoto(active: boolean): void {
     this.photo = active;
     this.drawDecorationSelection();
-    this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active); this.buildingGhost?.setVisible(!active && !!this.placement?.cell);
+    this.bubbles?.setVisible(!active); this.grid?.setVisible(!active); this.ghostView?.setVisible(!active); this.buildingGhost?.setVisible(!active && !!this.placement?.cell); this.updateDetails();
   }
   reactToFeed(id: string): void {
     const rabbit = this.rabbitViews.find(r => r.id === id); if (!rabbit) return;
@@ -149,7 +172,7 @@ export class MeadowScene extends Phaser.Scene {
     if (s) { this.view.setColumns(visibleColumns(s)); this.applyCamera(); }
     const key = JSON.stringify([s?.acquiredParcels, s?.buildings.map(b => [b.id, b.kind, b.x, b.y, b.habitat]), s?.rabbits.map(r => [r.id, r.species, r.enclosureId])]);
     if (key !== this.layoutKey) { this.layoutKey = key; this.drawGround(); this.drawBuildings(); this.drawAnimals(); }
-    this.drawDecorations(); this.drawBubbles(); this.drawGrid(); this.drawGhost();
+    this.drawDecorations(); this.drawBubbles(); this.drawGrid(); this.drawGhost(); this.updateDetails();
   }
   private decorationPoint(location: DecorationLocation, catalogId: typeof DECORATION_IDS[number]): Point | null {
     if (location.kind === 'inventory') return null;
@@ -187,7 +210,6 @@ export class MeadowScene extends Phaser.Scene {
   private drawGround(): void {
     this.ground.removeAll(true);
     for (const key of [...this.groundTextures]) if (!this.current?.acquiredParcels.some(id => key === this.groundTexture+':'+id)) { this.textures.remove(key); this.groundSignatures.delete(key); this.groundTextures=this.groundTextures.filter(k=>k!==key); }
-    this.labels.removeAll(true);
     if (!this.current) return;
     for (const id of this.current.acquiredParcels) {
     const parcel=PARCELS[id], px=VISUAL.grid.originX+parcel.x*VISUAL.grid.width, py=VISUAL.grid.originY+parcel.y*VISUAL.grid.depth, pad=90;
@@ -215,6 +237,7 @@ export class MeadowScene extends Phaser.Scene {
   }
   private drawBuildings(): void {
     this.labels.removeAll(true);
+    this.buildingNames=this.add.container(0,0);this.labels.add(this.buildingNames);
     const present = new Set<string>();
     for (const b of this.current?.buildings ?? []) {
       present.add(b.id);const p=buildingCenter(b),x=p.x,y=p.y;
@@ -225,7 +248,7 @@ export class MeadowScene extends Phaser.Scene {
       if(b.kind==='nursery')this.labels.add(this.add.text(x+30,y-54,'✦',{fontSize:'24px',color:'#f4df93'}).setOrigin(.5));
       const label=this.add.text(x,y+70,b.kind==='enclosure'?habitatName(b):BUILDING_NAMES[b.kind],{fontFamily:'Arial',fontSize:'13px',color:'#435b38',padding:{x:7,y:3}}).setOrigin(.5);
       const background=this.add.graphics();background.fillStyle(0xf8f4de,.96);background.fillRoundedRect(x-label.width/2,y+70-label.height/2,label.width,label.height,7);
-      this.labels.add([background,label]);
+      this.buildingNames.add([background,label]);
     }
     for(const [id,image] of this.buildingViews)if(!present.has(id)){image.destroy();this.buildingViews.delete(id);}
     this.buildingsLayer.sort('depth');
@@ -290,7 +313,7 @@ export class MeadowScene extends Phaser.Scene {
       if (!text) continue;
       const p = buildingCenter(b); p.y -= 72;
       const bubble = this.add.text(p.x, p.y, text, {fontFamily: 'Arial', fontSize: '17px', color: '#3b4d2d', backgroundColor: b.kind === 'enclosure' && amount >= habitatStats(b).cap ? '#f0c889' : '#fff7dc', padding: {x: 13, y: 10}}).setOrigin(.5);
-      this.bubbles.add(bubble); this.bubbleHits.push({point: p, selection: {kind, id: b.id}});
+      this.bubbles.add(bubble); this.bubbleHits.push({point: p, width:bubble.width, height:bubble.height, selection: {kind, id: b.id}});
     }
   }
   private drawGrid(): void {
@@ -355,7 +378,7 @@ export class MeadowScene extends Phaser.Scene {
   private tap(screen: Point): void {
     const world = this.view.world(screen), cell = gridCell(world);
     if (this.photo) return;
-    for (const bubble of this.bubbleHits) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < 39 && Math.abs(p.y - screen.y) < 25) { this.select(bubble.selection); return; } }
+    for (const bubble of this.bubbles.visible && this.bubbles.alpha>=.65 ? this.bubbleHits : []) { const p = this.view.screen(bubble.point); if (Math.abs(p.x - screen.x) < Math.min(39,bubble.width*this.view.zoom/2+3) && Math.abs(p.y - screen.y) < Math.min(25,bubble.height*this.view.zoom/2+3)) { this.select(bubble.selection); return; } }
     if (this.expanding) {const id=parcelAt(cell.x,cell.y);if(id && !this.current?.acquiredParcels.includes(id))this.select({kind:'extension',parcelId:id});return;}
     if (this.placement) {this.select({kind:'fineCell',...fineCell(world)});return;}
     if (this.arrangement) {
@@ -382,7 +405,7 @@ export class MeadowScene extends Phaser.Scene {
             this.textures.getPixelAlpha(x, y, r.art.texture) < 32) return [];
       }
       return [{id: r.id, point: this.view.screen(rabbitHitPoint(r.object)), depth: r.object.y,
-        ...(r.sprite ? {radius: Infinity} : {})}];
+        radius: r.sprite ? Infinity : VISUAL.rabbit.hitRadius * Math.min(1,this.view.zoom/.8)}];
     }));
     if (closest) { this.select({kind: 'rabbit', id: closest.id}); return; }
     const decorationId = this.decorationAt(screen);
