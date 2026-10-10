@@ -13,6 +13,8 @@ Bâtiments de 4 × 4 petits carrés, déplaçables d’un petit carré et à tra
 | `/Project-L/preview/decorations/` | Prévisualisation v5 conservée, révision `85fe255`, stockage distinct |
 | `/Project-L/preview/accounts/` | Comptes figés v4, révision `3e70d9e`, email/Supabase/SQL en pause |
 
+Révision applicative v7 : `687075e8989cb64a9f45db73765b96581372cb3c` ([PR nº 8 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/8)). [Publication et preuves](docs/validation/fine-buildings-v7/publication.json). 614 tests, TypeScript, deux builds, sept suites publiques et 27 contrôles réussis.
+
 Dernière publication historique de l’île v6 : `ecb8953ffd1b2df2e414d31bb162d60b2c9e3e79` ([PR nº 3](https://github.com/sullivanlegoff-code/Project-L/pull/3)). [Publication et preuves](docs/validation/production-v6-2026-10-09.json).
 
 La révision réellement servie est lisible dans Paramètres et `build-revision.txt`. Les quatre routes sont publiées dans un seul artefact Pages. Aucun transfert automatique des parties entre espaces ; un import volontaire remplace uniquement la destination après confirmation. Les anciens clients et Comptes v4 ne peuvent pas lire les exports v7.

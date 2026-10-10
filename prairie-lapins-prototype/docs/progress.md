@@ -1,8 +1,8 @@
-# Placement fin des bâtiments — validation v7
+# Placement fin des bâtiments — livré v7
 
 Travail depuis production `45e2d2d` (application `550dceb`). Tous les bâtiments utilisent les coordonnées entières fines et l’empreinte commune 4 × 4 ; achats et déplacements unitaires, collisions partagées, aperçu, confirmation et annulation. Migration v6 → v7 sans décalage, décorations inchangées et secours brut conservé. Cache des bâtiments indépendant des parcelles, illustrations réutilisées sans coupure ni duplication. Les six visuels de lapins validés sur Safari sont conservés.
 
-614 tests / 19 fichiers, TypeScript et deux builds réussis. Chromium tactile et build réel : refus, annulations, doubles pressions, gestes, rechargement, cache et sept lapins sélectionnés à trois zooms après déplacement. Scénario `fineBuildings` ajouté aux quinze scénarios du laboratoire. [Règles, captures et essai iPhone](fine-buildings-v7.md). Publication à confirmer après la CI ; Décorations v5 et Comptes v4 restent figés, Supabase en pause.
+614 tests / 19 fichiers, TypeScript et deux builds réussis. Chromium tactile et build réel : refus, annulations, doubles pressions, gestes, rechargement, cache et sept lapins sélectionnés à trois zooms après déplacement. Scénario `fineBuildings` ajouté aux quinze scénarios du laboratoire. [Règles, captures et essai iPhone](fine-buildings-v7.md). Application `687075e8989cb64a9f45db73765b96581372cb3c`, [PR nº 8 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/8). [CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38049916234) : arbre livré identique à la fusion testée. [Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38050582414) : quatre révisions et formats confirmés, sept suites navigateur, 27 contrôles publics sans erreur. [Preuves durables](validation/fine-buildings-v7/publication.json) · [Captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38050582414/artifacts/11669092804). Décorations v5 et Comptes v4 restent figés, Supabase en pause.
 
 # Bélier Gris, Feu et nouveau Volant — livrés
 

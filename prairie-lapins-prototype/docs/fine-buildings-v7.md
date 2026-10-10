@@ -25,3 +25,7 @@ Chromium tactile : aperçu, annulation, double confirmation, glissement/pincemen
 3. Recharger : vérifier le placement et les occupants. Revenir au jeu normal pour constater que sa partie est distincte ; ne pas effacer les données Safari.
 
 Chromium est disponible ; aucun iPhone Safari physique pendant cette étape. Les six visuels ont déjà été validés sur Safari par le joueur. Les routes Décorations v5 et Comptes v4 restent figées, Supabase/email en pause.
+
+## Livraison confirmée
+
+Application `687075e8989cb64a9f45db73765b96581372cb3c`, [PR nº 8 fusionnée](https://github.com/sullivanlegoff-code/Project-L/pull/8). [CI réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38049916234) : 614 tests / 19 fichiers, TypeScript, deux builds et tous les parcours ; arbre livré identique à celui testé. [Publication réussie](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38050582414) : sept suites et 27 contrôles publics sans erreur, quatre routes confirmées (v7/v7/v4/v5), six PNG servis inchangés. [Rapport durable](validation/fine-buildings-v7/publication.json) · [Captures publiques](https://github.com/sullivanlegoff-code/Project-L/actions/runs/38050582414/artifacts/11669092804).
