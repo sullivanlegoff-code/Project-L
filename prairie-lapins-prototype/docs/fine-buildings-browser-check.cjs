@@ -2,7 +2,7 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
 const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5198/Project-L/?dev=1',out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/fine-buildings-proof';
 (async()=>{
- fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});
+ fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:852,height:393},hasTouch:true});page.setDefaultTimeout(15000);const report={passed:false,checks:[],selections:[],errors:[],browser:'Chromium touch emulation, not physical Safari'};page.on('pageerror',e=>report.errors.push(e.message));page.on('dialog',d=>d.accept());
  const state=()=>page.evaluate(()=>window.__scene.current);
  const tapFine=async(x,y)=>{const p=await page.evaluate(({x,y})=>{const s=window.__scene;return s.view.screen({x:120+(x+.5)*44,y:120+(y+.5)*37});},{x,y});assert.equal(await page.evaluate(p=>document.elementFromPoint(p.x,p.y)?.tagName,p),'CANVAS');await page.touchscreen.tap(p.x,p.y);};
@@ -13,11 +13,11 @@ const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5198/Project-L/?dev=1'
  const snapshot=async()=>{const s=await state();return{pattes:s.pattes,grass:s.grass,hearts:s.hearts,rabbits:s.rabbits,buildings:s.buildings.map(({incomeUnits,...b})=>b)};};
  try{
   await page.route('**/src/main.ts*',async route=>{const r=await route.fetch();await route.fulfill({response:r,body:(await r.text()).replace('const game = new Phaser.Game','window.__scene=scene;const game = new Phaser.Game').replace('const disposePanel =','window.__ui=ui;const disposePanel =')});});
-  await page.goto(url);await page.waitForFunction(()=>window.__scene?.current?.version===7);await page.getByRole('button',{name:'Masquer',exact:true}).click();
-  const source=await page.evaluate(()=>{const s=structuredClone(window.__scene.current);s.version=6;s.buildings.forEach(b=>{b.x/=4;b.y/=4;});s.nextId=5;s.decorations=[{id:'decoration-4',catalogId:'wildflowers',location:{kind:'outside',x:23,y:12,rotation:0}}];const raw=JSON.stringify(s);localStorage.setItem('prairie-lapins.development.prairie-lapins.save.v1',raw);return{s,raw};});
-  await page.reload();await page.waitForFunction(()=>window.__scene?.current?.version===7);const migrated=await state();assert.deepEqual(migrated.buildings.map(b=>[b.x,b.y]),source.s.buildings.map(b=>[b.x*4,b.y*4]));assert.deepEqual(migrated.decorations,source.s.decorations);assert.equal(await page.evaluate(()=>localStorage.getItem('prairie-lapins.development.prairie-lapins.backup.before-v7')),source.raw);assert.equal(migrated.pattes,source.s.pattes);
+  await page.goto(url);await page.waitForFunction(()=>window.__scene?.current?.version===8);await page.getByRole('button',{name:'Masquer',exact:true}).click();
+  const source=await page.evaluate(()=>{const s=structuredClone(window.__scene.current);s.version=6;s.buildings.forEach(b=>{b.x/=4;b.y/=4;});s.nextId=7;s.decorations=[{id:'decoration-6',catalogId:'wildflowers',location:{kind:'outside',x:23,y:20,rotation:0}}];const raw=JSON.stringify(s);localStorage.setItem('prairie-lapins.development.prairie-lapins.save.v1',raw);return{s,raw};});
+  await page.reload();await page.waitForFunction(()=>window.__scene?.current?.version===8);const migrated=await state();assert.deepEqual(migrated.buildings.map(b=>[b.x,b.y]),source.s.buildings.map(b=>[b.x*4,b.y*4]));assert.deepEqual(migrated.decorations,source.s.decorations);assert.equal(await page.evaluate(()=>localStorage.getItem('prairie-lapins.development.prairie-lapins.backup.before-v7')),source.raw);assert.equal(migrated.pattes,source.s.pattes);
   const centre=await page.evaluate(()=>window.__scene.rabbitViews.map(r=>r.base));assert.deepEqual(centre,[{x:875,y:782},{x:946,y:782}]);
-  report.checks.push('v6 save migrates once to v7; decoration coordinates unchanged, raw backup retained and initial rabbit world positions unchanged.');
+  report.checks.push('v6 save migrates once to v8; decoration coordinates unchanged, raw backup retained and initial rabbit world positions unchanged.');
   await page.click('#open-settings');await page.click('#dev-scenario-fineBuildings');await close();
   const initial=await state();assert.equal(initial.rabbits.length,7);assert.ok(initial.buildings.every(b=>b.x%4||b.y%4));const farm=initial.buildings.find(b=>b.kind==='farm');assert.ok(farm.x<24&&farm.x+4>24);assert.ok(farm.order);
   await page.evaluate(()=>{const s=window.__scene;window.__fineCache={terrain:s.groundTextures.map(k=>[k,s.textures.get(k)]),image:s.buildingViews.get(s.current.buildings.find(b=>b.kind==='farm').id)};});
@@ -39,7 +39,7 @@ const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5198/Project-L/?dev=1'
    for(const r of initial.rabbits){const point=await page.evaluate(id=>{const s=window.__scene,r=s.rabbitViews.find(r=>r.id===id);return s.view.screen({x:r.object.x,y:r.object.y-9.1});},r.id);await page.touchscreen.tap(point.x,point.y);assert.equal(await page.evaluate(()=>window.__ui.view.id),r.id);report.selections.push({zoom,id:r.id,species:r.species});await close();}
   }
   report.checks.push('Water/unacquired footprint refusals and decoration obstacle preserve objects. Pan/pinch do not change the draft. Seven residents follow the moved habitat and remain individually selectable at three zooms.');
-  const saved=await snapshot();await page.reload();await page.waitForFunction(()=>window.__scene?.current?.version===7);assert.deepEqual(await snapshot(),saved);
+  const saved=await snapshot();await page.reload();await page.waitForFunction(()=>window.__scene?.current?.version===8);assert.deepEqual(await snapshot(),saved);
   await page.setViewportSize({width:1400,height:950});await page.evaluate(()=>{const s=window.__scene;s.view.zoom=1.05;s.view.x=120+5*176;s.view.y=120+3.5*148;s.applyCamera();});await page.screenshot({path:out+'/fine-buildings-placements.png'});
   await page.setViewportSize({width:390,height:844});await page.click('#continue-portrait');await move(farm.id);await page.screenshot({path:out+'/fine-buildings-portrait.png'});await page.getByRole('button',{name:'Annuler · aucun coût',exact:true}).click();
   report.checks.push('Reload preserves fine coordinates, occupants and active farm job; landscape and portrait previews captured.');assert.deepEqual(report.errors,[]);report.passed=true;

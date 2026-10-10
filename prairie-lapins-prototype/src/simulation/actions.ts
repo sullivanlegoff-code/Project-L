@@ -7,7 +7,7 @@ import {dailyCycleStart, recordMissionAction} from './missions';
 import {BALANCE, HEARTS, HOUR, growthDuration, ORDERS, SPECIES, GUARANTEE_SPECIES, type BuildingKind, type SpeciesId} from '../config/balance';
 import {emptyBuilding} from '../state/initial';
 import type {ActionResult, Building, Command, GameState, PattesCommand, Refusal} from '../state/types';
-import {chooseBirth} from './breeding';
+import {chooseBirth, nestForParent} from './breeding';
 import {advance, validTime} from './time';
 import {complementCost, quoteAcceleration} from './hearts';
 import {DECORATIONS, decorationResalePrice} from '../config/decorations';
@@ -25,7 +25,7 @@ export function act(state: GameState, command: Command, now: number = Date.now()
 function runAction(state: GameState, requested: Command, now: number, rng: () => number, quoteOnly = false): ActionResult {
   const payment = requested.type === 'payWithHearts' ? requested : null;
   const command = requested.type === 'payWithHearts' ? requested.action : requested;
-  if (payment && !['buyBuilding', 'buyRabbit', 'expand', 'startOrder', 'breed', 'upgradeHabitat'].includes(command.type)) return {ok: false, state, reason: 'INVALID_CHOICE'};
+  if (payment && !['buyBuilding', 'buyRabbit', 'expand', 'startOrder', 'upgradeHabitat'].includes(command.type)) return {ok: false, state, reason: 'INVALID_CHOICE'};
   if (!validTime(now)) return {ok: false, state, reason: 'INVALID_TIME'};
   const s = advance(state, now);
   const time = s.lastSimulatedAt;
@@ -58,7 +58,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
     const reason = buildingPlacementReason(s, x, y, exclude);
     requireRule(!reason, reason ?? 'INVALID_CELL');
   };
-  const busy = (rabbitId: string) => s.buildings.some(b => b.breeding && b.breeding.endsAt > time && b.breeding.parents.includes(rabbitId));
+  const busy = (rabbitId: string) => !!nestForParent(s, rabbitId);
   const reward = (r: Reward) => {
     credit(r.resource, r.amount); value = r.amount;
   };
@@ -126,12 +126,31 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       }
       case 'buyBuilding': {
         requireRule(Object.hasOwn(BALANCE.buildings, command.kind), 'INVALID_CHOICE');
+        requireRule(command.kind !== 'nest' && command.kind !== 'nursery', 'INVALID_CHOICE');
         const config = BALANCE.buildings[command.kind];
         requireRule(config.maximum === null || s.buildings.filter(b => b.kind === command.kind).length < config.maximum, 'BUILDING_LIMIT');
         const habitatType = command.habitatType ?? 'universal';
         requireRule(HABITAT_TYPES.includes(habitatType) && (command.kind === 'enclosure' || command.habitatType === undefined), 'INVALID_CHOICE');
         cell(command.x, command.y); allocation(); pay(command.kind === 'enclosure' ? habitatPrice(habitatType) : config.price);
         value = id('building'); s.buildings.push(emptyBuilding(value, command.kind, command.x, command.y, habitatType)); break;
+      }
+      case 'placeStarterBuilding': {
+        requireRule(command.kind === 'nest' || command.kind === 'nursery', 'INVALID_CHOICE');
+        requireRule(!s.buildings.some(b => b.kind === command.kind), 'BUILDING_LIMIT');
+        cell(command.x, command.y); allocation(); value = id('building');
+        s.buildings.push(emptyBuilding(value, command.kind, command.x, command.y)); break;
+      }
+      case 'transferBirth': {
+        const nest = building(command.id, 'nest');
+        requireRule(nest.breeding, 'NOT_READY');
+        requireRule(nest.breeding.birth.id === command.birthId, 'STALE_ACTION');
+        requireRule(nest.breeding.endsAt <= time, 'NOT_READY');
+        const nursery = s.buildings.find(b => b.kind === 'nursery');
+        requireRule(nursery, 'MISSING_BUILDING'); requireRule(!nursery.baby, 'BUSY');
+        const birth = nest.breeding.birth, duration = growthDuration(birth.species);
+        requireRule(Number.isSafeInteger(time + duration), 'INVALID_TIME');
+        nursery.baby = {birth, startedAt: time, readyAt: time + duration};
+        nest.breeding = null; value = birth.id; break;
       }
       case 'upgradeHabitat': {
         const b = building(command.id, 'enclosure');
@@ -154,6 +173,7 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       }
       case 'moveRabbit': {
         const rabbit = s.rabbits.find(r => r.id === command.id); requireRule(rabbit, 'NOT_FOUND');
+        requireRule(!busy(rabbit.id), 'PARENT_BUSY');
         if (rabbit.enclosureId !== command.enclosureId) { room(command.enclosureId, rabbit.species); rabbit.enclosureId = command.enclosureId; }
         break;
       }
@@ -186,10 +206,11 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
         const nest = s.buildings.find(b => b.kind === 'nest');
         requireRule(nest && s.buildings.some(b => b.kind === 'nursery'), 'MISSING_BUILDING');
         requireRule(!nest.breeding, 'BUSY');
+        requireRule(parents.every(r => r && !busy(r.id)), 'PARENT_BUSY');
         allocation();
         const longestGrowth = Math.max(...(Object.keys(SPECIES) as SpeciesId[]).map(growthDuration));
         requireRule(Number.isSafeInteger(time + BALANCE.breedingDuration + longestGrowth), 'INVALID_TIME');
-        pay(BALANCE.breedingCost);
+        // Free launch: no payment or heart-complement path.
         const roll = rng(); requireRule(Number.isFinite(roll) && roll >= 0 && roll < 1, 'INVALID_RANDOM');
         const result = chooseBirth(s, parents[0].species, parents[1].species, roll, parents[0].affection, parents[1].affection);
         s.pityFailures = result.pityFailures;
@@ -217,8 +238,8 @@ function runAction(state: GameState, requested: Command, now: number, rng: () =>
       }
       case 'release': {
         const rabbit = s.rabbits.find(r => r.id === command.id); requireRule(rabbit, 'NOT_FOUND');
-        requireRule(s.rabbits.filter(r => r.species === rabbit.species).length > 1, 'LAST_OF_SPECIES');
-        requireRule(!busy(rabbit.id), 'PARENT_BUSY'); s.rabbits = s.rabbits.filter(r => r.id !== rabbit.id); break;
+        requireRule(!busy(rabbit.id), 'PARENT_BUSY');
+        requireRule(s.rabbits.filter(r => r.species === rabbit.species).length > 1, 'LAST_OF_SPECIES'); s.rabbits = s.rabbits.filter(r => r.id !== rabbit.id); break;
       }
       default: throw new Denied('INVALID_CHOICE');
     }
@@ -241,6 +262,7 @@ export function pendingDiscoveries(state: GameState): SpeciesId[] {
 export type ComplementQuote = {ok: true; cost: number; pattes: number; hearts: number; missing: number} | {ok: false; reason: Refusal};
 /** Reuses the exact action validation, stopping at payment before any RNG or mutation. */
 export function quoteComplement(state: GameState, command: PattesCommand, now: number): ComplementQuote {
+  if ((command as {type:string}).type === 'breed') return {ok:false,reason:'INVALID_CHOICE'};
   const result = runAction(state, command, now, () => { throw new Error('A quote must not draw a birth'); }, true);
   if (!result.ok) return {ok: false, reason: result.reason};
   const cost = result.value as number;

@@ -28,8 +28,7 @@ function pendingGuaranteed(): GameState {
   function apply(command: Command) {
     const result = act(s, command, 0, () => 0); if (!result.ok) throw new Error(result.reason); s = result.state;
   }
-  apply({type: 'buyBuilding', kind: 'nest', x: 16, y: 12});
-  apply({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+
   apply({type: 'feed', id: 'rabbit-2'}); apply({type: 'feed', id: 'rabbit-3'});
   s.pityFailures = 9; apply({type: 'breed', parents: ['rabbit-2', 'rabbit-3']});
   return s;
@@ -211,7 +210,7 @@ describe('transactional imports', () => {
     expect(state(restored)).toEqual(advance(original, clock.now));
     expect(pendingDiscoveries(state(restored))).toEqual(['brumelin']);
     expect(state(restored).discovered).not.toContain('brumelin'); expect(state(restored).pityFailures).toBe(0);
-    expect(state(restored).buildings.find(b => b.kind === 'nursery')!.baby!.birth)
+    expect(state(restored).buildings.find(b => b.kind === 'nest')!.breeding!.birth)
       .toMatchObject({species: 'brumelin', guaranteed: true, reservedDiscovery: true});
   });
   it('prevents an older controller from overwriting a newly imported game', () => {

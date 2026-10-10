@@ -22,7 +22,7 @@ async function run() {
   };
   const browser = await chromium.launch({
     executablePath: process.env.PRAIRIE_CHROMIUM === 'playwright' ? undefined : process.env.PRAIRIE_CHROMIUM || '/usr/bin/chromium',
-    args: ['--no-sandbox'],
+    args: ['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader'],
   });
   const context = await browser.newContext({viewport: {width: 852, height: 393}, acceptDownloads: true});
   const page = await context.newPage();
@@ -68,7 +68,7 @@ async function run() {
     await download.saveAs(filename);
     assert.equal(await download.failure(), null);
     const state = JSON.parse(fs.readFileSync(filename, 'utf8'));
-    assert.equal(state.version, 7);
+    assert.equal(state.version, 8);
     assert.match(download.suggestedFilename(), /^prairie-lapins-.*\.json$/);
     report.downloads.push({path: filename, suggestedFilename: download.suggestedFilename()});
     return state;
@@ -90,11 +90,11 @@ async function run() {
     assert.equal(await page.locator('#grass').textContent(), '10');
     assert.equal(await page.locator('#hearts').textContent(), '12');
     const initial = await save();
-    assert.equal(initial.version, 7);
+    assert.equal(initial.version, 8);
     assert.equal(initial.rabbits.length, 2);
-    assert.equal(initial.buildings.length, 1);
+    assert.equal(initial.buildings.length, 3);
     await noDevelopment();
-    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v7.');
+    report.checks.push('Normal new game: canvas, 300 pattes, 10 grass, 12 hearts, 2 rabbits, save v8.');
     await screenshot('production-initial');
 
     for (const [button, title] of [['#open-shop', /^Boutique$/], ['#open-collection', /^Collection · 2\/15$/], ['#open-missions', /^Missions$/]]) {
@@ -106,8 +106,8 @@ async function run() {
     await settings();
     await page.locator('#game-version').scrollIntoViewIfNeeded();
     report.version = await page.locator('#game-version').textContent();
-    assert.match(report.version, /^Version : Prairie de lapins · île à neuf parcelles · v7 · build /);
-    if (expectedRevision) assert.equal(report.version, `Version : Prairie de lapins · île à neuf parcelles · v7 · build ${expectedRevision}`);
+    assert.match(report.version, /^Version : Prairie de lapins · île à neuf parcelles · v8 · build /);
+    if (expectedRevision) assert.equal(report.version, `Version : Prairie de lapins · île à neuf parcelles · v8 · build ${expectedRevision}`);
     await noDevelopment();
     report.checks.push('Shop, collection, missions, settings and release identifier.');
     await screenshot('production-version');
@@ -138,7 +138,7 @@ async function run() {
     await page.click('#cancel-import');
     assert.equal(await page.locator('#import-dialog').isVisible(), false);
     assert.deepEqual(progress(await save()), beforeImport);
-    report.checks.push('Export downloads valid v7 JSON; cancelling import preserves current progression.');
+    report.checks.push('Export downloads valid v8 JSON; cancelling import preserves current progression.');
 
     await importFile(importJson);
     await page.locator('#import-dialog[open]').waitFor();

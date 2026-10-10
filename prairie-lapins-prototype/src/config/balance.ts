@@ -36,7 +36,7 @@ export const BALANCE = {
   extensionCost: 500, enclosureCapacity: 3, enclosureCap: 600,
   minAffection: 1, maxAffection: 20, breedingAffection: 2,
   incomeBase: 12, incomePerLevel: 2, foodMultiplier: 2,
-  breedingCost: 20, breedingDuration: 20 * MINUTE,
+  breedingCost: 0, breedingDuration: 20 * MINUTE,
   commonGrowth: 5 * MINUTE, hybridGrowth: 15 * MINUTE, rareGrowth: 30 * MINUTE, guaranteeAttempt: 10,
   buildings: {
     enclosure: {price: 120, maximum: null}, farm: {price: 60, maximum: 2},

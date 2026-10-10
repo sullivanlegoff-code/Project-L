@@ -1,3 +1,4 @@
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {withoutHabitats} from './legacy';
 import {createMissions} from '../src/simulation/missions';
@@ -19,12 +20,12 @@ function run(s: GameState, command: Command, now = s.lastSimulatedAt): GameState
 function prepared(): GameState {
   let s = createGame(0); s.pattes = 5000;
   s = run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 12});
-  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 20, y: 12});
-  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 12, y: 16});
+  s = run(s, {type: 'placeStarterBuilding', kind: 'nest', x: 20, y: 12});
+  s = run(s, {type: 'placeStarterBuilding', kind: 'nursery', x: 12, y: 16});
   s = run(s, {type: 'feed', id: 'rabbit-2'}); s = run(s, {type: 'feed', id: 'rabbit-3'});
   return s;
 }
-const breed: PattesCommand = {type: 'breed', parents: ['rabbit-2', 'rabbit-3']};
+const breed = {type: 'breed', parents: ['rabbit-2', 'rabbit-3']} as const as Extract<Command,{type:'breed'}>;
 function speed(s: GameState, id: string, stage: TimedStage, now = s.lastSimulatedAt): Extract<Command, {type: 'accelerate'}> {
   const q = quoteAcceleration(s, id, stage, now); if (!q.ok) throw new Error(q.reason);
   return {type: 'accelerate', id, stage, jobKey: q.jobKey, maxHearts: q.hearts};
@@ -49,7 +50,7 @@ const current = (c: GameController) => c.getSnapshot().state!;
 
 describe('hearts initialization, migration and gifts', () => {
   it('creates 12 hearts and a first gift exactly 24 hours after creation', () => {
-    expect(createGame(123)).toMatchObject({version: 7, hearts: 12, nextHeartGiftAt: 123 + DAY});
+    expect(createGame(123)).toMatchObject({version: 8, hearts: 12, nextHeartGiftAt: 123 + DAY});
   });
   it('migrates all v1 fields including guaranteed results, reservations and income fractions', () => {
     let s = prepared(); s.pityFailures = 9; s = run(s, breed, 17);
@@ -147,14 +148,15 @@ describe('acceleration transactions', () => {
     const result = act(s, speed(s, 'building-5', 'breeding'), MINUTE, rng);
     expect(result.ok).toBe(true); if (!result.ok) return;
     expect(rng).not.toHaveBeenCalled();
-    const baby = result.state.buildings.find(b => b.baby)!.baby!;
+    expect(result.state.buildings.find(b=>b.baby)).toBeUndefined();
+    const baby = sendToNursery(result.state).buildings.find(b => b.baby)!.baby!;
     expect(baby).toEqual({birth, startedAt: MINUTE, readyAt: 16 * MINUTE});
     expect(result.state.discovered).not.toContain(birth.species); expect(pendingDiscoveries(result.state)).toEqual(['brumelin']);
     expect(result.state.pityFailures).toBe(0);
     expect(decodeGame(encodeGame(result.state))).toEqual({ok: true, state: result.state});
   });
   it('allows a running reproduction to finish into an occupied nursery wait, then transfers normally', () => {
-    let s = advance(run(prepared(), breed), 20 * MINUTE);
+    let s = sendToNursery(advance(run(prepared(), breed),20 * MINUTE));
     const firstBaby = s.buildings.find(b => b.baby)!.baby;
     s = run(s, breed); const birth = s.buildings.find(b => b.breeding)!.breeding!.birth;
     s = run(s, speed(s, 'building-5', 'breeding'));
@@ -163,10 +165,11 @@ describe('acceleration transactions', () => {
     expect(quoteAcceleration(s, 'building-5', 'breeding', s.lastSimulatedAt)).toMatchObject({ok: false, reason: 'ACTION_FINISHED'});
     expect(decodeGame(encodeGame(s))).toEqual({ok: true, state: s});
     s = run(s, {type: 'welcome', enclosureId: 'building-1'}, 35 * MINUTE);
+    expect(s.buildings.find(b=>b.baby)).toBeUndefined();s=sendToNursery(s);
     expect(s.buildings.find(b => b.baby)!.baby).toEqual({birth, startedAt: 35 * MINUTE, readyAt: 50 * MINUTE});
   });
   it('makes growth ready without welcoming, and refuses accelerating a capacity blockage', () => {
-    let s = advance(run(prepared(), breed), 20 * MINUTE);
+    let s = sendToNursery(advance(run(prepared(), breed),20 * MINUTE));
     const command = speed(s, 'building-6', 'growth'), paid = run(s, command);
     expect(paid.rabbits).toHaveLength(2); expect(paid.discovered).toEqual(s.discovered);
     expect(paid.buildings.find(b => b.baby)!.baby!.readyAt).toBe(s.lastSimulatedAt);
@@ -193,7 +196,7 @@ describe('pattes complement transactions', () => {
   it.each<PattesCommand>([
     {type: 'buyBuilding', kind: 'enclosure', x: 16, y: 16},
     {type: 'buyRabbit', species: 'terre', enclosureId: 'building-1'},
-    {type:'expand',parcelId:'east',expectedCost:500}, {type: 'startOrder', id: 'building-4', recipe: 'small'}, breed,
+    {type:'expand',parcelId:'east',expectedCost:500}, {type: 'startOrder', id: 'building-4', recipe: 'small'},
   ])('explicitly pays the exact shortage for $type and does not grant change', action => {
     const s = prepared(); s.pattes = 3; s.hearts = 100;
     const before = structuredClone(s), q = quoteComplement(s, action, 0); expect(s).toEqual(before);
@@ -207,14 +210,11 @@ describe('pattes complement transactions', () => {
     expect(quoteComplement(s, action, 0)).toEqual({ok: true, cost: 80, pattes: 30, missing: 50, hearts: 2});
     const paid = run(s, pay(s, action)); expect(paid).toMatchObject({pattes: 0, hearts: 10}); expect(paid.rabbits).toHaveLength(3);
   });
-  it('checks space and parent availability before proposing any payment', () => {
-    let s = prepared(); s.pattes = 0;
-    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 12, y: 12}, 0)).toEqual({ok: false, reason: 'CELL_OCCUPIED'});
-    expect(quoteComplement(s, {type: 'buyBuilding', kind: 'farm', x: 32, y: 12}, 0)).toEqual({ok: false, reason: 'INVALID_CELL'});
-    expect(quoteComplement(s, {type: 'breed', parents: ['rabbit-2', 'rabbit-2']}, 0)).toEqual({ok: false, reason: 'SAME_PARENT'});
-    s.rabbits[0].affection = 1; expect(quoteComplement(s, breed, 0)).toEqual({ok: false, reason: 'AFFECTION_TOO_LOW'});
-    s.rabbits[0].affection = 2; s = run(s, pay(s, breed));
-    expect(quoteComplement(s, breed, 0)).toEqual({ok: false, reason: 'BUSY'});
+  it('keeps breeding free and refuses the retired complement even through an indirect request', () => {
+    const s=prepared();s.pattes=0;s.hearts=0;
+    expect(quoteComplement(s,breed as unknown as PattesCommand,0)).toEqual({ok:false,reason:'INVALID_CHOICE'});
+    expect(act(s,{type:'payWithHearts',action:breed as unknown as PattesCommand,maxHearts:100,maxPattes:100},0)).toMatchObject({ok:false,reason:'INVALID_CHOICE',state:s});
+    expect(run(s,breed)).toMatchObject({pattes:0,hearts:0});
   });
   it('rejects payment if another condition changes, funds are insufficient or a cap is exceeded', () => {
     const s = prepared(); s.pattes = 30; const action: PattesCommand = {type: 'buyRabbit', species: 'terre', enclosureId: 'building-1'}, command = pay(s, action);
@@ -238,7 +238,7 @@ describe('v1/v2 imports and exports', () => {
     const preview = c.prepareImport(encodeGame(s)); if (!preview.ok) throw new Error(preview.reason);
     expect(preview.summary.hearts).toBe(3); expect(c.confirmImport(preview.token, true)).toEqual({ok: true});
     expect(current(c).hearts).toBe(3); const exported = c.exportGame(); if (!exported.ok) throw new Error(exported.reason);
-    expect(JSON.parse(exported.json)).toMatchObject({version: 7, hearts: 3});
+    expect(JSON.parse(exported.json)).toMatchObject({version: 8, hearts: 3});
   });
   it('migrates v1 at confirmation time, with cancellation and write failures preserving the active save', () => {
     const memory = store(); let now = 0; const c = new GameController(memory.storage, () => now);

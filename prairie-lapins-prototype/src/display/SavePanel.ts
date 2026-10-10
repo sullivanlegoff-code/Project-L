@@ -6,7 +6,7 @@ import {fileExporter} from './fileExport';
 export const ERROR_MESSAGES: Record<ControllerIssue, string> = {
   INVALID_JSON: 'Ce fichier ne contient pas un JSON lisible.',
   INVALID_STATE: 'Cette sauvegarde est incohérente ou incomplète.',
-  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3, 4, 5 6 ou 7.',
+  UNSUPPORTED_VERSION: 'Cette version de sauvegarde n’est pas prise en charge. Utilisez un fichier du prototype version 1, 2, 3, 4, 5, 6, 7 ou 8.',
   FILE_TOO_LARGE: 'Le fichier dépasse la limite de 1 000 000 octets pour l’import.',
   READ_FAILED: 'Le navigateur ne permet pas de lire la sauvegarde. Aucun contenu existant n’a été écrasé.',
   WRITE_FAILED: 'L’écriture locale a échoué. Vérifiez l’espace disponible et les autorisations du navigateur.',
@@ -29,13 +29,13 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const confirm = get<HTMLButtonElement>('confirm-import'), cancel = get<HTMLButtonElement>('cancel-import');
   const beforeImport = get<HTMLButtonElement>('export-before-import');
   const exporter = fileExporter();
-  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, environment.decorationPreview ? 'prairie-lapins-PREVIEW-DECORATIONS-v7-MODE-TEST-' : 'prairie-lapins-MODE-TEST-') : name;
+  const exportFilename = (name: string) => environment.test ? name.replace(/^prairie-lapins-/, environment.decorationPreview ? 'prairie-lapins-PREVIEW-DECORATIONS-v8-MODE-TEST-' : 'prairie-lapins-MODE-TEST-') : name;
   if (environment.test) {
     exportButton.textContent = 'Exporter la partie de test';
     importButton.textContent = 'Importer dans la partie de test';
     restart.textContent = 'Recommencer la partie de test';
     get('import-warning').textContent = 'Cet import remplace seulement la partie du laboratoire. La sauvegarde normale reste intacte. Les exports MODE-TEST peuvent contenir du temps avancé et des ressources ajoutées.';
-    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v1 à v6 sont migrés en v7 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v7-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v7 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
+    if (environment.decorationPreview) get('import-warning').textContent = 'Cet import remplace seulement la prévisualisation Décorations. Les fichiers v1 à v7 sont migrés en v8 dans cet espace, avec un secours avant migration. Export PREVIEW-DECORATIONS-v8-MODE-TEST : importable volontairement dans le jeu normal et le laboratoire v8 après export de la partie à remplacer. Incompatible avec les comptes figés en v4. Aucun transfert automatique.';
   }
   const abort = new AbortController();
   let importToken: number | null = null;
@@ -93,9 +93,9 @@ export function mountSavePanel(controller: GameController, onReplacement: () => 
   const options = {signal: abort.signal};
   get<HTMLButtonElement>('export-migration-source').addEventListener('click', () => {
     const raw = controller.migrationBackup();
-    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v7.'); return; }
+    if (raw === null) { say('Aucune copie avant migration n’est accessible. Conservez votre export actuel ; ne revenez pas à un ancien client pour ouvrir une partie v8.'); return; }
     const filename = `prairie-lapins-source-avant-migration-${new Date().toISOString().slice(0, 10)}.json`;
-    // Keep the original format/name explicit, even in a v7 test environment.
+    // Keep the original format/name explicit, even in a v8 test environment.
     void exporter.export(raw, filename).then(outcome => {
       if (!alive) return;
       if (outcome === 'fallback') { pendingDownload = {json: raw, filename}; fallback.hidden = false; }

@@ -17,7 +17,7 @@ import type {MeadowScene, MeadowSelection} from '../display/MeadowScene';
 import {ActionGate} from './gestures';
 import {portrait} from './portraits';
 import {PreferenceStore, Sounds} from './preferences';
-import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, TYPE_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, releaseReason, timeLeft, tutorialStep, type Placement, type CollectionFilter} from './models';
+import {BUILDING_NAMES, REFUSALS, RARITY_NAMES, TYPE_NAMES, typeNames, recipeBook, buildingReason, collectionView, incomeWhole, moneyReason, nurseryView, occupants, oddsView, placementReason, rabbitAvailability, parentBusy, releaseReason, timeLeft, tutorialStep, type Placement, type CollectionFilter} from './models';
 
 type View = {kind: 'missions'; tab: 'main' | 'daily'} | {kind: 'shop'; tab: 'buildings' | 'rabbits' | 'decorations'} | {kind: 'building' | 'rabbit' | 'moveRabbit' | 'decoration'; id: string} |
   {kind: 'buyRabbit' | 'species'; species: SpeciesId} | {kind:'extension';parcelId?:ParcelId} | {kind: 'collection' | 'settings' | 'placement' | 'hearts' | 'recipes' | 'arrange' | 'decorationPlacement'} | null;
@@ -221,7 +221,7 @@ export class GameUI {
         this.button(card, `Placer · ${stats.cost} pattes`, () => this.beginPlacement('enclosure', undefined, type), buildingReason(s, 'enclosure', true, type)); this.content.append(card);
       }
       this.content.append(node('h3', 'Production et reproduction'));
-      for (const kind of ['farm', 'nest', 'nursery'] as const) {
+      for (const kind of ['farm'] as const) {
         const card = this.card(BUILDING_NAMES[kind], utility[kind]);
         this.button(card, `Placer · ${BALANCE.buildings[kind].price} pattes`, () => this.beginPlacement(kind), buildingReason(s, kind, true)); this.content.append(card);
       }
@@ -231,9 +231,10 @@ export class GameUI {
       this.button(card, `Choisir un habitat · ${SPECIES[species].price} pattes`, () => this.open({kind: 'buyRabbit', species}), full ? 'Aucun habitat compatible avec une place libre.' : null); this.content.append(card);
     }
   }
-  private beginPlacement(kind: BuildingKind, movingId?: string, habitatType?: HabitatType): void {
+  private beginPlacement(kind: BuildingKind, movingId?: string, habitatType?: HabitatType, starter = false): void {
+    if (!movingId && (kind==='nest'||kind==='nursery') && !starter) return;
     this.arranging=false;this.decorationDraft=null;this.syncArrangement();
-    this.placement = {kind, movingId, habitatType, cell: null}; this.view = {kind: 'placement'}; this.scene.setPlacement(this.placement); this.render();
+    this.placement = {kind, movingId, habitatType, starter, cell: null}; this.view = {kind: 'placement'}; this.scene.setPlacement(this.placement); this.render();
   }
   private renderPlacement(s: GameState): void {
     const p = this.placement; if (!p) { this.close(); return; }
@@ -244,12 +245,12 @@ export class GameUI {
     this.content.append(node('p', p.cell ? `Grille fine : (${p.cell.x}, ${p.cell.y}) · empreinte 4 × 4` : 'Aucune case sélectionnée.', 'badge'));
     const reason = placementReason(s, p);
     this.content.append(node('p', !p.cell ? 'Choisissez une destination.' : reason ? `× ${reason}` : '✓ Emplacement valide · empreinte 4 × 4', !p.cell ? 'placement-pending' : reason ? 'placement-invalid' : 'placement-valid'));
-    this.button(this.content, p.movingId ? 'Confirmer le déplacement · gratuit' : `Acheter et placer · ${price} pattes`, () => {
+    this.button(this.content, p.movingId ? 'Confirmer le déplacement · gratuit' : p.starter ? 'Placer gratuitement' : `Acheter et placer · ${price} pattes`, () => {
       if (!p.cell) return;
-      const cmd: Command = p.movingId ? {type: 'moveBuilding', id: p.movingId, ...p.cell} : {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell};
+      const cmd: Command = p.movingId ? {type: 'moveBuilding', id: p.movingId, ...p.cell} : p.starter && (p.kind==='nest'||p.kind==='nursery') ? {type:'placeStarterBuilding',kind:p.kind,...p.cell} : {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell};
       this.execute(cmd, p.movingId ? 'Bâtiment déplacé.' : `${name} construit.`, () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     }, placementReason(s, p));
-    if (!p.movingId && p.cell) this.complement(this.content, s, {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell},
+    if (!p.movingId && !p.starter && p.cell) this.complement(this.content, s, {type: 'buyBuilding', kind: p.kind, habitatType: p.habitatType, ...p.cell},
       `Acheter et placer : ${name} (grille fine ${p.cell.x}, ${p.cell.y})`, `${name} construit.`,
       () => { this.placement = null; this.scene.setPlacement(null); this.view = null; });
     this.button(this.content, 'Annuler · aucun coût', () => this.close(), null, true);
@@ -289,6 +290,10 @@ export class GameUI {
   }
   private renderInventory(s: GameState): void {
     this.title.textContent = 'Aménager · inventaire';
+    for (const kind of ['nest','nursery'] as const) if (!s.buildings.some(b=>b.kind===kind)) {
+      const card=this.card(`${BUILDING_NAMES[kind]} offert`, 'Libérez une empreinte 4 × 4 sur le terrain acquis, puis placez gratuitement cet équipement. Aucun objet ne sera déplacé automatiquement.');
+      this.button(card,`Placer gratuitement : ${BUILDING_NAMES[kind]}`,()=>this.beginPlacement(kind,undefined,undefined,true));this.content.append(card);
+    }
     this.content.append(node('p', 'Touchez directement un objet posé pour le déplacer, le ranger ou le vendre. Glissez pour explorer, pincez pour zoomer. Toute pose demande une validation.', 'small'));
     this.button(this.content, 'Acheter des décorations', () => this.open({kind: 'shop', tab: 'decorations'}));
     const inventory = s.decorations.filter(d => d.location.kind === 'inventory');
@@ -416,11 +421,12 @@ export class GameUI {
     const species = SPECIES[r.species]; this.title.textContent = species.name;
     this.content.append(avatar(r.species, true), node('p', `${typeNames(species.types)} · ${RARITY_NAMES[species.rarity]}`, 'badge'),
       node('p', `Affection ${r.affection} / 20 · ${rabbitIncome(r.affection)} pattes / h`), node('p', this.enclosureName(s, r.enclosureId)));
+    if (parentBusy(s,id,this.now())) this.content.append(node('p','Au nid · place réservée dans son habitat · revenus conservés','badge'));
     const cost = BALANCE.foodMultiplier * r.affection;
     if (r.affection < 20) this.content.append(node('p', `Après une nourriture : affection ${r.affection + 1}, revenu ${rabbitIncome(r.affection + 1)} pattes / h.`, 'small'));
     this.button(this.content, `Nourrir · ${cost} herbes`, () => this.execute({type: 'feed', id}, `Affection ${r.affection + 1} !`, () => this.scene.reactToFeed(id)), r.affection >= 20 ? REFUSALS.MAX_AFFECTION : s.grass < cost ? REFUSALS.NOT_ENOUGH_GRASS : null).dataset.focus = 'feed';
     const hasDestination = s.buildings.some(b => b.kind === 'enclosure' && b.id !== r.enclosureId && !habitatEntryReason(s, b, r.species));
-    this.button(this.content, 'Changer d’habitat', () => this.open({kind: 'moveRabbit', id}), hasDestination ? null : 'Aucun autre habitat compatible avec une place libre.', true);
+    this.button(this.content, 'Changer d’habitat', () => this.open({kind: 'moveRabbit', id}), parentBusy(s,id,this.now()) ? REFUSALS.PARENT_BUSY : hasDestination ? null : 'Aucun autre habitat compatible avec une place libre.', true);
     this.button(this.content, 'Confier ce lapin', () => this.confirm('Confier ce lapin ?', 'Ce lapin quittera définitivement votre prairie, sans gain de pattes.', () => this.execute({type: 'release', id}, 'Lapin confié.', () => { this.view = {kind: 'building', id: r.enclosureId}; })), releaseReason(s, id, this.now()), true);
   }
   private destinations(s: GameState, choose: (id: string) => void, species: SpeciesId, currentId?: string, price?: number): void {
@@ -434,6 +440,7 @@ export class GameUI {
   private renderDestinations(s: GameState, id: string): void {
     const r = s.rabbits.find(r => r.id === id); if (!r) { this.close(); return; }
     this.title.textContent = 'Changer d’habitat';
+    if(parentBusy(s,id,this.now())) {this.content.append(node('p',REFUSALS.PARENT_BUSY,'reason'));return;}
     this.destinations(s, enclosureId => this.execute({type: 'moveRabbit', id, enclosureId}, 'Lapin déplacé.', () => { this.view = {kind: 'rabbit', id}; }), r.species, r.enclosureId);
   }
   private renderBuyRabbit(s: GameState, species: SpeciesId): void {
@@ -451,17 +458,28 @@ export class GameUI {
   private renderNest(s: GameState, id: string): void {
     const nest = s.buildings.find(b => b.id === id)!;
     if (nest.breeding) {
-      this.content.append(node('p', 'Les parents préparent l’arrivée d’un lapereau. Son espèce sera révélée après sa croissance.'));
-      this.timer(nest.breeding.startedAt, nest.breeding.endsAt);
-      this.acceleration(s, id, 'breeding');
-      if (nest.breeding.endsAt <= this.now()) this.content.append(node('p', 'Le lapereau attend au nid : la nurserie est occupée. Accueillez son occupant pour libérer la place.', 'reason'));
+      const job=nest.breeding;
+      this.content.append(node('p', 'Les parents restent au nid jusqu’au transfert manuel. Leurs places et revenus sont conservés dans leurs habitats. L’espèce du lapereau reste secrète jusqu’à la fin de croissance.'));
+      for(const parentId of job.parents) {
+        const parent=s.rabbits.find(r=>r.id===parentId);
+        if(parent) {const card=this.rabbitCard(s,parentId);card.append(node('p','Au nid · '+this.enclosureName(s,parent.enclosureId),'badge'));this.button(card,'Voir ce parent',()=>this.open({kind:'rabbit',id:parentId}),null,true);this.content.append(card);}
+        else this.content.append(node('p','Ancienne reproduction : un parent déjà confié reste absent. Le lapereau est conservé ; aucun individu ne sera recréé.','small'));
+      }
+      this.timer(job.startedAt,job.endsAt);
+      if(job.endsAt>this.now()) this.acceleration(s,id,'breeding');
+      else {
+        const nursery=s.buildings.find(b=>b.kind==='nursery');
+        const reason=!nursery ? 'Placez gratuitement la nurserie depuis Aménagement.' : nursery.baby ? 'La nurserie est occupée. Accueillez son occupant pour libérer la place ; parents et lapereau attendent au nid.' : null;
+        this.content.append(node('p',reason ?? 'Le lapereau est prêt à rejoindre la nurserie. Sa croissance commencera à votre confirmation.',reason?'reason':'badge'));
+        this.button(this.content,'Envoyer dans la nurserie',()=>this.execute({type:'transferBirth',id,birthId:job.birth.id},'Lapereau envoyé dans la nurserie. Les parents retrouvent leurs habitats.'),reason);
+      }
       return;
     }
-    if (!s.buildings.some(b => b.kind === 'nursery')) { this.content.append(node('p', 'Construisez une nurserie avant de lancer une reproduction.')); this.button(this.content, 'Ouvrir la boutique', () => this.open({kind: 'shop', tab: 'buildings'})); return; }
+    if (!s.buildings.some(b => b.kind === 'nursery')) { this.content.append(node('p', 'Placez la nurserie offerte avant de lancer une reproduction.')); this.button(this.content, 'Placer gratuitement la nurserie', () => this.beginPlacement('nursery',undefined,undefined,true)); return; }
     for (let i = 0; i < 2; i++) if (this.parents[i] && !s.rabbits.some(r => r.id === this.parents[i])) this.parents[i] = null;
     const selected = this.parents.map(id => s.rabbits.find(r => r.id === id));
     this.content.append(node('p', `Parent A : ${selected[0] ? SPECIES[selected[0].species].name : 'à choisir'} · Parent B : ${selected[1] ? SPECIES[selected[1].species].name : 'à choisir'}`));
-    this.content.append(node('p', '20 pattes · 20 minutes de reproduction, puis croissance en nurserie.'));
+    this.content.append(node('p', 'Gratuit · 20 minutes de reproduction, puis transfert manuel et croissance en nurserie.'));
     this.content.append(node('p', 'Recettes rares : affection 4 ; épiques : 6 ; Dragon : 10 chez chacun des deux parents, avec Perroquet et Feu obligatoires. Les résultats inadmissibles sont exclus ; la reproduction ordinaire reste possible dès 2.', 'small'));
     this.button(this.content, 'Carnet de reproduction', () => this.open({kind: 'recipes'}), null, true);
     if (selected[0] && selected[1]) {
@@ -473,12 +491,11 @@ export class GameUI {
       this.content.append(node('p', odds.guaranteed ? 'Cette tentative garantit une espèce de reproduction encore inconnue, à parts égales entre les recettes admissibles.' : odds.eligible ? 'Cette paire est admissible à la garantie.' : 'Cette paire ne fait pas avancer la garantie.', 'badge'));
     }
     this.content.append(node('p', `Garantie : ${s.pityFailures}/9 échecs admissibles. Après neuf échecs, la tentative admissible suivante garantit une des six recettes ordinaires inconnues admissibles, à parts égales s’il y en a plusieurs. Un résultat ordinaire inédit réservé remet le compteur à zéro ; la découverte n’est enregistrée qu’à l’accueil.`, 'small'));
-    let reason: string | null = selected[0] && selected[1] ? (rabbitAvailability(s, selected[0].id, this.now()) ?? rabbitAvailability(s, selected[1].id, this.now()) ?? moneyReason(s, 20)) : 'Choisissez deux parents différents.';
+    let reason: string | null = selected[0] && selected[1] ? (rabbitAvailability(s, selected[0].id, this.now()) ?? rabbitAvailability(s, selected[1].id, this.now())) : 'Choisissez deux parents différents.';
     if (this.parents[0] && this.parents[0] === this.parents[1]) reason = REFUSALS.SAME_PARENT;
-    this.button(this.content, 'Lancer la reproduction · 20 pattes', () => {
+    this.button(this.content, 'Lancer la reproduction · gratuit', () => {
       if (this.parents[0] && this.parents[1]) this.execute({type: 'breed', parents: [this.parents[0], this.parents[1]]}, 'Reproduction lancée. Le résultat reste une surprise !');
     }, reason);
-    if (this.parents[0] && this.parents[1]) this.complement(this.content, s, {type: 'breed', parents: [this.parents[0], this.parents[1]]}, 'Lancer la reproduction', 'Reproduction lancée. Le résultat reste une surprise !');
     if (s.buildings.some(b => b.baby)) this.content.append(node('p', 'La nurserie est occupée : le prochain lapereau attendra au nid si nécessaire.', 'small'));
     this.content.append(node('h3', 'Choisir les parents'));
     for (const r of s.rabbits) {
@@ -679,9 +696,7 @@ export class GameUI {
       const fresh = quoteComplement(current, action, this.now());
       if (!fresh.ok) { this.notice(REFUSALS[fresh.reason]); return; }
       if (current.hearts < fresh.hearts) { this.notice(REFUSALS.NOT_ENOUGH_HEARTS); return; }
-      const parents = action.type === 'breed' ? action.parents.map(id => current.rabbits.find(r => r.id === id)!) : null;
-      const chances = parents ? ' Probabilités : ' + oddsView(current, parents[0].species, parents[1].species, parents[0].affection, parents[1].affection).entries.map(e => `${e.name} (${e.description}) : ${e.probability}`).join(' ; ') + '.' : '';
-      this.confirm(title, `Paiement : ${fresh.pattes} pattes + ${heartAmount(fresh.hearts)} pour couvrir ${fresh.missing} pattes manquantes, sans monnaie supplémentaire. Solde disponible : ${current.pattes} pattes et ${current.hearts} cœurs.${chances}`,
+      this.confirm(title, `Paiement : ${fresh.pattes} pattes + ${heartAmount(fresh.hearts)} pour couvrir ${fresh.missing} pattes manquantes, sans monnaie supplémentaire. Solde disponible : ${current.pattes} pattes et ${current.hearts} cœurs.`,
         () => this.execute({type: 'payWithHearts', action, maxHearts: fresh.hearts, maxPattes: fresh.pattes}, success, after));
     }, s.hearts < quote.hearts ? REFUSALS.NOT_ENOUGH_HEARTS : null, true).classList.add('heart-spend');
   }
@@ -700,7 +715,7 @@ export class GameUI {
       if (current.hearts < fresh.hearts) { this.notice(REFUSALS.NOT_ENOUGH_HEARTS); return; }
       const names = {order: 'cette production', breeding: 'cette reproduction', growth: 'cette croissance'};
       const effect = stage === 'order' ? 'La récolte reste manuelle.' : stage === 'growth' ? 'L’accueil reste manuel.' :
-        current.buildings.some(b => b.baby) ? 'La nurserie est occupée : le résultat attendra au nid.' : 'La croissance commencera ensuite en nurserie.';
+        'Le délai se termine seulement. Le transfert dans la nurserie restera manuel, dès qu’elle sera libre.';
       this.confirm(`Terminer ${names[stage]} ?`, `${heartAmount(fresh.hearts)} maximum · solde : ${current.hearts} cœurs. Le prix sera recalculé à la confirmation et pourra diminuer, jamais augmenter. ${effect}`,
         () => this.execute({type: 'accelerate', id, stage, jobKey: fresh.jobKey, maxHearts: fresh.hearts}, value => `Étape terminée · ${heartAmount(Number(value))} dépensé(s).`));
     }, s.hearts < quote.hearts ? REFUSALS.NOT_ENOUGH_HEARTS : null, true).classList.add('heart-spend');
@@ -750,7 +765,9 @@ export class GameUI {
       else if (step.rabbitId) this.open({kind: 'rabbit', id: step.rabbitId});
       else if (step.building) {
         const existing = s.buildings.find(b => b.kind === step.building);
-        this.open(existing ? {kind: 'building', id: existing.id} : {kind: 'shop', tab: 'buildings'});
+        if(existing) this.open({kind:'building',id:existing.id});
+        else if(step.building==='nest'||step.building==='nursery') this.beginPlacement(step.building,undefined,undefined,true);
+        else this.open({kind:'shop',tab:'buildings'});
       }
     });
     this.button(this.tutorial, 'Masquer', () => { this.preferences.set({tutorial: false}); this.renderPreferences(); this.renderTutorial(); }, null, true);

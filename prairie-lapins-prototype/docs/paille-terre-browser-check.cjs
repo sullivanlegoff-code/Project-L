@@ -4,7 +4,7 @@ const url=process.env.PRAIRIE_TEST_URL||'http://127.0.0.1:5192/Project-L/?dev=1'
 const out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/paille-terre-proof';
 (async()=>{
  fs.mkdirSync(out,{recursive:true});
- const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width:852,height:393},hasTouch:true});page.setDefaultTimeout(15000);
  const report={passed:false,checks:[],selections:[],errors:[],browser:'Chromium touch emulation, not physical iPhone Safari'};
  page.on('pageerror',e=>report.errors.push(e.message));

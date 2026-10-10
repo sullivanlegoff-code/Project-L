@@ -2,7 +2,7 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 (async()=>{
  const root=new URL(process.argv[2]),expected=process.argv[3]?.slice(0,7),out=process.env.PRAIRIE_CAPTURE_DIR||'/tmp/snow-public';fs.mkdirSync(out,{recursive:true});
- const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox']});const context=await browser.newContext({viewport:{width:852,height:393}});const page=await context.newPage();page.setDefaultTimeout(15000);
+ const browser=await chromium.launch({executablePath:process.env.PRAIRIE_CHROMIUM==='playwright'?undefined:process.env.PRAIRIE_CHROMIUM||'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});const context=await browser.newContext({viewport:{width:852,height:393}});const page=await context.newPage();page.setDefaultTimeout(15000);
  const report={url:root.href,expected,checks:[],errors:[],passed:false};page.on('pageerror',e=>report.errors.push(e.message));
  try{
  for(const route of ['', 'dev/']){

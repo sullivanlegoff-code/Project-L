@@ -1,3 +1,4 @@
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {describe, expect, it, vi} from 'vitest';
 import {GUARANTEE_SPECIES, MINUTE, SPECIES, SPECIES_IDS, growthDuration, type SpeciesId} from '../src/config/balance';
@@ -20,7 +21,7 @@ function run(s: GameState, command: Command, now=s.lastSimulatedAt, roll=.999) {
 function couple(a: SpeciesId,b: SpeciesId,level:number) {
  let s=createGame(0);s.pattes=2000;s.grass=1000;s.rabbits[0].species=a;s.rabbits[1].species=b;
  s.rabbits.forEach(r=>r.affection=level);s.discovered=[...new Set([a,b])];
- s=run(s,{type:'buyBuilding',kind:'nest',x: 16, y: 12});return run(s,{type:'buyBuilding',kind:'nursery',x: 20, y: 12});
+ s=run(s,{type: 'placeStarterBuilding',kind:'nest',x: 16, y: 12});return run(s,{type: 'placeStarterBuilding',kind:'nursery',x: 20, y: 12});
 }
 const breed:Command={type:'breed',parents:['rabbit-2','rabbit-3']};
 describe('approved four-species rules',()=>{
@@ -28,7 +29,7 @@ describe('approved four-species rules',()=>{
   expect(SPECIES[id].price).toBeNull();expect(growthDuration(id)).toBe(minutes*MINUTE);
   expect(breedingOdds(a,b,level,level-1)[id]).toBeUndefined();expect(breedingOdds(a,b,level,level)[id]).toBeGreaterThan(0);
   const low=couple(a,b,2),before=structuredClone(low);const result=act(low,breed,0,()=>0);expect(result.ok).toBe(true);
-  if(result.ok){expect(result.state.pattes).toBe(low.pattes-20);expect(result.state.buildings.find(x=>x.breeding)!.breeding!.birth.species).not.toBe(id)}
+  if(result.ok){expect(result.state.pattes).toBe(low.pattes);expect(result.state.buildings.find(x=>x.breeding)!.breeding!.birth.species).not.toBe(id)}
   expect(low).toEqual(before);expect(act(low,{type:'buyRabbit',species:id,enclosureId:'building-1'},0)).toMatchObject({ok:false,reason:'INVALID_CHOICE',state:low});
   expect(COATS[id]).toEqual({body:COATS[id].body,patch:COATS[id].body});
  });
@@ -67,7 +68,7 @@ describe('ordinary guarantee excludes epic and legendary discoveries',()=>{
  it('epic birth and welcome count as an eligible failure and do not reset the ordinary counter',()=>{
   let s=couple('paille','terre',6);s.pityFailures=3;s=run(s,breed);
   expect(s.pityFailures).toBe(4);expect(s.buildings.find(b=>b.breeding)!.breeding!.birth).toMatchObject({species:'geant',guaranteed:false,reservedDiscovery:false});expect(pendingDiscoveries(s)).toEqual([]);
-  s=run(s,{type:'welcome',enclosureId:'building-1'},80*MINUTE);expect(s.discovered).toContain('geant');expect(s.pityFailures).toBe(4);
+  s=sendToNursery(s,20*MINUTE);s=run(s,{type:'welcome',enclosureId:'building-1'},80*MINUTE);expect(s.discovered).toContain('geant');expect(s.pityFailures).toBe(4);
  });
  it('does not count a special-only eligible pair, even with a pending ordinary guarantee',()=>{
   const s=couple('belier-gris','volant',6);s.pityFailures=9;expect(chooseBirth(s,'belier-gris','volant',.999,6,6)).toMatchObject({species:'magicien',guaranteed:false,reservedDiscovery:false,pityFailures:9});
@@ -83,15 +84,15 @@ describe('saved births, delays, compatibility and collection',()=>{
   const c=new GameController(storage,()=>0,rng);expect(c.perform(breed).ok).toBe(true);expect(rng).toHaveBeenCalledTimes(1);
   const saved=c.getSnapshot().state!,birth=saved.buildings.find(b=>b.breeding)!.breeding!.birth;expect(birth.species).toBe(id);c.dispose();
   const noDraw=vi.fn(()=>0),reload=new GameController(storage,()=>0,noDraw);expect(reload.getSnapshot().state).toEqual(saved);expect(noDraw).not.toHaveBeenCalled();reload.dispose();
-  const growing=advance(saved,20*MINUTE),baby=growing.buildings.find(b=>b.baby)!.baby!;expect(baby.birth).toEqual(birth);expect(baby.readyAt-baby.startedAt).toBe(minutes*MINUTE);
+  const growing=sendToNursery(advance(saved,20*MINUTE)),baby=growing.buildings.find(b=>b.baby)!.baby!;expect(baby.birth).toEqual(birth);expect(baby.readyAt-baby.startedAt).toBe(minutes*MINUTE);
   expect(nurseryView(growing,20*MINUTE)).toEqual({stage:'growing',readyAt:(20+minutes)*MINUTE});expect(collectionView(growing).filter(e=>e.known).map(e=>e.name)).not.toContain(SPECIES[id].name);
   expect(decodeGame(encodeGame(growing))).toEqual({ok:true,state:growing});
   expect(nurseryView(growing,(20+minutes)*MINUTE)).toMatchObject({stage:'ready',species:id});
   const welcomed=run(growing,{type:'welcome',enclosureId:'building-1'},(20+minutes)*MINUTE);expect(welcomed.rabbits.at(-1)).toMatchObject({species:id,affection:1});expect(rabbitIncome(1)).toBe(12);
  });
  it('starts the full Dragon growth only after an occupied nursery is freed',()=>{
-  let s=advance(run(couple('perroquet','feu',10),breed,0,0),20*MINUTE);s=run(s,breed);s=advance(s,200*MINUTE);
-  expect(s.buildings.find(b=>b.breeding)!.breeding!.birth.species).toBe('dragon');s=run(s,{type:'welcome',enclosureId:'building-1'});
+  let s=sendToNursery(advance(run(couple('perroquet','feu',10),breed,0,0),20*MINUTE));s=run(s,breed);s=advance(s,200*MINUTE);
+  expect(s.buildings.find(b=>b.breeding)!.breeding!.birth.species).toBe('dragon');s=run(s,{type:'welcome',enclosureId:'building-1'});expect(s.buildings.find(b=>b.baby)).toBeUndefined();s=sendToNursery(s);
   expect(s.buildings.find(b=>b.baby)!.baby).toMatchObject({startedAt:200*MINUTE,readyAt:320*MINUTE});
  });
  it.each(rows)('%s uses current habitat type compatibility',(id)=>{

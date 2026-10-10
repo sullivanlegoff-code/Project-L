@@ -1,3 +1,13 @@
+> Règles courantes : reproduction manuelle v8. Les descriptions des anciennes prévisualisations plus bas constituent l’historique ; les règles ci-dessous les remplacent pour le jeu normal et le laboratoire.
+
+## Départ et migration v8
+
+Toute nouvelle partie contient un enclos universel en (16,16), un nid en (12,12), une nurserie en (20,12), et les deux lapins initiaux. Toutes les empreintes sont de 4 × 4 sur la grille fine, sans collision sur la parcelle centrale. Ressources initiales inchangées : 300 pattes, 10 herbes, 12 cœurs. Les missions de possession du nid et de la nurserie sont réclamables une fois dès le départ. Ces deux équipements ne sont plus achetables, même indirectement.
+
+La conversion v7 → v8 préserve les bâtiments déjà possédés, tous les occupants, ressources, travaux et résultats. Les équipements manquants sont ajoutés gratuitement, aux positions préférées ou à la première position fine libre sur le terrain acquis. Aucun objet n’est déplacé. S’il n’existe aucune place, Aménagement propose leur placement gratuit après libération d’une empreinte. Un seul exemplaire de chacun est autorisé. Le format v8 n’ajoute rien automatiquement au rechargement. La copie v7 originale est conservée sous `prairie-lapins.backup.before-v8` (stockage séparé au laboratoire).
+
+Les lapereaux déjà en nurserie y restent avec leurs dates exactes. Pour une ancienne reproduction terminée dont un parent a été déplacé, son habitat actuellement enregistré devient son habitat de retour. Un parent déjà confié reste absent ; l’interface l’explique et aucun individu n’est recréé. Le résultat en attente, son identité et ses réservations de découverte sont conservés. Les coordonnées v7 ne changent pas d’unité.
+
 # Référence du prototype — habitats et aménagement
 
 Cette référence reprend les règles et chiffres approuvés par le joueur. Une modification d'équilibrage doit être précédée d'une explication de sa raison. Les paramètres exécutables se trouvent dans `src/config/balance.ts`, `src/config/missions.ts` et `src/config/habitats.ts`.
@@ -61,11 +71,11 @@ Brumelin et Mottelin restent des noms provisoires validés pour ce prototype. Un
 | Lapin commun | 80 pattes | immédiat, affection 1 |
 | Enclos supplémentaire | 120 pattes | immédiat, trois places |
 | Ferme | 60 pattes | immédiat |
-| Nid | 100 pattes | immédiat |
-| Nurserie | 80 pattes | immédiat |
+| Nid | Offert, un exemplaire | immédiat |
+| Nurserie | Offerte, un exemplaire | immédiat |
 | Première extension | 500 pattes | immédiat, 6 × 2 cases |
 | Deuxième extension | 1 000 pattes | après la première, 9 × 2 cases |
-| Reproduction | 20 pattes | 20 minutes |
+| Reproduction | Gratuit (0 patte, 0 cœur) | 20 minutes puis transfert manuel |
 | Croissance d'un commun | gratuit | 5 minutes |
 | Croissance de Brumelin ou Mottelin | gratuit | 15 minutes |
 | Croissance d'un nouveau rare | gratuit | 30 minutes |
@@ -93,7 +103,7 @@ Affection : de 1 à 20. Passer de A à A + 1 coûte `2 × A` herbes, immédiatem
 
 ## Reproduction
 
-Deux individus distincts d'affection minimale 2. Pas de sexes à gérer. Toutes les paires d'espèces sont autorisées. Les parents sont conservés, peuvent être nourris et continuent à produire leurs revenus. Ils sont indisponibles pour une autre reproduction pendant les 20 minutes ; ils sont libérés à la fin, même si le résultat attend encore au nid.
+Deux individus distincts d'affection minimale 2. Pas de sexes à gérer. Toutes les paires d'espèces sont autorisées. Les parents sont conservés, peuvent être nourris et continuent à produire leurs revenus. Ils apparaissent dans le nid et disparaissent visuellement de leurs habitats. Leur habitat d’origine et leur capacité restent réservés ; leurs revenus y continuent. La fiche indique « Au nid ». Déplacement, don et nouvelle reproduction sont interdits jusqu’au transfert manuel du lapereau, y compris après les 20 minutes. Nourrir reste possible.
 
 L'ordre des parents ne change pas le tirage. Les tables historiques suivantes restent exactement inchangées lorsque l'union contient uniquement paille, neige et/ou terre, pour la distribution ordinaire, avant la réservation éventuelle de Géant :
 
@@ -129,7 +139,7 @@ Précision pour les découvertes en attente : un résultat inédit d'une de ces 
 
 ### Nid et nurserie
 
-À la fin de la reproduction, transfert automatique si la nurserie est libre. La croissance commence à la date réelle de fin, même en l'absence du joueur. Si elle est occupée, le résultat attend au nid. La croissance commence seulement à la libération effective de la nurserie. Un lapereau prêt attend son accueil manuel ; il ne disparaît jamais. Le nid ne peut pas lancer une autre reproduction tant qu'il contient un résultat.
+À la fin des 20 minutes, « Envoyer dans la nurserie » devient disponible. Aucun transfert automatique : délai terminé, absence, rechargement et libération de la nurserie laissent le résultat et les parents au nid. Si elle est occupée, l’interface explique le blocage. Le clic valide transfère l’identité et le résultat déjà tiré, commence la croissance à cet instant, rend les parents à leurs habitats et libère le nid en une opération sauvegardée. Un refus, une sauvegarde impossible ou une double pression ne perd ni ne duplique d’individu. L’espèce reste secrète jusqu’à la fin de croissance et la découverte est enregistrée lors de l’accueil.
 
 ### Collection et carnet
 
@@ -150,12 +160,12 @@ Les variantes provisoires conservent la silhouette de lapin : orange/flamme, gri
 - Confier un doublon est gratuit et irréversible après confirmation dans l’interface. Le dernier individu possédé de chaque espèce est protégé, ainsi qu'un parent en reproduction active.
 - Un lapereau sans place attend dans la nurserie. Aucun résultat ne peut être écrasé.
 - JSON versionné, identifiants stables, dates de fin persistées, validation avant remplacement d'une partie.
-- Sauvegarde automatique, restauration et export/import sont implémentés. Format exporté version 4 ; import des versions 1, 2, 3 et 4.
+- Sauvegarde automatique, restauration et export/import sont implémentés. Format courant exporté v8 ; import des versions 1 à 8, sauvegarde locale avant conversion.
 
 
 ## Cœurs — équilibrage validé le 6 octobre 2026
 
-Monnaie facultative pour terminer un délai ou compléter les pattes manquantes. Aucun achat réel, publicité, paiement automatique ou besoin de cœurs pour progresser. Les tarifs sont centralisés dans `HEARTS`, dans `src/config/balance.ts`. Aucune règle existante de collection, revenus, affection ou reproduction n'est modifiée.
+Monnaie facultative pour terminer un délai ou compléter les pattes manquantes d’un achat ou d’une production. Le lancement d’une reproduction est gratuit et exclu du complément en cœurs. Aucun achat réel, publicité, paiement automatique ou besoin de cœurs pour progresser. Les tarifs sont centralisés dans `HEARTS`, dans `src/config/balance.ts`. Aucune règle existante de collection, revenus, affection ou reproduction n'est modifiée.
 
 | Paramètre | Valeur validée |
 |---|---:|
@@ -174,7 +184,7 @@ L'heure de référence est `max(heure fournie, lastSimulatedAt)`. Une horloge qu
 
 Concerne une production de ferme, une reproduction ou une croissance **en cours**. À la confirmation, le contrôleur avance le temps normalement, puis la simulation recalcule le prix pour le même délai identifié. Un prix diminué est appliqué ; un prix supérieur au montant confirmé est refusé. Une étape terminée, absente ou remplacée ne peut pas être payée. Exemples : 1 min → 1 cœur ; 5 min → 1 ; 6 min → 2 ; 20 min → 4.
 
-La fin de l'étape choisie est fixée à l'heure simulée actuelle. Cela n'avance ni l'horloge globale, ni les revenus, ni les délais voisins. Ferme : produit prêt, récolte manuelle. Reproduction : résultat identique, transfert normal en nurserie libre et croissance complète à partir de maintenant ; si elle est occupée, attente au nid. Croissance : résultat révélé et prêt, accueil manuel. Identité, espèce, garantie et réservation sont conservées, sans nouveau tirage ; la découverte reste enregistrée à l'accueil.
+La fin de l'étape choisie est fixée à l'heure simulée actuelle. Cela n'avance ni l'horloge globale, ni les revenus, ni les délais voisins. Ferme : produit prêt, récolte manuelle. Reproduction : termine seulement son délai, avec le résultat identique. Les parents et le lapereau attendent le transfert manuel, même si la nurserie est libre. La croissance commence au clic de transfert. Croissance : résultat révélé et prêt, accueil manuel. Identité, espèce, garantie et réservation sont conservées, sans nouveau tirage ; la découverte reste enregistrée à l'accueil.
 
 Une reproduction toujours en cours peut donc être accélérée malgré une nurserie occupée, avec avertissement explicite dans la confirmation. Cette règle de la demande actuelle remplace la restriction de la proposition initiale. Une reproduction déjà terminée qui attend au nid ne propose aucun paiement. Une croissance dans une prairie dont tous les enclos sont pleins ne propose pas d'accélération ; libérer une place reste nécessaire. Aucun cœur ne contourne une capacité.
 

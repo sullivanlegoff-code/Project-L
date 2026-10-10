@@ -67,3 +67,8 @@ export function chooseBirth(state: GameState, a: SpeciesId, b: SpeciesId, random
   const pityFailures = reservedDiscovery ? 0 : eligible ? state.pityFailures + 1 : state.pityFailures;
   return {species, guaranteed, reservedDiscovery, pityFailures};
 }
+
+/** A parent remains in its original habitat data (capacity and income), until explicit transfer. */
+export function nestForParent(state: Pick<GameState, 'buildings'>, rabbitId: string) {
+  return state.buildings.find(b => b.kind === 'nest' && b.breeding?.parents.includes(rabbitId));
+}

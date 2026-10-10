@@ -1,3 +1,4 @@
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {describe, expect, it} from 'vitest';
 import {HOUR, MINUTE, ORDERS, LEGACY_SPECIES_IDS, type SpeciesId} from '../src/config/balance';
@@ -20,8 +21,8 @@ function refuses(s: GameState, command: Command, reason: Refusal, now = s.lastSi
 }
 function setup(): GameState {
   let s = createGame(0); s.pattes = 10_000;
-  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 16, y: 12});
-  s = run(s, {type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+  s = run(s, {type: 'placeStarterBuilding', kind: 'nest', x: 16, y: 12});
+  s = run(s, {type: 'placeStarterBuilding', kind: 'nursery', x: 20, y: 12});
   s = run(s, {type: 'buyBuilding', kind: 'enclosure', x: 12, y: 16});
   s = run(s, {type: 'feed', id: 'rabbit-2'}); s = run(s, {type: 'feed', id: 'rabbit-3'});
   return s;
@@ -56,8 +57,8 @@ describe('initial state, costs and atomic refusals', () => {
   });
   it('enforces building limits', () => {
     let s = setup();
-    refuses(s, {type: 'buyBuilding', kind: 'nest', x: 16, y: 16}, 'BUILDING_LIMIT');
-    refuses(s, {type: 'buyBuilding', kind: 'nursery', x: 16, y: 16}, 'BUILDING_LIMIT');
+    refuses(s, {type: 'placeStarterBuilding', kind: 'nest', x: 16, y: 16}, 'BUILDING_LIMIT');
+    refuses(s, {type: 'placeStarterBuilding', kind: 'nursery', x: 16, y: 16}, 'BUILDING_LIMIT');
     s = run(s, {type: 'buyBuilding', kind: 'farm', x: 16, y: 16});
     s = run(s, {type: 'buyBuilding', kind: 'farm', x: 20, y: 16});
     refuses(s, {type: 'buyBuilding', kind: 'farm', x: 12, y: 12}, 'BUILDING_LIMIT');
@@ -125,8 +126,7 @@ describe('income and time', () => {
     let split = original;
     for (let t = MINUTE; t <= 48 * HOUR; t += MINUTE) split = advance(split, t);
     expect(split).toEqual(advance(original, 48 * HOUR));
-    expect(nursery(split).baby!.startedAt).toBe(20 * MINUTE);
-    expect(nursery(split).baby!.readyAt).toBe(35 * MINUTE);
+    expect(nursery(split).baby).toBeNull();expect(nest(split).breeding).not.toBeNull();
   });
 });
 
@@ -190,7 +190,7 @@ describe('breeding probabilities and pity', () => {
     refuses(s, breed, 'AFFECTION_TOO_LOW');
     const fed = run(run(s, {type: 'feed', id: 'rabbit-2'}), {type: 'feed', id: 'rabbit-3'});
     refuses(fed, breed, 'MISSING_BUILDING');
-    const ready = setup(); ready.pattes = 19; refuses(ready, breed, 'NOT_ENOUGH_PATTES');
+    const ready = setup(); ready.pattes=0;ready.hearts=0;expect(run(ready,breed).pattes).toBe(0);
   });
   it('does not count ineligible attempts, including already discovered hybrids', () => {
     const s = createGame(0); s.pityFailures = 7;
@@ -201,7 +201,7 @@ describe('breeding probabilities and pity', () => {
     let s = setup();
     for (let attempt = 1; attempt <= 9; attempt++) {
       s = run(s, breed, s.lastSimulatedAt, 0); expect(s.pityFailures).toBe(attempt);
-      s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, s.lastSimulatedAt + 25 * MINUTE);
+      s=sendToNursery(s,s.lastSimulatedAt+20*MINUTE);s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, s.lastSimulatedAt + 5 * MINUTE);
       s = run(s, {type: 'release', id: s.rabbits.at(-1)!.id});
     }
     let calls = 0;
@@ -214,7 +214,7 @@ describe('breeding probabilities and pity', () => {
     const decoded = decodeGame(encodeGame(s)); expect(decoded.ok).toBe(true);
     if (decoded.ok) {
       expect(advance(decoded.state, s.lastSimulatedAt + 35 * MINUTE)).toEqual(advance(s, s.lastSimulatedAt + 35 * MINUTE));
-      s = run(decoded.state, {type: 'welcome', enclosureId: secondEnclosure(s)}, s.lastSimulatedAt + 35 * MINUTE);
+      const deadline=s.lastSimulatedAt+20*MINUTE;s=sendToNursery(decoded.state,deadline);s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, deadline+15*MINUTE);
     }
     expect(s.discovered).toContain('brumelin'); expect(pendingDiscoveries(s)).toEqual([]); expect(s.pityFailures).toBe(0);
   });
@@ -231,7 +231,7 @@ describe('breeding probabilities and pity', () => {
   });
   it('keeps a guaranteed result and its counter coherent while another birth waits', () => {
     let s = setup(); s.pityFailures = 9;
-    s = run(s, breed, 0, 0); s = advance(s, 20 * MINUTE);
+    s = run(s, breed, 0, 0); s = sendToNursery(advance(s, 20 * MINUTE));
     expect(nursery(s).baby!.birth.guaranteed).toBe(true);
     s = run(s, breed, 20 * MINUTE, 0);
     expect(nest(s).breeding!.birth.guaranteed).toBe(false); expect(s.pityFailures).toBe(1);
@@ -239,13 +239,13 @@ describe('breeding probabilities and pity', () => {
     const decoded = decodeGame(encodeGame(s)); expect(decoded).toEqual({ok: true, state: s});
     s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, HOUR);
     expect(s.pityFailures).toBe(0); expect(s.discovered).toContain('brumelin');
-    expect(nursery(s).baby!.birth.species).toBe('paille');
+    expect(nursery(s).baby).toBeNull();s=sendToNursery(s);expect(nursery(s).baby!.birth.species).toBe('paille');
   });
 });
 
 describe('nursery, capacity and release', () => {
   it('holds a second birth at the nest and starts growth exactly when space is freed', () => {
-    let s = run(setup(), breed); s = advance(s, 20 * MINUTE);
+    let s = run(setup(), breed); s = sendToNursery(advance(s, 20 * MINUTE));
     s = run(s, breed, 20 * MINUTE, 0.9);
     const blocked = advance(s, 2 * HOUR);
     expect(nursery(blocked).baby!.startedAt).toBe(20 * MINUTE);
@@ -253,13 +253,13 @@ describe('nursery, capacity and release', () => {
     let split = s; for (let t = 21 * MINUTE; t <= 2 * HOUR; t += MINUTE) split = advance(split, t);
     expect(split).toEqual(blocked);
     s = run(blocked, {type: 'welcome', enclosureId: secondEnclosure(blocked)}, 2 * HOUR);
-    expect(nest(s).breeding).toBeNull(); expect(nursery(s).baby!.startedAt).toBe(2 * HOUR);
+    expect(nursery(s).baby).toBeNull();s=sendToNursery(s);expect(nest(s).breeding).toBeNull(); expect(nursery(s).baby!.startedAt).toBe(2 * HOUR);
     expect(nursery(s).baby!.readyAt).toBe(2 * HOUR + 15 * MINUTE);
   });
   it('refuses welcoming early and avoids retroactive income after a late welcome', () => {
     let s = run(setup(), breed);
     refuses(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, 'NOT_READY', 24 * MINUTE);
-    s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, HOUR);
+    s=sendToNursery(s,20*MINUTE);s = run(s, {type: 'welcome', enclosureId: secondEnclosure(s)}, HOUR);
     expect(s.buildings.find(b => b.id === secondEnclosure(s))!.incomeUnits).toBe(0);
     expect(advance(s, 2 * HOUR).buildings.find(b => b.id === secondEnclosure(s))!.incomeUnits).toBe(12 * HOUR);
   });
@@ -268,8 +268,8 @@ describe('nursery, capacity and release', () => {
     refuses(s, {type: 'buyRabbit', species: 'paille', enclosureId: enclosure}, 'CAPACITY_FULL');
     s = run(s, {type: 'buyRabbit', species: 'paille', enclosureId: secondEnclosure(s)});
     refuses(s, {type: 'moveRabbit', id: s.rabbits.at(-1)!.id, enclosureId: enclosure}, 'CAPACITY_FULL');
-    s = run(s, breed); refuses(s, {type: 'welcome', enclosureId: enclosure}, 'CAPACITY_FULL', 25 * MINUTE);
-    expect(nest(s).breeding).not.toBeNull();
+    s = run(s, breed);s=sendToNursery(s,20*MINUTE); refuses(s, {type: 'welcome', enclosureId: enclosure}, 'CAPACITY_FULL', 25 * MINUTE);
+    expect(nursery(s).baby).not.toBeNull();
   });
   it('protects last representatives, retains discoveries and settles income before release', () => {
     let s = createGame(0); refuses(s, {type: 'release', id: 'rabbit-2'}, 'LAST_OF_SPECIES');
@@ -283,6 +283,7 @@ describe('nursery, capacity and release', () => {
   it('protects an active parent even when a duplicate exists', () => {
     let s = run(setup(), {type: 'buyRabbit', species: 'paille', enclosureId: secondEnclosure(setup())});
     s = run(s, breed); refuses(s, {type: 'release', id: 'rabbit-2'}, 'PARENT_BUSY');
+    refuses(s,{type:'release',id:'rabbit-2'},'PARENT_BUSY',20*MINUTE);s=sendToNursery(s,20*MINUTE);
     s = run(s, {type: 'release', id: 'rabbit-2'}, 20 * MINUTE);
     expect(s.rabbits.some(r => r.id === 'rabbit-2')).toBe(false);
   });

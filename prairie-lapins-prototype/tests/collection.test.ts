@@ -1,3 +1,4 @@
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {withoutHabitats, withUniversalHabitats} from './legacy';
 import {createMissions} from '../src/simulation/missions';
@@ -25,8 +26,8 @@ function couple(a: SpeciesId, b: SpeciesId, affectionA = 4, affectionB = 4): Gam
   s.rabbits[0].species = a; s.rabbits[1].species = b;
   s.rabbits[0].affection = affectionA; s.rabbits[1].affection = affectionB;
   s.discovered = [...new Set([a, b])];
-  s = run(s, {type: 'buyBuilding', kind: 'nest', x: 16, y: 12});
-  return run(s, {type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+  s = run(s, {type: 'placeStarterBuilding', kind: 'nest', x: 16, y: 12});
+  return run(s, {type: 'placeStarterBuilding', kind: 'nursery', x: 20, y: 12});
 }
 const breed: Command = {type: 'breed', parents: ['rabbit-2', 'rabbit-3']};
 function memory(raw: string) {
@@ -53,7 +54,7 @@ describe('fifteen species and acquisition', () => {
     expect(act(s, {type: 'buyRabbit', species, enclosureId: 'building-1'}, 0)).toEqual({ok: false, reason: 'INVALID_CHOICE', state: s});
   });
   it('keeps affection, income, building capacities, costs and established growth times', () => {
-    expect(BALANCE).toMatchObject({minAffection: 1, maxAffection: 20, enclosureCapacity: 3, enclosureCap: 600, breedingCost: 20, breedingDuration: 20 * MINUTE});
+    expect(BALANCE).toMatchObject({minAffection: 1, maxAffection: 20, enclosureCapacity: 3, enclosureCap: 600, breedingCost: 0, breedingDuration: 20 * MINUTE});
     expect([rabbitIncome(1), rabbitIncome(20)]).toEqual([12, 50]);
     for (const id of SHOP_SPECIES) expect(growthDuration(id)).toBe(5 * MINUTE);
     for (const id of ['brumelin', 'mottelin'] as const) expect(growthDuration(id)).toBe(15 * MINUTE);
@@ -111,7 +112,8 @@ describe('extended guarantee and persisted rare births', () => {
     for (let i = 0; i < 9; i++) {
       s = run(s, breed, s.lastSimulatedAt, 0);
       expect(s.pityFailures).toBe(i + 1);
-      s = run(s, {type: 'welcome', enclosureId: 'building-1'}, s.lastSimulatedAt + 25 * MINUTE);
+      s = sendToNursery(s,s.lastSimulatedAt+20*MINUTE);
+      s = run(s, {type: 'welcome', enclosureId: 'building-1'}, s.lastSimulatedAt + 5 * MINUTE);
       const duplicate = s.rabbits[2].id; s = run(s, {type: 'release', id: duplicate});
     }
     s = run(s, breed, s.lastSimulatedAt, 0);
@@ -121,7 +123,7 @@ describe('extended guarantee and persisted rare births', () => {
     const stored = memory(encodeGame(s)), rng = vi.fn(() => 0);
     const c = new GameController(stored.storage, () => s.lastSimulatedAt, rng);
     expect(c.getSnapshot().state).toEqual(s); expect(rng).not.toHaveBeenCalled();
-    const growing = advance(s, s.lastSimulatedAt + 20 * MINUTE);
+    const growing = sendToNursery(advance(s, s.lastSimulatedAt + 20 * MINUTE));
     const baby = growing.buildings.find(x => x.baby)!.baby!;
     expect(baby.birth).toEqual(birth); expect(baby.readyAt - baby.startedAt).toBe(30 * MINUTE);
     const q = quoteAcceleration(growing, 'building-5', 'growth', growing.lastSimulatedAt);
@@ -150,11 +152,12 @@ describe('extended guarantee and persisted rare births', () => {
     expect(oddsView(s, 'lunettes', 'feu-glace', 4, 4).entries.every(e => e.probability === '25 %')).toBe(true);
   });
   it('starts the full rare growth only when an occupied nursery becomes available', () => {
-    let s = advance(run(couple('feu', 'neige'), breed), 20 * MINUTE);
+    let s = sendToNursery(advance(run(couple('feu', 'neige'), breed),20 * MINUTE));
     s = run(s, breed); const waitingBirth = s.buildings.find(b => b.breeding)!.breeding!.birth;
     s = advance(s, 120 * MINUTE);
     expect(s.buildings.find(b => b.breeding)!.breeding!.birth).toEqual(waitingBirth);
     s = run(s, {type: 'welcome', enclosureId: 'building-1'});
+    expect(s.buildings.find(b=>b.baby)).toBeUndefined();s=sendToNursery(s);
     expect(s.buildings.find(b => b.baby)!.baby).toEqual({birth: waitingBirth, startedAt: 120 * MINUTE, readyAt: 150 * MINUTE});
   });
 });
@@ -168,7 +171,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
     // Equal public progression gives the same notebook whatever the secret birth.
     a.pityFailures = b.pityFailures;
     expect(recipeBook(a, 0)).toEqual(recipeBook(b, 0)); expect(recipeBook(a, 0)).toHaveLength(9);
-    const growing = advance(b, 20 * MINUTE);
+    const growing = sendToNursery(advance(b, 20 * MINUTE));
     expect(nurseryView(growing, 20 * MINUTE)).toEqual({stage: 'growing', readyAt: 50 * MINUTE});
     expect(nurseryView(growing, 50 * MINUTE)).toMatchObject({stage: 'ready', species: 'feu-glace'});
   });
@@ -194,7 +197,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   it('loads and imports an actual previous-build v2 export with its reserved birth and 7 hearts unchanged', () => {
     const raw = JSON.stringify(previous), parsed = decodeGame(raw, previous.lastSimulatedAt); expect(parsed.ok).toBe(true); if (!parsed.ok) return;
     const expected = {...withUniversalHabitats(previous), missions: createMissions(previous as unknown as GameState, previous.lastSimulatedAt)};
-    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(7);
+    expect(parsed.state).toEqual(expected); expect(parsed.state.version).toBe(8);
     const saved = memory(raw), rng = vi.fn(() => 0), c = new GameController(saved.storage, () => previous.lastSimulatedAt, rng);
     expect(c.getSnapshot().state).toEqual(expected); expect(rng).not.toHaveBeenCalled();
     const preview = c.prepareImport(raw); if (!preview.ok) throw Error(preview.reason);
@@ -205,7 +208,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   it('keeps v1 migration available and rejects unknown identifiers', () => {
     const {hearts: _hearts, nextHeartGiftAt: _gift, ...rest} = previous;
     const migrated = decodeGame(JSON.stringify({...rest, version: 1}), previous.lastSimulatedAt);
-    expect(migrated.ok && migrated.state).toMatchObject({version: 7, hearts: 12, discovered: previous.discovered, buildings: previous.buildings.map(b=>({...b,x:(b.x+3)*4,y:(b.y+3)*4}))});
+    expect(migrated.ok && migrated.state).toMatchObject({version: 8, hearts: 12, discovered: previous.discovered, buildings: previous.buildings.map(b=>({...b,x:(b.x+3)*4,y:(b.y+3)*4}))});
     const invalid = structuredClone(previous); invalid.rabbits[0].species = 'arc-en-ciel';
     expect(decodeGame(JSON.stringify(invalid))).toEqual({ok: false, reason: 'INVALID_STATE'});
   });
@@ -228,7 +231,7 @@ describe('catalogue, notebook, visuals and compatibility', () => {
   });
   it('accepts the documented development scenario and preserves its gift schedule on import', () => {
     const result = decodeGame(JSON.stringify(testSave), testSave.lastSimulatedAt); expect(result.ok).toBe(true); if (!result.ok) return;
-    expect(result.state.version).toBe(7); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
+    expect(result.state.version).toBe(8); expect(result.state.discovered).toHaveLength(6); expect(result.state.pityFailures).toBe(9);
     expect(result.state.rabbits.every(r => r.affection === 2)).toBe(true);
     const {missions, ...fields} = withoutHabitats(result.state);
     expect({...fields, version: 2}).toEqual(testSave); expect(missions.daily.referenceAt).toBe(testSave.lastSimulatedAt);

@@ -9,10 +9,10 @@ export function emptyBuilding(id: string, kind: BuildingKind, x: number, y: numb
 export function createGame(now: number = Date.now()): GameState {
   if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + HEARTS.giftInterval) || !Number.isSafeInteger(now + MISSION_CYCLE_DURATION)) throw new RangeError('Invalid timestamp');
   const state: Omit<GameState, 'missions'> = {
-    version: 7, decorations: [], lastSimulatedAt: now, nextId: 4,
+    version: 8, decorations: [], lastSimulatedAt: now, nextId: 6,
     hearts: HEARTS.initial, nextHeartGiftAt: now + HEARTS.giftInterval,
     pattes: BALANCE.initialPattes, grass: BALANCE.initialGrass, acquiredParcels: ['center'],
-    buildings: [emptyBuilding('building-1', 'enclosure', 16, 16)],
+    buildings: [emptyBuilding('building-1', 'enclosure', 16, 16), emptyBuilding('building-4', 'nest', 12, 12), emptyBuilding('building-5', 'nursery', 20, 12)],
     rabbits: [
       {id: 'rabbit-2', species: 'paille', affection: 1, enclosureId: 'building-1'},
       {id: 'rabbit-3', species: 'neige', affection: 1, enclosureId: 'building-1'},

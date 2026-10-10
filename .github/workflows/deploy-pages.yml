@@ -141,11 +141,12 @@ jobs:
           node prairie-lapins-prototype/docs/belier-feu-volant-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/fine-buildings-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
           node prairie-lapins-prototype/docs/camera-overview-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
+          node prairie-lapins-prototype/docs/manual-breeding-public-check.cjs https://sullivanlegoff-code.github.io/Project-L/ "${{ github.sha }}"
       - name: Conserver les preuves publiques
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: public-v7-validation-${{ github.sha }}
+          name: public-v8-validation-${{ github.sha }}
           path: |
             published-revisions.json
             ${{ runner.temp }}/public-browser-proof

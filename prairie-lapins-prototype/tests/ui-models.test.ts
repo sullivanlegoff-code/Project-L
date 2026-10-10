@@ -1,3 +1,4 @@
+import {sendToNursery} from './manual-transfer';
 import {regressionStart as createGame} from './regression-start';
 import {VISUAL} from '../src/config/visual';
 import {describe, expect, it} from 'vitest';
@@ -10,7 +11,7 @@ import type {Command, GameState} from '../src/state/types';
 function readyState(): GameState {
   let state = createGame(0); state.pattes = 10_000;
   const apply = (command: Command) => { const r = act(state, command, 0, () => .9); if (!r.ok) throw new Error(r.reason); state = r.state; };
-  apply({type: 'buyBuilding', kind: 'nest', x: 16, y: 12}); apply({type: 'buyBuilding', kind: 'nursery', x: 20, y: 12});
+  apply({type: 'placeStarterBuilding', kind: 'nest', x: 16, y: 12}); apply({type: 'placeStarterBuilding', kind: 'nursery', x: 20, y: 12});
   apply({type: 'feed', id: 'rabbit-2'}); apply({type: 'feed', id: 'rabbit-3'});
   apply({type: 'breed', parents: ['rabbit-2', 'rabbit-3']});
   return state;
@@ -131,7 +132,7 @@ describe('UI projections preserve gameplay rules and secrets', () => {
     s.acquiredParcels.push('east'); expect(placementReason(s, {kind: 'farm', cell: {x: 32, y: 16}})).toBeNull();
   });
   it('does not expose the species of a hidden birth in nursery or collection models', () => {
-    let s = readyState(); const r = act(s, {type: 'collectIncome', id: 'building-1'}, 20 * 60_000); if (!r.ok) throw new Error(r.reason); s = r.state;
+    let s = readyState(); const r = act(s, {type: 'collectIncome', id: 'building-1'}, 20 * 60_000); if (!r.ok) throw new Error(r.reason); s = sendToNursery(r.state);
     expect(nurseryView(s, 20 * 60_000)).toEqual({stage: 'growing', readyAt: 35 * 60_000});
     expect(JSON.stringify(nurseryView(s, 20 * 60_000))).not.toContain('brumelin');
     expect(collectionView(s).filter(e => !e.known)).toEqual(Array.from({length: 13}, () => ({known: false, name: '???'})));
@@ -147,6 +148,6 @@ describe('UI projections preserve gameplay rules and secrets', () => {
   it('explains last-of-species protection and adapts the tutorial to existing progress', () => {
     const s = createGame(0); expect(releaseReason(s, 'rabbit-2', 0)).toContain('au moins un');
     expect(tutorialStep(s, false).text).toContain('pattes'); expect(tutorialStep(s, true).rabbitId).toBe('rabbit-2');
-    s.rabbits.forEach(r => { r.affection = 2; }); expect(tutorialStep(s, true).building).toBe('farm');
+    s.rabbits.forEach(r => { r.affection = 2; }); expect(tutorialStep(s, true).building).toBe('nest');
   });
 });

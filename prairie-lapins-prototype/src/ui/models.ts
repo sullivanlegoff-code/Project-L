@@ -1,11 +1,12 @@
 import {buildingPlacementReason} from '../simulation/placement';
 import {habitatPrice, type HabitatType} from '../config/habitats';
 import {BALANCE, HOUR, SPECIES, SPECIES_IDS, RECIPE_SPECIES, type BuildingKind, type SpeciesId, type RabbitType, type Rarity} from '../config/balance';
-import {breedingPool, recipeMatches} from '../simulation/breeding';
+import {breedingPool, recipeMatches, nestForParent} from '../simulation/breeding';
 import type {GameState, Refusal} from '../state/types';
 
 export const BUILDING_NAMES: Record<BuildingKind, string> = {enclosure: 'Enclos', farm: 'Ferme', nest: 'Nid', nursery: 'Nurserie'};
-export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'STORAGE_CHANGED', string> = {
+export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED' | 'ACTION_NOT_SAVED' | 'STORAGE_CHANGED', string> = {
+  ACTION_NOT_SAVED: 'Le transfert n’a pas pu être sauvegardé. Parents et lapereau restent au nid. Réessayez après avoir résolu le problème de sauvegarde.',
   STORAGE_CHANGED: 'Une autre fenêtre a modifié cette partie. Exportez la copie en mémoire puis rechargez la page pour continuer.',
   SALE_NOT_SAVED: 'La vente n’a pas pu être sauvegardée. Objet et pattes conservés. Réessayez après avoir résolu le problème de sauvegarde.',
   DECORATION_LIMIT: 'Inventaire limité à 512 exemplaires pour préserver les performances.',
@@ -22,32 +23,34 @@ export const REFUSALS: Record<Refusal | 'NO_GAME' | 'DISPOSED' | 'SALE_NOT_SAVED
   CAPACITY_FULL: 'Habitat plein.', BUSY: 'Ce bâtiment est occupé.', NOT_READY: 'Ce n’est pas encore prêt.', MAX_AFFECTION: 'Affection maximale atteinte.',
   SAME_PARENT: 'Choisissez deux lapins différents.', AFFECTION_TOO_LOW: 'Chaque parent doit avoir au moins 2 d’affection.',
   MISSING_BUILDING: 'Il faut un nid et une nurserie.', ALREADY_EXPANDED: 'L’extension est déjà achetée.', LAST_OF_SPECIES: 'Gardez au moins un lapin de chaque espèce possédée.',
-  PARENT_BUSY: 'Ce parent participe à une reproduction.', NO_GAME: 'Chargez une partie dans les paramètres.', DISPOSED: 'Rechargez la page.',
+  PARENT_BUSY: 'Au nid : ce parent reste indisponible jusqu’au transfert du lapereau dans la nurserie.', NO_GAME: 'Chargez une partie dans les paramètres.', DISPOSED: 'Rechargez la page.',
 };
 export const moneyReason = (s: GameState, price: number) => s.pattes < price ? 'Pas assez de pattes.' : null;
 export const occupants = (s: GameState, id: string) => s.rabbits.filter(r => r.enclosureId === id);
-export const parentBusy = (s: GameState, id: string, now: number) => s.buildings.some(b => b.breeding && b.breeding.endsAt > now && b.breeding.parents.includes(id));
+export const parentBusy = (s: GameState, id: string, _now: number) => !!nestForParent(s,id);
 export function rabbitAvailability(s: GameState, id: string, now: number): string | null {
   const r = s.rabbits.find(r => r.id === id);
-  return !r ? 'Lapin absent.' : r.affection < BALANCE.breedingAffection ? 'Affection 2 nécessaire.' : parentBusy(s, id, now) ? 'Parent occupé.' : null;
+  return !r ? 'Lapin absent.' : parentBusy(s, id, now) ? 'Au nid.' : r.affection < BALANCE.breedingAffection ? 'Affection 2 nécessaire.' : null;
 }
 export function releaseReason(s: GameState, id: string, now: number): string | null {
   const r = s.rabbits.find(r => r.id === id);
-  return !r ? 'Lapin absent.' : s.rabbits.filter(other => other.species === r.species).length <= 1 ? REFUSALS.LAST_OF_SPECIES : parentBusy(s, id, now) ? REFUSALS.PARENT_BUSY : null;
+  return !r ? 'Lapin absent.' : parentBusy(s, id, now) ? REFUSALS.PARENT_BUSY : s.rabbits.filter(other => other.species === r.species).length <= 1 ? REFUSALS.LAST_OF_SPECIES : null;
 }
 export function buildingReason(s: GameState, kind: BuildingKind, ignorePrice = false, habitatType: HabitatType = 'universal'): string | null {
+  if (kind === 'nest' || kind === 'nursery') return 'Cet équipement est offert et ne s’achète pas.';
   const config = BALANCE.buildings[kind];
   if (config.maximum !== null && s.buildings.filter(b => b.kind === kind).length >= config.maximum) return REFUSALS.BUILDING_LIMIT;
   if (s.buildings.length >= s.acquiredParcels.length * 9) return 'Aucune case libre. Agrandissez la prairie.';
   return ignorePrice ? null : moneyReason(s, kind === 'enclosure' ? habitatPrice(habitatType) : config.price);
 }
-export type Placement = {kind: BuildingKind; movingId?: string; habitatType?: HabitatType; cell: {x: number; y: number} | null};
+export type Placement = {kind: BuildingKind; movingId?: string; starter?: boolean; habitatType?: HabitatType; cell: {x: number; y: number} | null};
 export function placementReason(s: GameState, placement: Placement): string | null {
   const cell = placement.cell;
   if (!cell) return 'Touchez un petit carré de la prairie.';
   const reason = buildingPlacementReason(s, cell.x, cell.y, placement.movingId);
   if (reason) return REFUSALS[reason];
   if (placement.movingId) return null;
+  if (placement.starter) return (placement.kind !== 'nest' && placement.kind !== 'nursery') ? REFUSALS.INVALID_CHOICE : s.buildings.some(b=>b.kind===placement.kind) ? REFUSALS.BUILDING_LIMIT : null;
   return buildingReason(s, placement.kind, false, placement.habitatType);
 }
 export function nurseryView(s: GameState, now: number): {stage: 'empty'} | {stage: 'growing'; readyAt: number} | {stage: 'ready'; species: SpeciesId; birthId: string} {
@@ -114,7 +117,9 @@ export function tutorialStep(s: GameState, intro: boolean): {text: string; rabbi
   if (!intro) return {text: 'Les pattes financent la prairie. L’herbe augmente l’affection et les revenus. Aucune faim à gérer.'};
   const candidate = ['paille', 'neige'].map(species => s.rabbits.find(r => r.species === species)).find(r => r && r.affection < 2);
   if (candidate) return {text: 'Nourrissez les deux lapins de départ jusqu’à l’affection 2.', rabbitId: candidate.id};
-  for (const building of ['farm', 'nest', 'nursery'] as const) if (!s.buildings.some(b => b.kind === building)) return {text: `Achetez et placez votre ${BUILDING_NAMES[building].toLowerCase()}.`, building};
+  for (const building of ['nest', 'nursery'] as const) if (!s.buildings.some(b => b.kind === building)) return {text: `Placez gratuitement votre ${BUILDING_NAMES[building].toLowerCase()} depuis Aménagement. Libérez une empreinte 4 × 4 si nécessaire.`, building};
+  if (s.buildings.some(b=>b.breeding)) return {text:'Les parents restent au nid. À la fin des 20 minutes, envoyez manuellement le lapereau dans la nurserie libre.',building:'nest'};
+  if (!s.buildings.some(b=>b.kind==='farm')) return {text:'Achetez et placez votre ferme pour produire de l’herbe.',building:'farm'};
   if (s.buildings.some(b => b.breeding || b.baby) || s.discovered.some(id => SPECIES[id].recipe !== null)) return {text: 'Votre prairie prend vie ! Revenez accueillir le lapereau après sa croissance.', done: true};
   return {text: 'Choisissez vos deux parents dans le nid et lancez une reproduction. Vous pouvez jouer pendant l’attente.', building: 'nest'};
 }
